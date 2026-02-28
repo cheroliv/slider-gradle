@@ -1,0 +1,57 @@
+<!DOCTYPE html SYSTEM "http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      lang="fr" data-bs-theme="light">
+<body>
+<!-- =============================================================================================================== -->
+<!-- Hero Section -->
+<!-- =============================================================================================================== -->
+<section id="home"
+         class="hero-section"
+         th:fragment="hero">
+    <div id="main-content"></div>
+    <div class="container">
+        <div class="row align-items-center min-vh-100">
+            <div class="col-lg-6">
+                <div class="hero-content">
+                    <h1 class="display-4 fw-bold mb-4">
+                        Bakery
+                        <span class="text-primary">Template</span>
+                    </h1>
+                    <p class="lead mb-4">
+                        A simple and elegant space to share your knowledge, stories, and passions with the world..
+                    </p>
+                    <div class="hero-buttons d-grid d-lg-inline-flex gap-3">
+                        <a href="https://github.com/cheroliv/bakery-gradle-plugin"
+                           class="btn btn-primary btn-hero-style"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            <i class="bi bi-rocket me-2"></i>
+                            Project
+                        </a>
+                        <a href="https://github.com/cheroliv/bakery-gradle-plugin/tree/main/site"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn btn-outline-primary btn-hero-style">
+                            <i class="bi bi-envelope me-2"></i>
+                            Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="hero-image">
+                    <div class="hero-card">
+                        <div class="card-body text-center">
+                            <i class="bi bi-laptop display-1 text-primary mb-3"></i>
+                            <h3>Start Writing</h3>
+                            <p>Powered by the robustness of Bootstrap 5, this template offers you a seamless publishing experience and a fully responsive design, perfect for all your readers..</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

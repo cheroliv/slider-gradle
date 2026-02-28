@@ -1,0 +1,11 @@
+#Exclude everything
+out
+.gradle
+.idea
+site.yml
+.kotlin
+*.iml
+*.ipr
+*.iws
+local.properties
+workspace-engine.tar

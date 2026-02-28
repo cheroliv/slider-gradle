@@ -1,0 +1,9 @@
+[versions]
+slider = "0.0.0"
+
+[libraries]
+
+[plugins]
+slider = { id = "com.cheroliv.slider", version.ref = "slider" }
+
+[bundles]
