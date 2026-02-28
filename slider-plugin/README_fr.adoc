@@ -1,0 +1,5 @@
+= Slider plugin
+:toc: left
+:toclevels: 3
+:source-highlighter: rouge
+:slider-version: "0.0.0"
