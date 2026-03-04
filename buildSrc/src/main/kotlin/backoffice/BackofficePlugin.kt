@@ -1,0 +1,4 @@
+package backoffice
+
+class BackofficePlugin {
+}

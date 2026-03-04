@@ -1,0 +1,65 @@
+{
+  "theme": {
+    "Thème": "Développement Kotlin"
+  },
+  "title": {
+    "Titre": "Kotlin et Langchain4j"
+  },
+  "presentation": {
+    "Présentation et description": "Cette formation vous permettra de découvrir et maîtriser Langchain4j, une librairie Kotlin pour faciliter le développement d'applications basées sur les chaînes."
+  },
+  "mindmap": {
+    "Carte thématique": "Lien vers la mindmap (à compléter)"
+  },
+  "public_prospect": {
+    "Public": "Développeurs Kotlin intéressés par l'utilisation des chaînes et des agents conversationnels."
+  },
+  "pre_requis": {
+    "Pré-requis et conditions d’accès à la formation (Qualiopi)": "Connaissance de base de Kotlin et des principes de la programmation orientée objet."
+  },
+  "objectives": {
+    "Objectifs pédagogiques (Qualiopi)": "Comprendre les concepts clés de Langchain4j.  Développer des applications utilisant des chaînes et des agents.  Intégrer Langchain4j avec d'autres librairies Kotlin."
+  },
+  "skills": {
+    "Compétences visées (Qualiopi)": "Construire des applications utilisant Langchain4j pour des tâches telles que la génération de texte, la réponse aux questions et la création d'agents conversationnels."
+  },
+  "timing": {
+    "Durée (Temporisation)] (Qualiopi)": "2 jours"
+  },
+  "means": {
+    "Moyen d’accompagnement et Suivi pédagogique (Qualiopi)": "Support de cours, exercices pratiques, assistance personnalisée."
+  },
+  "program": {
+    "Programme pédagogique (Modalités pédagogiques)] (Qualiopi) : du contenu et du séquencement": "Introduction à Langchain4j et à ses concepts fondamentaux.  Construction de chaînes simples et complexes.  Création d'agents conversationnels.  Intégration avec des modèles de langage.  Exemples pratiques et cas d'utilisation."
+  },
+  "evaluations": {
+    "Modalités d’évaluations] (Qualiopi)": "Évaluation continue basée sur des exercices pratiques et un projet final."
+  },
+  "certification": {
+    "Modalités de certification et Certification visé] (Qualiopi)": "Certificat de réussite délivré à la fin de la formation."
+  },
+  "place": {
+    "Lieux] (Qualiopi)": "En ligne ou en présentiel (à définir)"
+  },
+  "price": {
+    "Tarifs": "800€"
+  },
+  "infrastructure": {
+    "Moyens logistiques et matériels] (Qualiopi)": "Salle de formation équipée ou accès à un environnement de développement en ligne."
+  },
+  "pursuit": {
+    "Poursuite en formation] (Qualiopi)": "Formations avancées sur le développement d'agents conversationnels et l'intelligence artificielle."
+  },
+  "access_time": {
+    "Délais d’accès] (Réglementaire)": "Inscription possible jusqu'à une semaine avant le début de la formation."
+  },
+  "mobility": {
+    "Accessibilité et Handicap] (Qualiopi)": "Accès aux personnes à mobilité réduite, supports de cours adaptés."
+  },
+  "testimony": {
+    "Témoignage Evaluation de la formation] (Qualiopi)": "Formation concise et efficace, permettant une rapide prise en main de Langchain4j."
+  },
+  "testimony_customer": {
+    "Témoignage apprenant/commanditaire": "Grâce à cette formation, j'ai pu intégrer Langchain4j dans mon projet et développer un agent conversationnel performant."
+  }
+}

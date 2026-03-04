@@ -1,0 +1,4 @@
+package software
+
+class SoftwareProject {
+}
