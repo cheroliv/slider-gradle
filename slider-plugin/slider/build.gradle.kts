@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.cheroliv"
-version = libs.plugins.bakery.get().version
+version = libs.plugins.slider.get().version
 kotlin.jvmToolchain(JavaVersion.VERSION_24.ordinal)
 
 repositories {
@@ -21,7 +21,7 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
-    api(libs.bundles.jbake)
+    api(libs.bundles.slider)
     api(libs.bundles.jgit)
     api(libs.commons.io)
 
@@ -52,22 +52,18 @@ tasks.withType<Test> {
 
 tasks.named<Test>("test") {
     filter {
-        // Exclure les classes dans le package 'com.cheroliv.bakery.scenarios' (tests Cucumber)
-        excludeTestsMatching("com.cheroliv.bakery.scenarios.**")
+        // Exclure les classes dans le package 'com.cheroliv.slider.scenarios' (tests Cucumber)
+        excludeTestsMatching("com.cheroliv.slider.scenarios.**")
         // Exclure également les classes de functionalTest
-        excludeTestsMatching("com.cheroliv.bakery.BakeryPluginFunctionalTests")
+        excludeTestsMatching("com.cheroliv.slider.SliderPluginFunctionalTests")
     }
 }
 
 
 // 1. Créer le SourceSet functionalTest
 val functionalTest: SourceSet by sourceSets.creating {
-    java {
-        srcDirs("src/functionalTest/kotlin")
-    }
-    resources {
-        srcDirs("src/functionalTest/resources")
-    }
+    java.srcDirs("src/functionalTest/kotlin")
+    resources.srcDirs("src/functionalTest/resources")
 }
 
 // 2. Ajouter GradleTestKit à functionalTest (SANS hériter de testImplementation)
@@ -99,9 +95,7 @@ val functionalTestTask = tasks.register<Test>("functionalTest") {
     group = "verification"
     testClassesDirs = functionalTest.output.classesDirs
     classpath = configurations[functionalTest.runtimeClasspathConfigurationName] + functionalTest.output
-
     useJUnitPlatform()
-
     testLogging {
         events("passed", "skipped", "failed")
         showStandardStreams = true
@@ -116,12 +110,8 @@ tasks.named<ProcessResources>(functionalTest.processResourcesTaskName) {
 // 4. Configurer les sources sets pour Cucumber (test standard)
 sourceSets {
     test {
-        resources {
-            srcDir("src/test/features")
-        }
-        java {
-            srcDir("src/test/scenarios")  // Steps dans scenarios/
-        }
+        resources.srcDir("src/test/features")
+        java.srcDir("src/test/scenarios")  // Steps dans scenarios/
     }
 }
 
@@ -157,30 +147,23 @@ configurations {
 val cucumberTest = tasks.register<Test>("cucumberTest") {
     description = "Runs Cucumber BDD tests"
     group = "verification"
-
     testClassesDirs = sourceSets.test.get().output.classesDirs
-
     classpath = configurations.testRuntimeClasspath.get() +
             sourceSets.test.get().output +
             functionalTest.output +
             sourceSets.main.get().output
-
     useJUnitPlatform {
         // CORRECTION: Ne pas filtrer par tag ici, ça filtre les engines JUnit
         // Le filtrage des scénarios Cucumber se fait dans le runner via FILTER_TAGS_PROPERTY_NAME
         excludeEngines("junit-jupiter")
     }
-
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
-
     testLogging {
         events("passed", "skipped", "failed")
         showStandardStreams = true
         exceptionFormat = FULL
     }
-
     outputs.upToDateWhen { false }
-
     // S'assurer que functionalTest et main sont compilés avant
     dependsOn(functionalTest.classesTaskName)
     dependsOn(tasks.classes)
@@ -198,16 +181,16 @@ tasks.check {
 
 gradlePlugin {
     plugins {
-        create("bakery") {
-            id = libs.plugins.bakery.get().pluginId
-            implementationClass = "${libs.plugins.bakery.get().pluginId}.BakeryPlugin"
-            displayName = "Bakery Plugin"
-            description = "Gradle plugin for static site generation."
-            tags.set(listOf("jbake", "static-site-generator", "blog", "jgit", "asciidoc", "markdown", "thymeleaf"))
+        create("slider") {
+            id = libs.plugins.slider.get().pluginId
+            implementationClass = "${libs.plugins.slider.get().pluginId}.SliderPlugin"
+            displayName = "Slider Plugin"
+            description = "Gradle plugin for slider generation."
+            tags.set(listOf("revealjs", "slide-generator", "slide", "jgit", "asciidoc"))
         }
     }
     website = "https://cheroliv.com"
-    vcsUrl = "https://github.com/cheroliv/bakery-gradle.git"
+    vcsUrl = "https://github.com/cheroliv/slider-gradle.git"
     testSourceSets(functionalTest)
 }
 
@@ -221,8 +204,8 @@ publishing {
         withType<MavenPublication> {
             if (name == "pluginMaven") {
                 pom {
-                    name.set(gradlePlugin.plugins.getByName("bakery").displayName)
-                    description.set(gradlePlugin.plugins.getByName("bakery").description)
+                    name.set(gradlePlugin.plugins.getByName("slider").displayName)
+                    description.set(gradlePlugin.plugins.getByName("slider").description)
                     url.set(gradlePlugin.website.get())
                     licenses {
                         license {
