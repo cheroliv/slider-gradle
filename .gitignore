@@ -1,6 +1,7 @@
 .idea
 build
 site.yml
+slides-context.yml
 .gradle
 *.iml
 *.ipr
