@@ -68,31 +68,29 @@ object WorkspaceUtils {
     @Throws(RuntimeException::class)
     fun Project.lsWorkingDir() =
         ByteArrayOutputStream().use { outputStream: OutputStream ->
-            exec {
+            val result = exec {
                 standardOutput = outputStream
                 workingDir = projectDir
                 when {
-                    "os.name"
-                        .run(System::getProperty)
+                    System.getProperty("os.name")
                         .lowercase()
                         .contains("windows") -> commandLine(
                         "cmd.exe",
                         "/c",
                         "dir",
-                        workingDir,
+                        projectDir.absolutePath,
                         "/b"
                     )
 
-                    else -> commandLine("ls", workingDir)
+                    else -> commandLine("ls", projectDir.absolutePath)
                 }
-            }.let { result ->
-                when {
-                    result.exitValue != 0 -> throw RuntimeException("Command ls failed.")
-                    else -> outputStream.toString()
-                        .trim()
-                        .run { "Command ls output:\n$this" }
-                        .let(::println)
-                }
+            }
+            when {
+                result.exitValue != 0 -> throw RuntimeException("Command ls failed.")
+                else -> outputStream.toString()
+                    .trim()
+                    .run { "Command ls output:\n$this" }
+                    .let(::println)
             }
         }
 }
