@@ -27,7 +27,7 @@ import slides.SlidesPlugin.Slide.DEFAULT_SLIDES_FOLDER
 import workspace.WorkspaceUtils.sep
 import java.io.File.separator
 
-plugins { this.id("org.asciidoctor.jvm.revealjs") }
+plugins { id("org.asciidoctor.jvm.revealjs") }
 
 apply<slides.SlidesPlugin>()
 
