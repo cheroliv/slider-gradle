@@ -10,44 +10,20 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.repositories
+import slides.Slides.RevealJsSlides.GROUP_TASK_SLIDER
+import slides.Slides.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
+import slides.Slides.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
+import slides.Slides.RevealJsSlides.TASK_PUBLISH_SLIDES
+import slides.Slides.RevealJsSlides.TASK_SERVE_SLIDES
+import slides.Slides.Serve.SERVE_DEP
 import slides.SlidesManager.CONFIG_PATH_KEY
 import slides.SlidesManager.deckFile
 import slides.SlidesManager.pushSlides
-import slides.SlidesPlugin.RevealJsSlides.GROUP_TASK_SLIDER
-import slides.SlidesPlugin.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
-import slides.SlidesPlugin.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
-import slides.SlidesPlugin.RevealJsSlides.TASK_PUBLISH_SLIDES
-import slides.SlidesPlugin.RevealJsSlides.TASK_SERVE_SLIDES
-import slides.SlidesPlugin.Serve.SERVE_DEP
 import workspace.WorkspaceUtils.sep
 import java.io.File
 import java.io.File.separator
 
 class SlidesPlugin : Plugin<Project> {
-    object RevealJsSlides {
-        const val GROUP_TASK_SLIDER = "slider"
-        const val TASK_ASCIIDOCTOR_REVEALJS = "asciidoctorRevealJs"
-        const val TASK_CLEAN_SLIDES_BUILD = "cleanSlidesBuild"
-        const val TASK_DASHBOARD_SLIDES_BUILD = "dashSlidesBuild"
-        const val TASK_PUBLISH_SLIDES = "publishSlides"
-        const val BUILD_GRADLE_KEY = "build-gradle"
-        const val ENDPOINT_URL_KEY = "endpoint-url"
-        const val SOURCE_HIGHLIGHTER_KEY = "source-highlighter"
-        const val CODERAY_CSS_KEY = "coderay-css"
-        const val IMAGEDIR_KEY = "imagesdir"
-        const val TOC_KEY = "toc"
-        const val ICONS_KEY = "icons"
-        const val SETANCHORS_KEY = "setanchors"
-        const val IDPREFIX_KEY = "idprefix"
-        const val IDSEPARATOR_KEY = "idseparator"
-        const val DOCINFO_KEY = "docinfo"
-        const val REVEALJS_THEME_KEY = "revealjs_theme"
-        const val REVEALJS_TRANSITION_KEY = "revealjs_transition"
-        const val REVEALJS_HISTORY_KEY = "revealjs_history"
-        const val REVEALJS_SLIDENUMBER_KEY = "revealjs_slideNumber"
-        const val TASK_SERVE_SLIDES = "serveSlides"
-    }
-
     override fun apply(project: Project) {
         project.plugins.apply("com.github.node-gradle.node")
         project.plugins.apply("org.asciidoctor.jvm.revealjs")
@@ -67,15 +43,16 @@ class SlidesPlugin : Plugin<Project> {
             group = GROUP_TASK_SLIDER
             description = "Delete generated presentation in build directory."
             doFirst {
-                "${project.layout.buildDirectory}/docs/asciidocRevealJs".run {
-                    "$this/images"
-                        .let(::File)
-                        .deleteRecursively()
-                    let(::File)
-                        .listFiles()
-                        ?.filter { it.isFile && it.name.endsWith(".html") }
-                        ?.forEach { it.delete() }
-                }
+                project.layout.buildDirectory.get().asFile
+                    .resolve("docs")
+                    .resolve("asciidocRevealJs")
+                    .run {
+                        resolve("slides.json").run { if (exists()) delete() }
+                        resolve("images").deleteRecursively()
+                        listFiles()
+                            ?.filter { it.isFile && it.name.endsWith(".html") }
+                            ?.forEach { it.delete() }
+                    }
             }
         }
 
@@ -248,18 +225,4 @@ class SlidesPlugin : Plugin<Project> {
             )
         }
     }
-
-    object Serve {
-        const val PACKAGE_NAME = "serve"
-        const val VERSION = "14.2.4"
-        const val SERVE_DEP = "$PACKAGE_NAME@$VERSION"
-    }
-
-    object Slide {
-        const val SLIDES_FOLDER = "slides"
-        const val IMAGES = "images"
-        const val DEFAULT_SLIDES_FOLDER = "misc"
-        //TODO: construct path from config file in yaml format
-    }
-
 }
