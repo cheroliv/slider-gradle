@@ -35,7 +35,7 @@ class SlidesPlugin : Plugin<Project> {
 
         project.tasks.register<AsciidoctorTask>("asciidoctor") {
             group = GROUP_TASK_SLIDER
-            dependsOn(project.tasks.findByPath("asciidoctorRevealJs") as Any)
+            dependsOn(project.tasks.findByPath("asciidoctorRevealJs"))
         }
 
         project.tasks.register<DefaultTask>("cleanSlidesBuild") {
@@ -149,12 +149,10 @@ class SlidesPlugin : Plugin<Project> {
             dependsOn("asciidoctor")
             doFirst { "Task description :\n\t$description".run(project.logger::info) }
             doLast {
-                val localConf: SlidesConfiguration =
-                    "${project.rootDir}${separator}${project.properties[CONFIG_PATH_KEY]}"
-                        .run(::File)
-                        .readText()
-                        .trimIndent()
-                        .run(YAMLMapper()::readValue)
+                val localConf: SlidesConfiguration = project.properties[CONFIG_PATH_KEY].toString()
+                    .run(project.layout.projectDirectory.asFile::resolve)
+                    .readText().trimIndent()
+                    .run(YAMLMapper()::readValue)
 
                 val repoDir = project.layout.buildDirectory.get().asFile.resolve(localConf.pushSlides!!.to)
 
