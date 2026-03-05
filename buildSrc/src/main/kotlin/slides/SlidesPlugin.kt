@@ -19,7 +19,6 @@ import slides.Slides.Serve.SERVE_DEP
 import slides.SlidesManager.CONFIG_PATH_KEY
 import slides.SlidesManager.deckFile
 import slides.SlidesManager.pushSlides
-import workspace.WorkspaceUtils.sep
 import java.io.File
 import java.io.File.separator
 
@@ -92,23 +91,17 @@ class SlidesPlugin : Plugin<Project> {
                     }
 
                 val outputDir = project.layout.buildDirectory.get().asFile
-                    .run { "$this/docs/asciidocRevealJs" }
-                    .run(::File)
-                    .apply {
-                        "output dir path: $this"
-                            .run(project.logger::info)
-                    }
+                    .resolve("docs")
+                    .resolve("asciidocRevealJs")
+                    .also { "output dir path: $it".run(project.logger::info) }
 
-                val indexFile: File = "$slidesDir/index.html"
-                    .run(::File)
-                    .apply {
-                        readText().trimIndent()
-                            .run { "index.html:\n$this" }
-                            .run(project.logger::info)
-                    }
+                val indexFile: File = slidesDir.resolve("index.html").apply {
+                    readText().trimIndent()
+                        .run { "index.html:\n$this" }
+                        .run(project.logger::info)
+                }
 
-                val slidesJsonFile = File("$outputDir/slides.json")
-
+                val slidesJsonFile = outputDir.resolve("slides.json")
 
                 // Créer le dossier de sortie s'il n'existe pas
                 outputDir.mkdirs()
@@ -124,7 +117,7 @@ class SlidesPlugin : Plugin<Project> {
                 }.apply { println(this) } ?: emptyList()
 
                 // Générer le fichier slides.json
-                val jsonContent = buildString {
+                buildString {
                     appendLine("[")
                     adocFiles.forEachIndexed { index, slide ->
                         append("  {")
@@ -135,14 +128,12 @@ class SlidesPlugin : Plugin<Project> {
                         appendLine()
                     }
                     appendLine("]")
-                }
-
-                slidesJsonFile.writeText(jsonContent)
+                }.run(slidesJsonFile::writeText)
 
                 // Générer le fichier index.html
                 slidesDir.listFiles()
                     .find { it.name == "index.html" }!!
-                    .copyTo(File("${outputDir}/index.html"), true)
+                    .copyTo(outputDir.resolve("index.html"), true)
 
                 println("✅ Dashboard généré avec succès !")
                 println("📁 Fichiers générés :")
@@ -159,18 +150,18 @@ class SlidesPlugin : Plugin<Project> {
             doFirst { "Task description :\n\t$description".run(project.logger::info) }
             doLast {
                 val localConf: SlidesConfiguration =
-                    "${project.rootDir}${sep}${project.properties[CONFIG_PATH_KEY]}"
+                    "${project.rootDir}${separator}${project.properties[CONFIG_PATH_KEY]}"
                         .run(::File)
                         .readText()
                         .trimIndent()
                         .run(YAMLMapper()::readValue)
 
-                val repoDir = "${project.layout.buildDirectory.get().asFile}$sep${localConf.pushSlides?.to}"
-                    .run(::File)
+                val repoDir = project.layout.buildDirectory.get().asFile.resolve(localConf.pushSlides!!.to)
 
                 project.pushSlides({
-                    "${project.layout.buildDirectory.get().asFile}$sep${localConf.srcPath}"
-                        .run(::File).absolutePath
+                    project.layout.buildDirectory.get().asFile
+                        .resolve(localConf.srcPath!!)
+                        .absolutePath
                 }, { repoDir.absolutePath })
             }
         }
@@ -186,7 +177,11 @@ class SlidesPlugin : Plugin<Project> {
         project.tasks.register<Exec>("execServeSlides") {
             group = GROUP_TASK_SLIDER
             description = "Serve slides using the serve package executed via command line"
-            commandLine("npx", SERVE_DEP, "build/docs/asciidocRevealJs/")
+            commandLine(
+                "npx",
+                SERVE_DEP,
+                "build${separator}docs${separator}asciidocRevealJs$separator"
+            )
             workingDir = project.layout.projectDirectory.asFile
         }
 
@@ -195,10 +190,16 @@ class SlidesPlugin : Plugin<Project> {
             description = "Serve slides using the serve package executed via npx"
             dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
             command.set(SERVE_DEP)
-            args.set(listOf("build/docs/asciidocRevealJs/"))
+            project.layout.buildDirectory.get().asFile
+                .resolve("docs")
+                .resolve("asciidocRevealJs")
+                .absolutePath
+                .run(::listOf)
+                .run(args::set)
             workingDir.set(project.layout.projectDirectory.asFile)
             doFirst { println("Serve slides using the serve package executed via npx") }
         }
+
         project.tasks.register<Exec>("reportTests") {
             group = "verification"
             description = "Check slider project then show report in firefox"
@@ -206,9 +207,12 @@ class SlidesPlugin : Plugin<Project> {
             commandLine(
                 "firefox",
                 "--new-tab",
-                "build${separator}reports${separator}tests${separator}test${separator}index.html"
-                    .run(project.layout.projectDirectory.asFile.toPath()::resolve)
-                    .toAbsolutePath(),
+                project.layout.buildDirectory.asFile.get()
+                    .resolve("reports")
+                    .resolve("tests")
+                    .resolve("test")
+                    .resolve("index.html")
+                    .absolutePath,
             )
         }
 
@@ -219,9 +223,12 @@ class SlidesPlugin : Plugin<Project> {
             commandLine(
                 "firefox",
                 "--new-tab",
-                "build${separator}reports${separator}tests${separator}functionalTest${separator}index.html"
-                    .run(project.layout.projectDirectory.asFile.toPath()::resolve)
-                    .toAbsolutePath(),
+                project.layout.buildDirectory.get().asFile
+                    .resolve("reports")
+                    .resolve("tests")
+                    .resolve("functionalTest")
+                    .resolve("index.html")
+                    .absolutePath,
             )
         }
     }
