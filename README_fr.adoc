@@ -10,7 +10,7 @@
 ++++
 <p align="right">
   <a href="README.adoc">
-    <img src="slider-plugin/images/lang-fr-red.svg" alt="English" width="64"/>
+    <img src="slider-plugin/images/lang-en-blue.svg" alt="English" width="64"/>
   </a>
 </p>
 ++++
