@@ -2,28 +2,28 @@
 //
 //slider { configPath = file("site.yml").absolutePath }
 import org.asciidoctor.gradle.jvm.slides.AsciidoctorJRevealJSTask
-import slides.SlidesPlugin.RevealJsSlides.BUILD_GRADLE_KEY
-import slides.SlidesPlugin.RevealJsSlides.CODERAY_CSS_KEY
-import slides.SlidesPlugin.RevealJsSlides.DOCINFO_KEY
-import slides.SlidesPlugin.RevealJsSlides.ENDPOINT_URL_KEY
-import slides.SlidesPlugin.RevealJsSlides.GROUP_TASK_SLIDER
-import slides.SlidesPlugin.RevealJsSlides.ICONS_KEY
-import slides.SlidesPlugin.RevealJsSlides.IDPREFIX_KEY
-import slides.SlidesPlugin.RevealJsSlides.IDSEPARATOR_KEY
-import slides.SlidesPlugin.RevealJsSlides.IMAGEDIR_KEY
-import slides.SlidesPlugin.RevealJsSlides.REVEALJS_HISTORY_KEY
-import slides.SlidesPlugin.RevealJsSlides.REVEALJS_SLIDENUMBER_KEY
-import slides.SlidesPlugin.RevealJsSlides.REVEALJS_THEME_KEY
-import slides.SlidesPlugin.RevealJsSlides.REVEALJS_TRANSITION_KEY
-import slides.SlidesPlugin.RevealJsSlides.SETANCHORS_KEY
-import slides.SlidesPlugin.RevealJsSlides.SOURCE_HIGHLIGHTER_KEY
-import slides.SlidesPlugin.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
-import slides.SlidesPlugin.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
-import slides.SlidesPlugin.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
-import slides.SlidesPlugin.RevealJsSlides.TOC_KEY
-import slides.SlidesPlugin.Slide.DEFAULT_SLIDES_FOLDER
-import slides.SlidesPlugin.Slide.IMAGES
-import slides.SlidesPlugin.Slide.SLIDES_FOLDER
+import slides.Slides.RevealJsSlides.BUILD_GRADLE_KEY
+import slides.Slides.RevealJsSlides.CODERAY_CSS_KEY
+import slides.Slides.RevealJsSlides.DOCINFO_KEY
+import slides.Slides.RevealJsSlides.ENDPOINT_URL_KEY
+import slides.Slides.RevealJsSlides.GROUP_TASK_SLIDER
+import slides.Slides.RevealJsSlides.ICONS_KEY
+import slides.Slides.RevealJsSlides.IDPREFIX_KEY
+import slides.Slides.RevealJsSlides.IDSEPARATOR_KEY
+import slides.Slides.RevealJsSlides.IMAGEDIR_KEY
+import slides.Slides.RevealJsSlides.REVEALJS_HISTORY_KEY
+import slides.Slides.RevealJsSlides.REVEALJS_SLIDENUMBER_KEY
+import slides.Slides.RevealJsSlides.REVEALJS_THEME_KEY
+import slides.Slides.RevealJsSlides.REVEALJS_TRANSITION_KEY
+import slides.Slides.RevealJsSlides.SETANCHORS_KEY
+import slides.Slides.RevealJsSlides.SOURCE_HIGHLIGHTER_KEY
+import slides.Slides.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
+import slides.Slides.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
+import slides.Slides.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
+import slides.Slides.RevealJsSlides.TOC_KEY
+import slides.Slides.Slide.DEFAULT_SLIDES_FOLDER
+import slides.Slides.Slide.IMAGES
+import slides.Slides.Slide.SLIDES_FOLDER
 import workspace.WorkspaceUtils.sep
 
 plugins { id("org.asciidoctor.jvm.revealjs") }
@@ -33,7 +33,7 @@ apply<slides.SlidesPlugin>()
 project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
     repositories { ruby { gems() } }
     group = GROUP_TASK_SLIDER
-    description = "Slider settings"
+    description = "Slider settings and generation"
     dependsOn(TASK_CLEAN_SLIDES_BUILD)
     finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
     revealjs {
