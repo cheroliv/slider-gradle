@@ -21,8 +21,9 @@ import slides.SlidesPlugin.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
 import slides.SlidesPlugin.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
 import slides.SlidesPlugin.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
 import slides.SlidesPlugin.RevealJsSlides.TOC_KEY
-import slides.SlidesPlugin.Slide.defaultSlideDirectory
 import slides.SlidesPlugin.Slide.IMAGES
+import slides.SlidesPlugin.Slide.SLIDES_FOLDER
+import slides.SlidesPlugin.Slide.DEFAULT_SLIDES_FOLDER
 import workspace.WorkspaceUtils.sep
 import java.io.File.separator
 
@@ -48,7 +49,9 @@ project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
     revealjsOptions {
         //TODO: passer cette adresse a la configuration du slide pour indiquer sa source,
         // creer une localConf de type slides.SlidesConfiguration
-        defaultSlideDirectory
+        project.layout.projectDirectory.asFile
+            .resolve(SLIDES_FOLDER)
+            .resolve(DEFAULT_SLIDES_FOLDER)
             .apply { println("Slide source absolute path: $absolutePath") }
             .let(::setSourceDir)
         baseDirFollowsSourceFile()
