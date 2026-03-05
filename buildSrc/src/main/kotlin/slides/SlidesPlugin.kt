@@ -20,7 +20,6 @@ import slides.SlidesManager.CONFIG_PATH_KEY
 import slides.SlidesManager.deckFile
 import slides.SlidesManager.pushSlides
 import java.io.File
-import java.io.File.separator
 
 class SlidesPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -178,7 +177,10 @@ class SlidesPlugin : Plugin<Project> {
             commandLine(
                 "npx",
                 SERVE_DEP,
-                "build${separator}docs${separator}asciidocRevealJs$separator"
+                project.layout.buildDirectory.asFile.get()
+                    .resolve("docs")
+                    .resolve("asciidocRevealJs")
+                    .absolutePath
             )
             workingDir = project.layout.projectDirectory.asFile
         }
