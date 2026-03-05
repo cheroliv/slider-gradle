@@ -230,16 +230,14 @@ class SlidesPlugin : Plugin<Project> {
     }
 
     object Slide {
-        const val OFFICE_FOLDER = "office"
         const val SLIDES_FOLDER = "slides"
-        const val WORKSPACE_FOLDER = "workspace"
         const val IMAGES = "images"
         const val DEFAULT_SLIDES_FOLDER = "misc"
 
         //TODO: construct path from config file in yaml format
-        val officeDir: String
-            get() = "${System.getProperty("user.home")}$sep$WORKSPACE_FOLDER$sep$OFFICE_FOLDER"
-        val DEFAULT_SLIDES_FOLDER_PATH = "$officeDir$sep$SLIDES_FOLDER$sep$DEFAULT_SLIDES_FOLDER"
+
+        val Project.defaultSlideDirectory : File
+            get() =layout.projectDirectory.asFile.resolve(SLIDES_FOLDER).resolve(defaultSlideDirectory)
     }
 
 }

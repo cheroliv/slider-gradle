@@ -1,3 +1,0 @@
-package database
-
-object DatabaseManager

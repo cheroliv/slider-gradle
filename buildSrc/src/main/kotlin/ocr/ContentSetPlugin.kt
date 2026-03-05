@@ -1,4 +1,0 @@
-package ocr
-
-class ContentSetPlugin {
-}

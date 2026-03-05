@@ -21,23 +21,14 @@ import slides.SlidesPlugin.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
 import slides.SlidesPlugin.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
 import slides.SlidesPlugin.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
 import slides.SlidesPlugin.RevealJsSlides.TOC_KEY
-import slides.SlidesPlugin.Slide.DEFAULT_SLIDES_FOLDER_PATH
+import slides.SlidesPlugin.Slide.defaultSlideDirectory
 import slides.SlidesPlugin.Slide.IMAGES
 import workspace.WorkspaceUtils.sep
 import java.io.File.separator
 
 plugins { this.id("org.asciidoctor.jvm.revealjs") }
 
-apply<school.frontend.SchoolPlugin>()
-apply<forms.FormPlugin>()
-apply<jbake.JBakeGhPagesPlugin>()
-apply<ai.AssistantPlugin>()
-apply<translate.TranslatorPlugin>()
 apply<slides.SlidesPlugin>()
-apply<api.ApiPlugin>()
-apply<workspace.WorkspacePlugin>()
-apply<school.training.content.TrainingContentPlugin>()
-apply<school.training.courses.CoursesPlugin>()
 
 project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
     repositories { ruby { gems() } }
@@ -57,8 +48,7 @@ project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
     revealjsOptions {
         //TODO: passer cette adresse a la configuration du slide pour indiquer sa source,
         // creer une localConf de type slides.SlidesConfiguration
-        DEFAULT_SLIDES_FOLDER_PATH
-            .let(::File)
+        defaultSlideDirectory
             .apply { println("Slide source absolute path: $absolutePath") }
             .let(::setSourceDir)
         baseDirFollowsSourceFile()

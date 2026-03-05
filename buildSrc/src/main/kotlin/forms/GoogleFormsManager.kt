@@ -1,3 +1,0 @@
-package forms
-
-object GoogleFormsManager

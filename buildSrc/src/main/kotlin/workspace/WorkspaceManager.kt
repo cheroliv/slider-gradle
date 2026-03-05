@@ -8,9 +8,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import git.*
 import git.WorkspaceError.FileNotFound
 import git.WorkspaceError.ParsingError
-import jbake.BakeConfiguration
-import jbake.JBakeGhPagesManager.copyFilesTo
-import jbake.SiteConfiguration
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
@@ -39,11 +36,7 @@ object WorkspaceManager {
     const val GROUP_TASK_SITE = "site"
     const val CONFIG_PATH_KEY = "managed_config_path"
 
-    val Project.bakeSrcPath: String get() = localConf.bake?.srcPath!!
-    val Project.bakeDestDirPath: String get() = localConf.bake?.destDirPath!!
     val Project.workspacePath get() = "$projectDir$sep${properties[WORKSPACE_PATH_KEY]}"
-    val Project.localConf: SiteConfiguration
-        get() = readSiteConfigurationFile { "$rootDir$sep${properties[CONFIG_PATH_KEY]}" }
     val Map<*, *>.isCnameExists: Boolean
         get() = DNS_CNAME
             .lowercase()
@@ -92,113 +85,6 @@ object WorkspaceManager {
                     .let(::println)
             }
 
-    }
-
-    fun Project.readSiteConfigurationFile(
-        configPath: () -> String
-    ): SiteConfiguration = try {
-        configPath()
-            .run(::File)
-            .run(yamlMapper::readValue)
-    } catch (e: Exception) {
-        // Handle exception or log error
-        SiteConfiguration(
-            BakeConfiguration(
-                "",
-                "",
-                null
-            ),
-            GitPushConfiguration(
-                "",
-                "",
-                RepositoryConfiguration(
-                    "",
-                    "",
-                    RepositoryCredentials(
-                        "",
-                        ""
-                    )
-                ),
-                "",
-                ""
-            )
-        )
-    }
-
-
-    fun Project.initAddCommitToSite(
-        repoDir: File,
-        conf: SiteConfiguration,
-    ): RevCommit {
-        //3) initialiser un repo dans le dossier cvs
-        Git.init().setDirectory(repoDir).call().run {
-            assert(!repository.isBare)
-            assert(repository.directory.isDirectory)
-            // add remote repo:
-            remoteAdd().apply {
-                setName(CVS_ORIGIN)
-                setUri(URIish(conf.pushPage.repo.repository))
-                // you can add more settings here if needed
-            }.call()
-            //4) ajouter les fichiers du dossier cvs à l'index
-            add().addFilepattern(".").call()
-            //5) commit
-            return commit().setMessage(conf.pushPage.message).call()
-        }
-    }
-
-    @Throws(IOException::class)
-    fun Project.pushSite(
-        repoDir: File,
-        conf: SiteConfiguration,
-    ): MutableIterable<PushResult>? = FileRepositoryBuilder()
-        .setGitDir("${repoDir.absolutePath}$sep.git".let(::File))
-        .readEnvironment()
-        .findGitDir()
-        .setMustExist(true)
-        .build()
-        .apply {
-            config.apply {
-                getString(
-                    CVS_REMOTE,
-                    CVS_ORIGIN,
-                    conf.pushPage.repo.repository
-                )
-            }.save()
-            if (isBare) throw IOException("Repo dir should not be bare")
-        }
-        .let(::Git)
-        .run {
-            // push to remote:
-            return push().setCredentialsProvider(
-                UsernamePasswordCredentialsProvider(
-                    conf.pushPage.repo.credentials.username,
-                    conf.pushPage.repo.credentials.password
-                )
-            ).apply {
-                //you can add more settings here if needed
-                remote = CVS_ORIGIN
-                isForce = true
-            }.call()
-        }
-
-
-    //    "deploy": "gh-pages -d dist -b 'master' history false message 'https://cheroliv.github.io/talaria' repo 'https://github.com/cheroliv/talaria.git https://git:${GITHUB_TOKEN}@github.com/cheroliv/talaria.git' dest '.' ",
-    // passer par un workspaceEither pour récupérer le workspace
-    fun Project.pushSiteToGhPages(
-        destPath: () -> String,
-        pathTo: () -> String
-    ) = createDirectory(pathTo()).let { it: File ->
-        copyFilesTo(destPath(), it)
-            .takeIf { it is FileOperationResult.Success }
-            ?.run {
-                initAddCommitToSite(it, localConf)
-                pushSite(it, localConf)
-                it.deleteRecursively()
-                destPath()
-                    .let(::File)
-                    .deleteRecursively()
-            }
     }
 
     //TODO: si workspace.conf.path n'existe pas dans gradle properties, alors tu crées l'entrée dedans.

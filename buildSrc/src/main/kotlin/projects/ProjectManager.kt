@@ -1,3 +1,0 @@
-package projects
-
-object ProjectManager

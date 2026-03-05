@@ -16,6 +16,7 @@ import org.gradle.api.tasks.options.Option
 import org.gradle.kotlin.dsl.register
 import translate.TranslatorManager.PromptManager.getTranslatePromptMessage
 import workspace.WorkspaceUtils.uppercaseFirstChar
+import java.lang.System.getProperty
 import java.util.Locale.*
 
 object TranslatorManager {
@@ -64,10 +65,10 @@ object TranslatorManager {
 
     object PromptManager {
         @JvmStatic
-        val userLanguage = System.getProperty("user.language")!!
+        val userLanguage = getProperty("user.language")!!
 
         @JvmStatic
-        val fromLanguage = System.getProperty("user.language")!!
+        val fromLanguage = getProperty("user.language")!!
 
         @JvmStatic
         fun Pair<String, String>.getTranslatePromptMessage(text: String): String = Pair(

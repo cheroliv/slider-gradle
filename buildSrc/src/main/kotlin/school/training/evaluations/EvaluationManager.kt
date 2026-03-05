@@ -1,3 +1,0 @@
-package school.training.evaluations
-
-object EvaluationManager
