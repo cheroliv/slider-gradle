@@ -44,7 +44,6 @@ val Project.versions: Map<String, String>
 
 dependencies {
     setOf(
-        "com.avast.gradle:gradle-docker-compose-plugin:0.17.6",
         "com.github.node-gradle:gradle-node-plugin:7.0.1",
         "jakarta.xml.bind:jakarta.xml.bind-api:4.0.2",
         "com.fasterxml.jackson.module:jackson-module-kotlin:${versions[jacksonVersionKey]}",
@@ -65,7 +64,7 @@ dependencies {
         "org.asciidoctor:asciidoctor-gradle-jvm-gems:${versions[asciidoctorGradleVersionKey]}",
         "com.burgstaller:okhttp-digest:1.10",
         "org.ysb33r.gradle:grolifant:0.12.1",
-        "com.avast.gradle:gradle-docker-compose-plugin:0.14.2",
+        "com.avast.gradle:gradle-docker-compose-plugin:0.17.6",
         "org.gradle:gradle-tooling-api:8.6",
         "dev.langchain4j:langchain4j:${versions[langchain4jVersionKey]}",
         "dev.langchain4j:langchain4j-ollama:${versions[langchain4jExtensionVersionKey]}",
