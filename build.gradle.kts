@@ -1,6 +1,6 @@
 //plugins { alias(libs.plugins.slider) }
 //
-//slider { configPath = file("site.yml").absolutePath }
+//slider { configPath = file("slides-context.yml").absolutePath }
 import org.asciidoctor.gradle.jvm.slides.AsciidoctorJRevealJSTask
 import slides.Slides.RevealJsSlides.BUILD_GRADLE_KEY
 import slides.Slides.RevealJsSlides.CODERAY_CSS_KEY
