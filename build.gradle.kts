@@ -21,9 +21,9 @@ import slides.SlidesPlugin.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
 import slides.SlidesPlugin.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
 import slides.SlidesPlugin.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
 import slides.SlidesPlugin.RevealJsSlides.TOC_KEY
+import slides.SlidesPlugin.Slide.DEFAULT_SLIDES_FOLDER
 import slides.SlidesPlugin.Slide.IMAGES
 import slides.SlidesPlugin.Slide.SLIDES_FOLDER
-import slides.SlidesPlugin.Slide.DEFAULT_SLIDES_FOLDER
 import workspace.WorkspaceUtils.sep
 import java.io.File.separator
 
@@ -56,13 +56,13 @@ project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
             .let(::setSourceDir)
         baseDirFollowsSourceFile()
         resources {
-            from("$sourceDir$sep$IMAGES") {
+            from(sourceDir.resolve(IMAGES)) {
                 include("**")
                 into(IMAGES)
             }
         }
         mapOf(
-            BUILD_GRADLE_KEY to layout.projectDirectory
+            BUILD_GRADLE_KEY to project.layout.projectDirectory
                 .asFile
                 .let { "$it${sep}build.gradle.kts" }
                 .let(::File),
