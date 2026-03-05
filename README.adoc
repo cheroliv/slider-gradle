@@ -1,5 +1,143 @@
-= Gradle Slider
+= Gradle Slider Project
 :toc: left
 :toclevels: 3
 :source-highlighter: rouge
-:slider-version: "0.0.0"
+:icons: font
+:lang: en
+:hardbreaks-option:
+
+++++
+<p align="right">
+  <a href="README_fr.adoc">
+    <img src="slider-plugin/images/lang-fr-red.svg" alt="Français" width="64"/>
+  </a>
+</p>
+++++
+
+image:https://img.shields.io/badge/Kotlin-2.x-7F52FF?logo=kotlin[Kotlin]
+image:https://img.shields.io/badge/Gradle-8.x-02303A?logo=gradle[Gradle]
+image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
+
+== Description
+This project demonstrates how to use **Gradle 8.14.2** with **Java 17** to create interactive presentations using *AsciidoctorJ Reveal.js*.
+
+== Prerequisites
+* JDK 17
+* Gradle Wrapper (version 8.14.2 included)
+* Internet connection (to download Reveal.js dependencies)
+
+== Project Structure
+```
+.
+├── build.gradle.kts          # Main Gradle configuration
+├── buildSrc/                 # Shared Kotlin code for sub‑projects
+├── slides/                   # Presentation content ( *.adoc* files )
+├── slider-plugin/           # Future plugin – not used for now
+├── gradle/                  # Gradle Wrapper
+├── README.adoc               # This file
+└── ...
+```
+
+== Slider Tasks
+
+The following Gradle tasks are available to manage the full lifecycle of your presentations:
+
+=== Build
+
+`asciidoctor`::
+Runs the standard Asciidoctor conversion (HTML backend).
+
+`asciidoctorRevealJs`::
+Compiles the `.adoc` sources into a Reveal.js HTML presentation.
+Slides are generated in `build/docs/revealjs/`.
+
+`cleanSlidesBuild`::
+Deletes the generated presentation artifacts from the `build` directory.
++
+```bash
+./gradlew cleanSlidesBuild
+```
+
+=== Serve
+
+`serveSlides`::
+Serves the slides using the *serve* package executed via **npx**.
+Useful for a quick local preview without opening a browser manually.
++
+```bash
+./gradlew serveSlides
+```
+
+`execServeSlides`::
+Same as `serveSlides` but invoked directly from the command line (no npx wrapper).
++
+```bash
+./gradlew execServeSlides
+```
+
+=== Open
+
+`openChromium`::
+Opens the default deck file (`default.deck.file`) in **Chromium**.
++
+```bash
+./gradlew openChromium
+```
+
+`openFirefox`::
+Opens the presentation dashboard in **Firefox**.
++
+```bash
+./gradlew openFirefox
+```
+
+=== Deploy
+
+`publishSlides`::
+Deploys the generated slides to the configured remote repository (e.g. GitHub Pages).
++
+```bash
+./gradlew publishSlides
+```
+
+=== Typical workflows
+
+.Build and preview locally
+```bash
+./gradlew asciidoctorRevealJs serveSlides
+```
+
+.Clean, rebuild, and open in Chromium
+```bash
+./gradlew cleanSlidesBuild asciidoctorRevealJs openChromium
+```
+
+.Publish to remote
+```bash
+./gradlew asciidoctorRevealJs publishSlides
+```
+
+== Building the slides
+```bash
+./gradlew clean asciidoctorRevealJs
+```
+The `asciidoctorRevealJs` task generates HTML files in the `build/docs/revealjs` directory.
+
+== Running the presentation
+Open the file `build/docs/revealjs/index.html` in your preferred browser.
+
+== Advanced configuration
+The `build.gradle.kts` script exposes many options via `revealjsOptions { … }`:
+* `REVEALJS_THEME_KEY` – theme (default *black*)
+* `REVEALJS_TRANSITION_KEY` – slide transition style
+* `REVEALJS_HISTORY_KEY` – enables browser history navigation
+* `SOURCE_HIGHLIGHTER_KEY` – *coderay* for code syntax highlighting
+These settings can be adjusted in the `build.gradle.kts` file.
+
+== Roadmap
+* The `slider-plugin/` directory is planned for future extensions (e.g., a dedicated Gradle plugin).
+* Add automated tests for slide generation.
+* Support for additional Reveal.js themes.
+
+== License
+This project is licensed under the Apache‑2.0 License – see the `LICENCE` file.
