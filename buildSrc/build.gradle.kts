@@ -58,7 +58,6 @@ dependencies {
         "io.arrow-kt:arrow-fx-coroutines:${versions[arrowKtVersionKey]}",
         "io.arrow-kt:arrow-integrations-jackson-module:0.14.1",
         "org.apache.poi:poi-ooxml:5.2.5",
-        "org.jbake:jbake-gradle-plugin:5.5.0",
         "org.slf4j:slf4j-simple:2.0.16",
         "org.asciidoctor:asciidoctorj-diagram:2.3.1",
         "org.asciidoctor:asciidoctor-gradle-jvm-slides:${versions[asciidoctorGradleVersionKey]}",

@@ -59,7 +59,7 @@ class SlidesPlugin : Plugin<Project> {
 
         project.tasks.register<AsciidoctorTask>("asciidoctor") {
             group = GROUP_TASK_SLIDER
-            dependsOn(project.tasks.findByPath("asciidoctorRevealJs"))
+            dependsOn(project.tasks.findByPath("asciidoctorRevealJs") as Any)
         }
 
         project.tasks.register<DefaultTask>("cleanSlidesBuild") {
