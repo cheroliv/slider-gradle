@@ -21,6 +21,7 @@ import slides.SlidesPlugin.RevealJsSlides.TASK_SERVE_SLIDES
 import slides.SlidesPlugin.Serve.SERVE_DEP
 import workspace.WorkspaceUtils.sep
 import java.io.File
+import java.io.File.separator
 
 class SlidesPlugin : Plugin<Project> {
     object RevealJsSlides {
@@ -220,6 +221,31 @@ class SlidesPlugin : Plugin<Project> {
             args.set(listOf("build/docs/asciidocRevealJs/"))
             workingDir.set(project.layout.projectDirectory.asFile)
             doFirst { println("Serve slides using the serve package executed via npx") }
+        }
+        project.tasks.register<Exec>("reportTests") {
+            group = "verification"
+            description = "Check slider project then show report in firefox"
+            dependsOn("check")
+            commandLine(
+                "firefox",
+                "--new-tab",
+                "build${separator}reports${separator}tests${separator}test${separator}index.html"
+                    .run(project.layout.projectDirectory.asFile.toPath()::resolve)
+                    .toAbsolutePath(),
+            )
+        }
+
+        project.tasks.register<Exec>("reportFunctionalTests") {
+            group = "verification"
+            description = "Check slider project then show report in firefox"
+            dependsOn("check")
+            commandLine(
+                "firefox",
+                "--new-tab",
+                "build${separator}reports${separator}tests${separator}functionalTest${separator}index.html"
+                    .run(project.layout.projectDirectory.asFile.toPath()::resolve)
+                    .toAbsolutePath(),
+            )
         }
     }
 

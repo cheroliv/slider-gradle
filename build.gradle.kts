@@ -25,7 +25,6 @@ import slides.SlidesPlugin.Slide.DEFAULT_SLIDES_FOLDER
 import slides.SlidesPlugin.Slide.IMAGES
 import slides.SlidesPlugin.Slide.SLIDES_FOLDER
 import workspace.WorkspaceUtils.sep
-import java.io.File.separator
 
 plugins { id("org.asciidoctor.jvm.revealjs") }
 
@@ -63,9 +62,7 @@ project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
         }
         mapOf(
             BUILD_GRADLE_KEY to project.layout.projectDirectory
-                .asFile
-                .let { "$it${sep}build.gradle.kts" }
-                .let(::File),
+                .asFile.resolve("build.gradle.kts"),
             ENDPOINT_URL_KEY to "https://github.com/pages-content/slides/",
             SOURCE_HIGHLIGHTER_KEY to "coderay",
             CODERAY_CSS_KEY to "style",
@@ -84,31 +81,3 @@ project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
     }
 }
 
-
-allprojects {
-    tasks.register<Exec>("reportTests") {
-        group = "verification"
-        description = "Check jbake project then show report in firefox"
-        dependsOn("check")
-        commandLine(
-            "firefox",
-            "--new-tab",
-            "build${separator}reports${separator}tests${separator}test${separator}index.html"
-                .run(layout.projectDirectory.asFile.toPath()::resolve)
-                .toAbsolutePath(),
-        )
-    }
-
-    tasks.register<Exec>("reportFunctionalTests") {
-        group = "verification"
-        description = "Check jbake project then show report in firefox"
-        dependsOn("check")
-        commandLine(
-            "firefox",
-            "--new-tab",
-            "build${separator}reports${separator}tests${separator}functionalTest${separator}index.html"
-                .run(layout.projectDirectory.asFile.toPath()::resolve)
-                .toAbsolutePath(),
-        )
-    }
-}
