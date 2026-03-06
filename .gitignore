@@ -13,6 +13,7 @@ workspace-engine
 postgresql.yml
 .kotlin
 *.md
+!AGENTS.md
 *.adoc
 !README.adoc
 !README_fr.adoc
