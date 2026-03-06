@@ -3,13 +3,9 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins { `kotlin-dsl` }
 
-kotlin {
-    jvmToolchain(17)
-}
+kotlin { jvmToolchain(17) }
 
-java {
-    toolchain.languageVersion = JavaLanguageVersion.of(17)
-}
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
 
 repositories {
     google()
