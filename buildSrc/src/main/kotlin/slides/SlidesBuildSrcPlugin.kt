@@ -21,7 +21,7 @@ import slides.SlidesManager.deckFile
 import slides.SlidesManager.pushSlides
 import java.io.File
 
-class SlidesPlugin : Plugin<Project> {
+class SlidesBuildSrcPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         project.plugins.apply("com.github.node-gradle.node")
         project.plugins.apply("org.asciidoctor.jvm.revealjs")

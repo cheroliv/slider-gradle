@@ -28,7 +28,7 @@ import workspace.WorkspaceUtils.sep
 
 plugins { id("org.asciidoctor.jvm.revealjs") }
 
-apply<slides.SlidesPlugin>()
+apply<slides.SlidesBuildSrcPlugin>()
 
 project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
     repositories { ruby { gems() } }
