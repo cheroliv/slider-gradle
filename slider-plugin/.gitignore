@@ -4,3 +4,4 @@
 build
 .goose
 local.properties
+doc

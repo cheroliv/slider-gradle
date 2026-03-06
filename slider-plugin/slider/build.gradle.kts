@@ -11,7 +11,7 @@ plugins {
 
 group = "com.cheroliv"
 version = libs.plugins.slider.get().version
-kotlin.jvmToolchain(JavaVersion.VERSION_24.ordinal)
+kotlin.jvmToolchain(JavaVersion.VERSION_17.ordinal)
 
 repositories {
     mavenCentral()
