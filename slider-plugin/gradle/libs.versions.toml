@@ -1,4 +1,6 @@
 [versions]
+asciidoctor-gradle = "4.0.0-alpha.1"
+node-gradle = "7.1.0"
 slider = "0.0.0"
 commons-io = "2.13.0"
 jgit = "6.10.0.202406032230-r"
@@ -19,6 +21,10 @@ jackson = "2.21.0"
 coroutines = "1.10.2"
 
 [libraries]
+asciidoctor-gradle-jvm-slides = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm-slides", version.ref = "asciidoctor-gradle" }
+asciidoctor-gradle-jvm-gems = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm-gems", version.ref = "asciidoctor-gradle" }
+asciidoctor-gradle-jvm = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm", version.ref = "asciidoctor-gradle" }
+node-gradle = { group = "com.github.node-gradle", name = "gradle-node-plugin", version.ref = "node-gradle" }
 kotlin-stdlib-jdk8 = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8" }
 kotlin-test-junit5 = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit5", version.ref = "kotlin" }
 assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
@@ -74,8 +80,11 @@ coroutines = [
     "kotlinx-coroutines-jdk8",
     "kotlinx-coroutines-test",
 ]
-
-
+asciidoctor = [
+    "asciidoctor-gradle-jvm-slides",
+    "asciidoctor-gradle-jvm-gems",
+    "asciidoctor-gradle-jvm"
+]
 #
 #[versions]
 #kotlin = "2.3.10"
