@@ -98,13 +98,6 @@ object SliderManager {
         }[key].toString())
     }
 
-//}
-//package slides
-//
-
-    //
-//
-//object SlidesManager {
     const val CVS_ORIGIN: String = "origin"
     const val CVS_REMOTE: String = "remote"
     const val CONFIG_PATH_KEY = "managed_config_path"
