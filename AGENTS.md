@@ -10,7 +10,7 @@ This project primarily uses Gradle with Kotlin DSL.
 
 *   **Build Slides**:
     ```bash
-    ./gradlew asciidoctorRevealJs
+    ./gradlew -i asciidoctorRevealJs
     ```
     _Compiles AsciiDoc sources into a Reveal.js HTML presentation._
 
@@ -22,9 +22,7 @@ This project primarily uses Gradle with Kotlin DSL.
 
 *   **Serve Slides Locally**:
     ```bash
-    ./gradlew serveSlides
-    # Or an alternative that might be more direct:
-    ./gradlew execServeSlides
+    ./gradlew -i serveSlides
     ```
     _Serves the generated slides using `npx serve` for local preview._
 
@@ -68,14 +66,14 @@ For JUnit Platform-based tests (used by `test` and `functionalTest` tasks):
 
 *   **Run a specific test method**:
     ```bash
-    ./gradlew test --tests "com.cheroliv.slider.BakeryPluginTest.someTestMethod"
-    ./gradlew functionalTest --tests "com.cheroliv.slider.BakeryPluginFunctionalTests.anotherFeatureTest"
+    ./gradlew test --tests "com.cheroliv.slider.SliderPluginTest.someTestMethod"
+    ./gradlew functionalTest --tests "com.cheroliv.slider.SliderPluginFunctionalTests.anotherFeatureTest"
     ```
-    _Replace `com.cheroliv.slider.BakeryPluginTest` with the fully qualified class name and `someTestMethod` with the method name._
+    _Replace `com.cheroliv.slider.SliderPluginTest` with the fully qualified class name and `someTestMethod` with the method name._
 
 *   **Run all tests in a specific class**:
     ```bash
-    ./gradlew test --tests "com.cheroliv.slider.BakeryPluginTest"
+    ./gradlew test --tests "com.cheroliv.slider.SliderPluginTest"
     ```
 
 For Cucumber tests (`cucumberTest`):
