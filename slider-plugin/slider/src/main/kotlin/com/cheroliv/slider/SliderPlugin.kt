@@ -1,17 +1,88 @@
 package com.cheroliv.slider
 
+import arrow.integrations.jackson.module.registerArrowModule
+import com.cheroliv.slider.FileOperationResult.Success
+import com.cheroliv.slider.SliderManager.CONFIG_PATH_KEY
 import com.cheroliv.slider.SliderManager.deckFile
+import com.cheroliv.slider.SliderManager.pushSlides
 import com.cheroliv.slider.Slides.RevealJsSlides.GROUP_TASK_SLIDER
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
+import com.cheroliv.slider.Slides.RevealJsSlides.TASK_PUBLISH_SLIDES
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_SERVE_SLIDES
 import com.cheroliv.slider.Slides.Serve.SERVE_DEP
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.gradle.node.npm.task.NpxTask
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.transport.PushResult
+import org.eclipse.jgit.transport.URIish
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
 import java.io.File
+import java.io.IOException
+import java.nio.file.FileSystems
 import java.util.*
+
+data class SlidesConfiguration(
+    val srcPath: String? = null,
+    val pushSlides: GitPushConfiguration? = null,
+)
+
+object RepositoryInfo {
+    const val ORIGIN = "origin"
+    const val CNAME = "CNAME"
+    const val REMOTE = "remote"
+}
+
+@JvmRecord
+data class RepositoryConfiguration(
+    val name: String,
+    val repository: String,
+    val credentials: RepositoryCredentials,
+)
+
+@JvmRecord
+data class RepositoryCredentials(
+    val username: String,
+    val password: String
+)
+
+@JvmRecord
+data class GitPushConfiguration(
+    val from: String,
+    val to: String,
+    val repo: RepositoryConfiguration,
+    val branch: String,
+    val message: String,
+)
+
+sealed class GitOperationResult {
+    data class Success(
+        val commit: RevCommit,
+        val pushResults: MutableIterable<PushResult>?
+    ) : GitOperationResult()
+
+    data class Failure(val error: String) : GitOperationResult()
+}
+
+sealed class FileOperationResult {
+    object Success : FileOperationResult()
+    data class Failure(val error: String) : FileOperationResult()
+}
+
+sealed class WorkspaceError {
+    object FileNotFound : WorkspaceError()
+    data class ParsingError(val message: String) : WorkspaceError()
+}
 
 object SliderManager {
     fun Project.deckFile(key: String): String = buildString {
@@ -26,6 +97,185 @@ object SliderManager {
                 .use(::load)
         }[key].toString())
     }
+
+//}
+//package slides
+//
+
+    //
+//
+//object SlidesManager {
+    const val CVS_ORIGIN: String = "origin"
+    const val CVS_REMOTE: String = "remote"
+    const val CONFIG_PATH_KEY = "managed_config_path"
+    val sep: String get() = FileSystems.getDefault().separator
+
+    val Project.yamlMapper: ObjectMapper
+        get() = YAMLFactory()
+            .let(::ObjectMapper)
+            .disable(WRITE_DATES_AS_TIMESTAMPS)
+            .registerKotlinModule()
+            .registerArrowModule()
+
+    fun Project.readSlidesConfigurationFile(
+        configPath: () -> String
+    ): SlidesConfiguration = try {
+        configPath()
+            .run(::File)
+            .run(yamlMapper::readValue)
+    } catch (e: Exception) {
+        // Handle exception or log error
+        SlidesConfiguration(
+            "",
+            GitPushConfiguration(
+                "",
+                "",
+                RepositoryConfiguration(
+                    "",
+                    "",
+                    RepositoryCredentials(
+                        "",
+                        ""
+                    )
+                ),
+                "",
+                ""
+            )
+        )
+    }
+
+
+    val Project.localConf: SlidesConfiguration
+        get() = readSlidesConfigurationFile { "$rootDir$sep${properties[CONFIG_PATH_KEY]}" }
+
+    val Project.slideSrcPath: String get() = "${layout.buildDirectory.get().asFile.absolutePath}/${localConf.srcPath}/"
+    val Project.slideDestDirPath: String get() = localConf.pushSlides?.to!!
+
+    fun Project.pushSlides(
+        slidesDirPath: () -> String,
+        pathTo: () -> String
+    ) = pathTo()
+        .run(::createRepoDir)
+        .let { it: File ->
+            copySlideFilesToRepo(slidesDirPath(), it)
+                .takeIf { it is Success }
+                ?.run {
+                    initAddCommitToSlides(it, localConf)
+                    pushSlide(
+                        it,
+                        "${project.rootDir}${sep}${project.properties[CONFIG_PATH_KEY]}"
+                            .run(::File)
+                            .readText()
+                            .trimIndent()
+                            .run(YAMLMapper()::readValue)
+                    )
+                    it.deleteRecursively()
+                    slidesDirPath()
+                        .let(::File)
+                        .deleteRecursively()
+                }
+        }
+
+    @Throws(IOException::class)
+    fun Project.pushSlide(
+        repoDir: File,
+        conf: SlidesConfiguration,
+    ): MutableIterable<PushResult>? = FileRepositoryBuilder()
+        .setInitialBranch("main")
+        .setGitDir("${repoDir.absolutePath}$sep.git".let(::File))
+        .readEnvironment()
+        .findGitDir()
+        .setMustExist(true)
+        .build()
+        .apply {
+            config.apply {
+                getString(
+                    CVS_REMOTE,
+                    CVS_ORIGIN,
+                    conf.pushSlides?.repo?.repository
+                )
+            }.save()
+            if (isBare) throw IOException("Repo dir should not be bare")
+        }.let(::Git)
+        .run {
+            // push to remote:
+            return push().setCredentialsProvider(
+                UsernamePasswordCredentialsProvider(
+                    conf.pushSlides?.repo?.credentials?.username,
+                    conf.pushSlides?.repo?.credentials?.password
+                )
+            ).apply {
+                //you can add more settings here if needed
+                remote = CVS_ORIGIN
+                isForce = true
+
+            }.call()
+        }
+
+    fun Project.initAddCommitToSlides(
+        repoDir: File,
+        conf: SlidesConfiguration,
+    ): RevCommit {
+        //3) initialiser un repo dans le dossier cvs
+        Git.init().setInitialBranch(conf.pushSlides?.branch)
+            .setDirectory(repoDir).call().run {
+                assert(!repository.isBare)
+                assert(repository.directory.isDirectory)
+                // add remote repo:
+                remoteAdd().apply {
+                    setName(CVS_ORIGIN)
+                    setUri(URIish(conf.pushSlides?.repo?.repository))
+                    // you can add more settings here if needed
+
+                }.call()
+                //4) ajouter les fichiers du dossier cvs à l'index
+                add().addFilepattern(".").call()
+
+                //5) commit
+                return commit().setMessage(conf.pushSlides?.message).call()
+            }
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun copySlideFilesToRepo(
+        slidesDirPath: String,
+        repoDir: File
+    ): FileOperationResult = try {
+        slidesDirPath
+            .let(::File)
+            .apply {
+                when {
+                    !copyRecursively(
+                        repoDir,
+                        true
+                    ) -> throw Exception("Unable to copy slides directory to build directory")
+                }
+            }.deleteRecursively()
+        Success
+    } catch (e: Exception) {
+        FileOperationResult.Failure(e.message ?: "An error occurred during file copy.")
+    }
+
+    fun createRepoDir(path: String): File = path
+        .let(::File)
+        .apply {
+            when {
+                exists() && !isDirectory -> when {
+                    !delete() -> throw Exception("Cant delete file named like repo dir")
+                }
+            }
+            when {
+                exists() -> when {
+                    !deleteRecursively() -> throw Exception("Cant delete current repo dir")
+                }
+            }
+            when {
+                exists() -> throw Exception("Repo dir should not already exists")
+                !exists() -> when {
+                    !mkdir() -> throw Exception("Cant create repo dir")
+                }
+            }
+        }
 
 }
 
@@ -232,5 +482,27 @@ class SliderPlugin : Plugin<Project> {
                 println("📊 ${adocFiles.size} présentation(s) trouvée(s)")
             }
         }
+
+        project.tasks.register(TASK_PUBLISH_SLIDES) {
+            it.group = GROUP_TASK_SLIDER
+            it.description = "Deploy sliders to remote repository"
+            it.dependsOn("asciidoctor")
+            it.doFirst { "Task description :\n\t${it.description}".run(project.logger::info) }
+            it.doLast {
+                val localConf: SlidesConfiguration = project.properties[CONFIG_PATH_KEY].toString()
+                    .run(project.layout.projectDirectory.asFile::resolve)
+                    .readText().trimIndent()
+                    .run(YAMLMapper()::readValue)
+
+                val repoDir = project.layout.buildDirectory.get().asFile.resolve(localConf.pushSlides!!.to)
+
+                project.pushSlides({
+                    project.layout.buildDirectory.get().asFile
+                        .resolve(localConf.srcPath!!)
+                        .absolutePath
+                }, { repoDir.absolutePath })
+            }
+        }
+
     }
 }
