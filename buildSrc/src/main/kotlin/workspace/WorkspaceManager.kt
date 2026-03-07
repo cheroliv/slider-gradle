@@ -5,22 +5,13 @@ import arrow.core.left
 import arrow.core.right
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import git.*
+import git.WorkspaceError
 import git.WorkspaceError.FileNotFound
 import git.WorkspaceError.ParsingError
-import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.revwalk.RevCommit
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import org.eclipse.jgit.transport.PushResult
-import org.eclipse.jgit.transport.URIish
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import org.gradle.api.Project
-import slides.SlidesConfiguration
-import workspace.WorkspaceUtils.createDirectory
 import workspace.WorkspaceUtils.sep
 import workspace.WorkspaceUtils.yamlMapper
 import java.io.File
-import java.io.IOException
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.*
 
