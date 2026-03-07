@@ -16,10 +16,21 @@ kotlin.jvmToolchain(JavaVersion.VERSION_17.ordinal)
 repositories {
     mavenCentral()
     gradlePluginPortal()
+    listOf(
+        "https://repo.gradle.org/gradle/libs-releases/",
+        "https://plugins.gradle.org/m2/",
+        "https://maven.xillio.com/artifactory/libs-release/",
+        "https://mvnrepository.com/repos/springio-plugins-release",
+        "https://archiva-repository.apache.org/archiva/repository/public/"
+    ).forEach(::maven)
 }
-
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
+
+//    implementation(gradleApi())
+//    implementation(gradleKotlinDsl())
+//    implementation(libs.bundles.asciidoctor)
+    implementation(libs.node.gradle)
 
     api(libs.bundles.slider)
     api(libs.bundles.jgit)
