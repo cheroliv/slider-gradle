@@ -1,15 +1,10 @@
 package slides
 
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.github.gradle.node.npm.task.NpxTask
 import org.asciidoctor.gradle.jvm.AsciidoctorTask
 import org.asciidoctor.gradle.jvm.slides.AsciidoctorJRevealJSTask
 import org.asciidoctor.gradle.jvm.slides.RevealJSExtension
-import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.Exec
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.jvm.toolchain.JvmVendorSpec
@@ -33,18 +28,11 @@ import slides.Slides.RevealJsSlides.SOURCE_HIGHLIGHTER_KEY
 import slides.Slides.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
 import slides.Slides.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
 import slides.Slides.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
-import slides.Slides.RevealJsSlides.TASK_PUBLISH_SLIDES
-import slides.Slides.RevealJsSlides.TASK_SERVE_SLIDES
 import slides.Slides.RevealJsSlides.TOC_KEY
-import slides.Slides.Serve.SERVE_DEP
 import slides.Slides.Slide.DEFAULT_SLIDES_FOLDER
 import slides.Slides.Slide.IMAGES
 import slides.Slides.Slide.SLIDES_FOLDER
-import slides.SlidesManager.CONFIG_PATH_KEY
-import slides.SlidesManager.deckFile
-import slides.SlidesManager.pushSlides
-import workspace.WorkspaceUtils.sep
-import java.io.File
+import java.io.File.separator
 
 class SlidesBuildSrcPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -54,7 +42,7 @@ class SlidesBuildSrcPlugin : Plugin<Project> {
         project.plugins.apply("org.asciidoctor.jvm.revealjs")
 
         project.repositories {
-            gradlePluginPortal(){ content { excludeGroup("rubygems") } }
+            gradlePluginPortal() { content { excludeGroup("rubygems") } }
             mavenCentral() { content { excludeGroup("rubygems") } }
             ivy {
                 url = project.uri("https://rubygems.org/gems/")
@@ -123,7 +111,7 @@ class SlidesBuildSrcPlugin : Plugin<Project> {
                     ENDPOINT_URL_KEY to "https://github.com/pages-content/slides/",
                     SOURCE_HIGHLIGHTER_KEY to "coderay",
                     CODERAY_CSS_KEY to "style",
-                    IMAGEDIR_KEY to ".${sep}images",
+                    IMAGEDIR_KEY to ".${separator}images",
                     TOC_KEY to "left",
                     ICONS_KEY to "font",
                     SETANCHORS_KEY to "",
@@ -137,30 +125,10 @@ class SlidesBuildSrcPlugin : Plugin<Project> {
                 ).let(::attributes)
             }
         }
+
         project.tasks.register<AsciidoctorTask>("asciidoctor") {
-            group = slides.Slides.RevealJsSlides.GROUP_TASK_SLIDER
+            group = GROUP_TASK_SLIDER
             dependsOn(project.tasks.findByPath("asciidoctorRevealJs"))
         }
-        project.tasks.register<DefaultTask>(TASK_PUBLISH_SLIDES) {
-            group = GROUP_TASK_SLIDER
-            description = "Deploy sliders to remote repository"
-            dependsOn("asciidoctor")
-            doFirst { "Task description :\n\t$description".run(project.logger::info) }
-            doLast {
-                val localConf: SlidesConfiguration = project.properties[CONFIG_PATH_KEY].toString()
-                    .run(project.layout.projectDirectory.asFile::resolve)
-                    .readText().trimIndent()
-                    .run(YAMLMapper()::readValue)
-
-                val repoDir = project.layout.buildDirectory.get().asFile.resolve(localConf.pushSlides!!.to)
-
-                project.pushSlides({
-                    project.layout.buildDirectory.get().asFile
-                        .resolve(localConf.srcPath!!)
-                        .absolutePath
-                }, { repoDir.absolutePath })
-            }
-        }
-
     }
 }
