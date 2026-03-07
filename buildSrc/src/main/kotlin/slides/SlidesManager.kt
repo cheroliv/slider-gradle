@@ -1,7 +1,12 @@
 package slides
 
+import arrow.integrations.jackson.module.registerArrowModule
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import git.FileOperationResult
 import git.GitPushConfiguration
 import git.RepositoryConfiguration
@@ -13,19 +18,26 @@ import org.eclipse.jgit.transport.PushResult
 import org.eclipse.jgit.transport.URIish
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import org.gradle.api.Project
-import workspace.WorkspaceManager
-import workspace.WorkspaceManager.CVS_ORIGIN
-import workspace.WorkspaceManager.CVS_REMOTE
 import workspace.WorkspaceUtils.sep
 import workspace.WorkspaceUtils.yamlMapper
 import java.io.File
 import java.io.IOException
+import java.nio.file.FileSystems
 import java.util.*
 
 
 object SlidesManager {
+    const val CVS_ORIGIN: String = "origin"
+    const val CVS_REMOTE: String = "remote"
     const val CONFIG_PATH_KEY = "managed_config_path"
+    val sep: String get() = FileSystems.getDefault().separator
 
+    val Project.yamlMapper: ObjectMapper
+        get() = YAMLFactory()
+            .let(::ObjectMapper)
+            .disable(WRITE_DATES_AS_TIMESTAMPS)
+            .registerKotlinModule()
+            .registerArrowModule()
     fun Project.readSlidesConfigurationFile(
         configPath: () -> String
     ): SlidesConfiguration = try {
@@ -87,7 +99,7 @@ object SlidesManager {
         slidesDirPath: () -> String,
         pathTo: () -> String
     ) = pathTo()
-        .run(WorkspaceManager::createRepoDir)
+        .run(::createRepoDir)
         .let { it: File ->
             copySlideFilesToRepo(slidesDirPath(), it)
                 .takeIf { it is FileOperationResult.Success }
@@ -187,4 +199,25 @@ object SlidesManager {
     } catch (e: Exception) {
         FileOperationResult.Failure(e.message ?: "An error occurred during file copy.")
     }
+    fun createRepoDir(path: String): File = path
+        .let(::File)
+        .apply {
+            when {
+                exists() && !isDirectory -> when {
+                    !delete() -> throw Exception("Cant delete file named like repo dir")
+                }
+            }
+            when {
+                exists() -> when {
+                    !deleteRecursively() -> throw Exception("Cant delete current repo dir")
+                }
+            }
+            when {
+                exists() -> throw Exception("Repo dir should not already exists")
+                !exists() -> when {
+                    !mkdir() -> throw Exception("Cant create repo dir")
+                }
+            }
+        }
+
 }
