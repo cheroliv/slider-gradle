@@ -31,6 +31,250 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.FileSystems
 import java.util.*
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import javax.inject.Inject
+
+/**
+ * DSL extension for the slider plugin.
+ *
+ * Usage in build.gradle.kts:
+ * ```
+ * slider {
+ *     configPath = file("slides-context.yml").absolutePath
+ *
+ *     // Optional — defaults to "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
+ *     // Only used when jdk17 is not installed locally but Docker is available.
+ *     java17TemurinDockerImage = "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
+ *
+ *     // Optional — force Docker even if jdk17 is installed locally. Default: false
+ *     forceDocker = true
+ * }
+ * ```
+ */
+open class SliderExtension @Inject constructor(objects: ObjectFactory) {
+    val configPath: Property<String> = objects.property(String::class.java)
+
+    /**
+     * Docker image to use for jdk17 when jdk17 is not installed on the host.
+     * Ignored if jdk17 is available locally AND [forceDocker] is false.
+     * Defaults to [DEFAULT_JDK17_IMAGE].
+     */
+    val java17TemurinDockerImage: Property<String> = objects
+        .property(String::class.java)
+        .convention(DEFAULT_JDK17_IMAGE)
+
+    /**
+     * When true, skips the local jdk17 probe and goes straight to Docker,
+     * even if `jdk17` is available on the system PATH.
+     * Defaults to false.
+     */
+    val forceDocker: Property<Boolean> = objects
+        .property(Boolean::class.java)
+        .convention(false)
+
+    companion object {
+        const val DEFAULT_JDK17_IMAGE = "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
+    }
+}
+
+object SlidesManager {
+    const val CVS_ORIGIN: String = "origin"
+    const val CVS_REMOTE: String = "remote"
+    const val CONFIG_PATH_KEY = "managed_config_path"
+    val sep: String get() = FileSystems.getDefault().separator
+
+    val Project.yamlMapper: ObjectMapper
+        get() = YAMLFactory()
+            .let(::ObjectMapper)
+            .disable(WRITE_DATES_AS_TIMESTAMPS)
+            .registerKotlinModule()
+            .registerArrowModule()
+
+    fun Project.readSlidesConfigurationFile(
+        configPath: () -> String
+    ): SlidesConfiguration = try {
+        configPath()
+            .run(::File)
+            .run(yamlMapper::readValue)
+    } catch (e: Exception) {
+        // Handle exception or log error
+        SlidesConfiguration(
+            "",
+            GitPushConfiguration(
+                "",
+                "",
+                RepositoryConfiguration(
+                    "",
+                    "",
+                    RepositoryCredentials(
+                        "",
+                        ""
+                    )
+                ),
+                "",
+                ""
+            )
+        )
+    }
+
+
+    val Project.localConf: SlidesConfiguration
+        get() = readSlidesConfigurationFile { "$rootDir$sep${properties[CONFIG_PATH_KEY]}" }
+
+    val Project.slideSrcPath: String get() = "${layout.buildDirectory.get().asFile.absolutePath}/${localConf.srcPath}/"
+    val Project.slideDestDirPath: String get() = localConf.pushSlides?.to!!
+
+
+    fun Project.deckFile(key: String): String = buildString {
+        append("build/docs/asciidocRevealJs/")
+        append(Properties().apply {
+            // TODO changer par une reference au path de office a integrer dans le model de données
+            buildString {
+                append(System.getProperty("user.home"))
+                append(sep)
+                append("workspace")
+                append(sep)
+                append("office")
+                append(sep)
+                append("slides")
+                append(sep)
+                append("misc")
+                append(sep)
+                append("deck.properties")
+            }.let(::File)
+                .inputStream()
+                .use(::load)
+        }[key].toString())
+    }
+
+    fun Project.pushSlides(
+        slidesDirPath: () -> String,
+        pathTo: () -> String
+    ) = pathTo()
+        .run(::createRepoDir)
+        .let { it: File ->
+            copySlideFilesToRepo(slidesDirPath(), it)
+                .takeIf { it is FileOperationResult.Success }
+                ?.run {
+                    initAddCommitToSlides(it, localConf)
+                    pushSlide(
+                        it,
+                        "${project.rootDir}${sep}${project.properties[CONFIG_PATH_KEY]}"
+                            .run(::File)
+                            .readText()
+                            .trimIndent()
+                            .run(YAMLMapper()::readValue)
+                    )
+                    it.deleteRecursively()
+                    slidesDirPath()
+                        .let(::File)
+                        .deleteRecursively()
+                }
+        }
+
+    @Throws(IOException::class)
+    fun Project.pushSlide(
+        repoDir: File,
+        conf: SlidesConfiguration,
+    ): MutableIterable<PushResult>? = FileRepositoryBuilder()
+        .setInitialBranch("main")
+        .setGitDir("${repoDir.absolutePath}$sep.git".let(::File))
+        .readEnvironment()
+        .findGitDir()
+        .setMustExist(true)
+        .build()
+        .apply {
+            config.apply {
+                getString(
+                    CVS_REMOTE,
+                    CVS_ORIGIN,
+                    conf.pushSlides?.repo?.repository
+                )
+            }.save()
+            if (isBare) throw IOException("Repo dir should not be bare")
+        }.let(::Git)
+        .run {
+            // push to remote:
+            return push().setCredentialsProvider(
+                UsernamePasswordCredentialsProvider(
+                    conf.pushSlides?.repo?.credentials?.username,
+                    conf.pushSlides?.repo?.credentials?.password
+                )
+            ).apply {
+                //you can add more settings here if needed
+                remote = CVS_ORIGIN
+                isForce = true
+
+            }.call()
+        }
+
+    fun Project.initAddCommitToSlides(
+        repoDir: File,
+        conf: SlidesConfiguration,
+    ): RevCommit {
+        //3) initialiser un repo dans le dossier cvs
+        Git.init().setInitialBranch(conf.pushSlides?.branch)
+            .setDirectory(repoDir).call().run {
+                assert(!repository.isBare)
+                assert(repository.directory.isDirectory)
+                // add remote repo:
+                remoteAdd().apply {
+                    setName(CVS_ORIGIN)
+                    setUri(URIish(conf.pushSlides?.repo?.repository))
+                    // you can add more settings here if needed
+
+                }.call()
+                //4) ajouter les fichiers du dossier cvs à l'index
+                add().addFilepattern(".").call()
+
+                //5) commit
+                return commit().setMessage(conf.pushSlides?.message).call()
+            }
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun copySlideFilesToRepo(
+        slidesDirPath: String,
+        repoDir: File
+    ): FileOperationResult = try {
+        slidesDirPath
+            .let(::File)
+            .apply {
+                when {
+                    !copyRecursively(
+                        repoDir,
+                        true
+                    ) -> throw Exception("Unable to copy slides directory to build directory")
+                }
+            }.deleteRecursively()
+        FileOperationResult.Success
+    } catch (e: Exception) {
+        FileOperationResult.Failure(e.message ?: "An error occurred during file copy.")
+    }
+
+    fun createRepoDir(path: String): File = path
+        .let(::File)
+        .apply {
+            when {
+                exists() && !isDirectory -> when {
+                    !delete() -> throw Exception("Cant delete file named like repo dir")
+                }
+            }
+            when {
+                exists() -> when {
+                    !deleteRecursively() -> throw Exception("Cant delete current repo dir")
+                }
+            }
+            when {
+                exists() -> throw Exception("Repo dir should not already exists")
+                !exists() -> when {
+                    !mkdir() -> throw Exception("Cant create repo dir")
+                }
+            }
+        }
+
+}
 
 data class SlidesConfiguration(
     val srcPath: String? = null,
