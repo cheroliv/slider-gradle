@@ -7,8 +7,11 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
-import org.gradle.jvm.toolchain.JvmVendorSpec
-import org.gradle.kotlin.dsl.*
+import org.gradle.jvm.toolchain.JvmVendorSpec.ADOPTIUM
+import org.gradle.kotlin.dsl.getByName
+import org.gradle.kotlin.dsl.getByType
+import org.gradle.kotlin.dsl.register
+import org.gradle.kotlin.dsl.repositories
 import org.gradle.kotlin.dsl.support.serviceOf
 import slides.Slides.RevealJsSlides.BUILD_GRADLE_KEY
 import slides.Slides.RevealJsSlides.CODERAY_CSS_KEY
@@ -42,8 +45,8 @@ class SlidesBuildSrcPlugin : Plugin<Project> {
         project.plugins.apply("org.asciidoctor.jvm.revealjs")
 
         project.repositories {
-            gradlePluginPortal() { content { excludeGroup("rubygems") } }
-            mavenCentral() { content { excludeGroup("rubygems") } }
+            gradlePluginPortal { content { excludeGroup("rubygems") } }
+            mavenCentral { content { excludeGroup("rubygems") } }
             ivy {
                 url = project.uri("https://rubygems.org/gems/")
                 patternLayout { artifact("[module]-[revision].[ext]") }
@@ -52,14 +55,16 @@ class SlidesBuildSrcPlugin : Plugin<Project> {
             }
         }
 
-        project.dependencies {
-            add("asciidoctorGems", "rubygems:asciidoctor-revealjs:3.1.0")
-        }
+        project.dependencies.add(
+            "asciidoctorGems",
+            "rubygems:asciidoctor-revealjs:3.1.0"
+        )
+
 
         project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
             group = GROUP_TASK_SLIDER
             description = "Slider settings and generation"
-            project.repositories.mavenCentral() {
+            project.repositories.mavenCentral {
                 content { excludeGroup("rubygems") }
             }
             project.repositories.ivy {
@@ -75,9 +80,8 @@ class SlidesBuildSrcPlugin : Plugin<Project> {
                     project.serviceOf<JavaToolchainService>()
                         .launcherFor {
                             languageVersion.set(JavaLanguageVersion.of(17))
-                            vendor.set(JvmVendorSpec.ADOPTIUM)
-                        }
-                        .get()
+                            vendor.set(ADOPTIUM)
+                        }.get()
                         .executablePath
                         .asFile
                         .absolutePath
