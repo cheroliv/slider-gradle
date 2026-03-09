@@ -8,7 +8,7 @@ class AssistantPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         project.tasks.register("displayE3POPrompt") {
-            it.group = "school-ai"
+            it.group = "slider-ai"
             it.description = "Dislpay on console AI prompt assistant"
             it.doFirst { AssistantManager.PromptManager.userMessageFr.let(::println) }
         }
