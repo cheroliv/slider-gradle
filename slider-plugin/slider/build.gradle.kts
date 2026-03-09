@@ -24,6 +24,23 @@ repositories {
         "https://archiva-repository.apache.org/archiva/repository/public/"
     ).forEach(::maven)
 }
+val asciidoctorGradleVersionKey = "asciidoctor-gradle.version"
+val jacksonVersionKey = "jackson.version"
+val arrowKtVersionKey = "arrow-kt.version"
+val jgitVersionKey = "jgit.version"
+val langchain4jVersionKey = "langchain4j.version"
+val langchain4jExtensionVersionKey = "langchain4j-extension.version"
+
+val Project.versions: Map<String, String>
+    get() = mapOf(
+        asciidoctorGradleVersionKey to project.properties[asciidoctorGradleVersionKey].toString(),
+        jacksonVersionKey to project.properties[jacksonVersionKey].toString(),
+        arrowKtVersionKey to project.properties[arrowKtVersionKey].toString(),
+        jgitVersionKey to project.properties[jgitVersionKey].toString(),
+        langchain4jVersionKey to project.properties[langchain4jVersionKey].toString(),
+        langchain4jExtensionVersionKey to project.properties[langchain4jExtensionVersionKey].toString()
+    )
+
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
@@ -53,6 +70,14 @@ dependencies {
     implementation("io.arrow-kt:arrow-core:1.2.4")
     implementation("io.arrow-kt:arrow-fx-coroutines:1.2.4")
     implementation("io.arrow-kt:arrow-integrations-jackson-module:0.14.1")
+
+    listOf("dev.langchain4j:langchain4j:${versions[langchain4jVersionKey]}",
+        "dev.langchain4j:langchain4j-ollama:${versions[langchain4jExtensionVersionKey]}",
+        "dev.langchain4j:langchain4j-hugging-face:${versions[langchain4jExtensionVersionKey]}",
+        "dev.langchain4j:langchain4j-google-ai-gemini:${versions[langchain4jExtensionVersionKey]}",
+        "dev.langchain4j:langchain4j-mistral-ai:${versions[langchain4jExtensionVersionKey]}",
+        "dev.langchain4j:langchain4j-pgvector:${versions[langchain4jExtensionVersionKey]}",
+    ).forEach(::implementation)
 }
 
 
