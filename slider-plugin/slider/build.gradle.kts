@@ -27,9 +27,9 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
-//    implementation(gradleApi())
-//    implementation(gradleKotlinDsl())
-//    implementation(libs.bundles.asciidoctor)
+    implementation(gradleApi())
+    implementation(gradleKotlinDsl())
+    implementation(libs.bundles.asciidoctor)
     implementation(libs.node.gradle)
 
     api(libs.bundles.slider)
