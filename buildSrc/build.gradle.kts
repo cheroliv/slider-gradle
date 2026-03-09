@@ -11,13 +11,13 @@ repositories {
     google()
     mavenCentral()
     gradlePluginPortal()
-    listOf(
-        "https://repo.gradle.org/gradle/libs-releases/",
-        "https://plugins.gradle.org/m2/",
-        "https://maven.xillio.com/artifactory/libs-release/",
-        "https://mvnrepository.com/repos/springio-plugins-release",
-        "https://archiva-repository.apache.org/archiva/repository/public/"
-    ).forEach(::maven)
+//    listOf(
+//        "https://repo.gradle.org/gradle/libs-releases/",
+//        "https://plugins.gradle.org/m2/",
+//        "https://maven.xillio.com/artifactory/libs-release/",
+//        "https://mvnrepository.com/repos/springio-plugins-release",
+//        "https://archiva-repository.apache.org/archiva/repository/public/"
+//    ).forEach(::maven)
 }
 
 
@@ -40,7 +40,7 @@ val Project.versions: Map<String, String>
 
 dependencies {
     setOf(
-        "com.github.node-gradle:gradle-node-plugin:7.0.1",
+//        "com.github.node-gradle:gradle-node-plugin:7.0.1",
         "jakarta.xml.bind:jakarta.xml.bind-api:4.0.2",
         "com.fasterxml.jackson.module:jackson-module-kotlin:${versions[jacksonVersionKey]}",
         "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${versions[jacksonVersionKey]}",
@@ -54,29 +54,20 @@ dependencies {
         "io.arrow-kt:arrow-integrations-jackson-module:0.14.1",
         "org.apache.poi:poi-ooxml:5.2.5",
         "org.slf4j:slf4j-simple:2.0.16",
-        "org.asciidoctor:asciidoctorj-diagram:2.3.1",
-        "org.asciidoctor:asciidoctor-gradle-jvm-slides:${versions[asciidoctorGradleVersionKey]}",
-        "org.asciidoctor:asciidoctor-gradle-base:${versions[asciidoctorGradleVersionKey]}",
-        "org.asciidoctor:asciidoctor-gradle-jvm-gems:${versions[asciidoctorGradleVersionKey]}",
-        "com.burgstaller:okhttp-digest:1.10",
-        "org.ysb33r.gradle:grolifant:0.12.1",
-        "com.avast.gradle:gradle-docker-compose-plugin:0.17.6",
-        "org.gradle:gradle-tooling-api:8.6",
+//        "org.asciidoctor:asciidoctorj-diagram:2.3.1",
+//        "org.asciidoctor:asciidoctor-gradle-jvm-slides:${versions[asciidoctorGradleVersionKey]}",
+//        "org.asciidoctor:asciidoctor-gradle-base:${versions[asciidoctorGradleVersionKey]}",
+//        "org.asciidoctor:asciidoctor-gradle-jvm-gems:${versions[asciidoctorGradleVersionKey]}",
+//        "com.burgstaller:okhttp-digest:1.10",
+//        "org.ysb33r.gradle:grolifant:0.12.1",
+//        "com.avast.gradle:gradle-docker-compose-plugin:0.17.6",
+//        "org.gradle:gradle-tooling-api:8.6",
         "dev.langchain4j:langchain4j:${versions[langchain4jVersionKey]}",
         "dev.langchain4j:langchain4j-ollama:${versions[langchain4jExtensionVersionKey]}",
         "dev.langchain4j:langchain4j-hugging-face:${versions[langchain4jExtensionVersionKey]}",
         "dev.langchain4j:langchain4j-google-ai-gemini:${versions[langchain4jExtensionVersionKey]}",
         "dev.langchain4j:langchain4j-mistral-ai:${versions[langchain4jExtensionVersionKey]}",
         "dev.langchain4j:langchain4j-pgvector:${versions[langchain4jExtensionVersionKey]}",
-//        "com.google.apis:google-api-services-forms:v1-rev20220908-2.0.0",
-//        "com.google.apis:google-api-services-drive:v3-rev197-1.25.0",
-//        "com.google.api-client:google-api-client-jackson2:2.3.0",
-//        "com.google.auth:google-auth-library-oauth2-http:1.23.0",
-//        "org.jetbrains.kotlin:kotlin-stdlib",
-//        "commons-io:commons-io:$commonsIoVersion",
-//        "org.tukaani:xz:1.9",
-//        "org.testcontainers:testcontainers:$testcontainersVersion",
-//        "org.testcontainers:ollama:$testcontainersVersion",
     ).forEach(::implementation)
     runtimeOnly("com.sun.xml.bind:jaxb-impl:4.0.5")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
