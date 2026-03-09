@@ -38,6 +38,7 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.transport.PushResult
 import org.eclipse.jgit.transport.URIish
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -639,8 +640,8 @@ class SliderPlugin : Plugin<Project> {
                     task.finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
                 }
                 // remplacer l'action de la tâche existante par Docker
-                project.tasks.named(TASK_ASCIIDOCTOR_REVEALJS, AsciidoctorJRevealJSTask::class.java) { task ->
-                    task.doFirst {
+                project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
+                    doFirst {
                         project.exec { exec ->
                             exec.commandLine(
                                 "docker", "run", "--rm",
@@ -723,33 +724,33 @@ class SliderPlugin : Plugin<Project> {
         }
 
 
-        project.tasks.register(TASK_SERVE_SLIDES, NpxTask::class.java) {
-            it.group = GROUP_TASK_SLIDER
-            it.description = "Serve slides using the serve package executed via npx"
-            it.dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
-            it.command.set(SERVE_DEP)
+        project.tasks.register<NpxTask>(TASK_SERVE_SLIDES) {
+            group = GROUP_TASK_SLIDER
+            description = "Serve slides using the serve package executed via npx"
+            dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
+            command.set(SERVE_DEP)
             project.layout.buildDirectory.get().asFile
                 .resolve("docs")
                 .resolve("asciidocRevealJs")
                 .absolutePath
                 .run(::listOf)
-                .run(it.args::set)
-            it.workingDir.set(project.layout.projectDirectory.asFile)
-            it.doFirst { println("Serve slides using the serve package executed via npx") }
+                .run(args::set)
+            workingDir.set(project.layout.projectDirectory.asFile)
+            doFirst { println("Serve slides using the serve package executed via npx") }
         }
 
-        project.tasks.register("asciidocCapsule", Exec::class.java) {
-            it.group = "capsule"
-            it.dependsOn("asciidoctor")
-            it.commandLine("chromium", project.deckFile("asciidoc.capsule.deck.file"))
-            it.workingDir = project.layout.projectDirectory.asFile
+        project.tasks.register<Exec>("asciidocCapsule") {
+            group = "capsule"
+            dependsOn("asciidoctor")
+            commandLine("chromium", project.deckFile("asciidoc.capsule.deck.file"))
+            workingDir = project.layout.projectDirectory.asFile
         }
 
-        project.tasks.register("reportTests", Exec::class.java) {
-            it.group = "verification"
-            it.description = "Check slider project then show report in firefox"
-            it.dependsOn("check")
-            it.commandLine(
+        project.tasks.register<Exec>("reportTests") {
+            group = "verification"
+            description = "Check slider project then show report in firefox"
+            dependsOn("check")
+            commandLine(
                 "firefox",
                 "--new-tab",
                 project.layout.buildDirectory.asFile.get()
@@ -761,11 +762,11 @@ class SliderPlugin : Plugin<Project> {
             )
         }
 
-        project.tasks.register("reportFunctionalTests", Exec::class.java) {
-            it.group = "verification"
-            it.description = "Check slider project then show report in firefox"
-            it.dependsOn("check")
-            it.commandLine(
+        project.tasks.register<Exec>("reportFunctionalTests") {
+            group = "verification"
+            description = "Check slider project then show report in firefox"
+            dependsOn("check")
+            commandLine(
                 "firefox",
                 "--new-tab",
                 project.layout.buildDirectory.get().asFile
@@ -777,10 +778,10 @@ class SliderPlugin : Plugin<Project> {
             )
         }
 
-        project.tasks.register("cleanSlidesBuild") {
-            it.group = GROUP_TASK_SLIDER
-            it.description = "Delete generated presentation in build directory."
-            it.doFirst {
+        project.tasks.register<DefaultTask>("cleanSlidesBuild") {
+            group = GROUP_TASK_SLIDER
+            description = "Delete generated presentation in build directory."
+            doFirst {
                 project.layout.buildDirectory.get().asFile
                     .resolve("docs")
                     .resolve("asciidocRevealJs")
@@ -794,27 +795,27 @@ class SliderPlugin : Plugin<Project> {
             }
         }
 
-        project.tasks.register("openFirefox", Exec::class.java) {
-            it.group = GROUP_TASK_SLIDER
-            it.description = "Open the presentation dashboard in firefox"
-            it.dependsOn("asciidoctor")
-            it.commandLine("firefox", project.deckFile("default.deck.file"))
-            it.workingDir = project.layout.projectDirectory.asFile
+        project.tasks.register<Exec>("openFirefox") {
+            group = GROUP_TASK_SLIDER
+            description = "Open the presentation dashboard in firefox"
+            dependsOn("asciidoctor")
+            commandLine("firefox", project.deckFile("default.deck.file"))
+            workingDir = project.layout.projectDirectory.asFile
         }
 
-        project.tasks.register("openChromium", Exec::class.java) {
-            it.group = GROUP_TASK_SLIDER
-            it.description = "Open the default.deck.file presentation in chromium"
-            it.dependsOn("asciidoctor")
-            it.commandLine("chromium", project.deckFile("default.deck.file"))
-            it.workingDir = project.layout.projectDirectory.asFile
+        project.tasks.register<Exec>("openChromium") {
+            group = GROUP_TASK_SLIDER
+            description = "Open the default.deck.file presentation in chromium"
+            dependsOn("asciidoctor")
+            commandLine("chromium", project.deckFile("default.deck.file"))
+            workingDir = project.layout.projectDirectory.asFile
         }
 
-        project.tasks.register(TASK_DASHBOARD_SLIDES_BUILD) {
-            it.group = "documentation"
-            it.description = "Génère un index.html listant toutes les présentations Reveal.js"
+        project.tasks.register<DefaultTask>(TASK_DASHBOARD_SLIDES_BUILD) {
+            group = "documentation"
+            description = "Génère un index.html listant toutes les présentations Reveal.js"
 
-            it.doLast {
+            doLast {
                 //TODO: passer cette adresse a la configuration du slide pour indiquer sa source
                 val slidesDir = project.layout.projectDirectory.asFile
                     .resolve("slides")
@@ -879,12 +880,12 @@ class SliderPlugin : Plugin<Project> {
             }
         }
 
-        project.tasks.register(TASK_PUBLISH_SLIDES) {
-            it.group = GROUP_TASK_SLIDER
-            it.description = "Deploy sliders to remote repository"
-            it.dependsOn("asciidoctor")
-            it.doFirst { task -> "Task description :\n\t${task.description}".run(project.logger::info) }
-            it.doLast {
+        project.tasks.register<DefaultTask>(TASK_PUBLISH_SLIDES) {
+            group = GROUP_TASK_SLIDER
+            description = "Deploy sliders to remote repository"
+            dependsOn("asciidoctor")
+            doFirst { task -> "Task description :\n\t${task.description}".run(project.logger::info) }
+            doLast {
                 val localConf: SlidesConfiguration = project.properties[CONFIG_PATH_KEY].toString()
                     .run(project.layout.projectDirectory.asFile::resolve)
                     .readText().trimIndent()
