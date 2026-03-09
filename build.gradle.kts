@@ -1,11 +1,14 @@
 plugins { alias(libs.plugins.slider) }
 
 repositories {
-    google()
-    mavenCentral()
-    gradlePluginPortal()
-    maven { url = uri("https://maven.xillio.com/artifactory/libs-release/") }
+    "https://maven.xillio.com/artifactory/libs-release/"
+        .run(::uri)
+        .run(::maven)
 }
 
-slider { configPath = file("slides-context.yml").absolutePath }
+slider {
+    configPath = "slides-context.yml"
+        .run(::file)
+        .absolutePath
+}
 
