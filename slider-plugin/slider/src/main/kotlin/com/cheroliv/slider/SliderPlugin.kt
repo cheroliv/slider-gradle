@@ -13,10 +13,14 @@ import com.cheroliv.slider.Slides.RevealJsSlides.ENDPOINT_URL_KEY
 import com.cheroliv.slider.Slides.RevealJsSlides.GROUP_TASK_SLIDER
 import com.cheroliv.slider.Slides.RevealJsSlides.SOURCE_HIGHLIGHTER_KEY
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
+import com.cheroliv.slider.Slides.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_PUBLISH_SLIDES
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_SERVE_SLIDES
 import com.cheroliv.slider.Slides.Serve.SERVE_DEP
+import com.cheroliv.slider.Slides.Slide.DEFAULT_SLIDES_FOLDER
+import com.cheroliv.slider.Slides.Slide.IMAGES
+import com.cheroliv.slider.Slides.Slide.SLIDES_FOLDER
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -24,6 +28,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.gradle.node.npm.task.NpxTask
+import org.asciidoctor.gradle.jvm.AbstractAsciidoctorTask.OUT_OF_PROCESS
 import org.asciidoctor.gradle.jvm.AsciidoctorTask
 import org.asciidoctor.gradle.jvm.slides.AsciidoctorJRevealJSTask
 import org.asciidoctor.gradle.jvm.slides.RevealJSExtension
@@ -39,12 +44,8 @@ import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Exec
-import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.gradle.jvm.toolchain.JavaToolchainService
-import org.gradle.jvm.toolchain.JvmVendorSpec.ADOPTIUM
 import org.gradle.kotlin.dsl.getByName
 import org.gradle.kotlin.dsl.register
-import org.gradle.kotlin.dsl.support.serviceOf
 import java.io.File
 import java.io.IOException
 import java.nio.file.FileSystems
@@ -572,6 +573,7 @@ object Slides {
 }
 
 class SliderPlugin : Plugin<Project> {
+    @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
     override fun apply(project: Project) {
         project.repositories.maven { repo ->
             repo.url = project.uri("https://plugins.gradle.org/m2/")
@@ -599,8 +601,12 @@ class SliderPlugin : Plugin<Project> {
             repo.content { c -> c.includeGroup("rubygems") }
         }
         project.plugins.apply("com.github.node-gradle.node")
-        project.plugins.apply("org.asciidoctor.jvm.gems")
-        project.plugins.apply("org.asciidoctor.jvm.revealjs")
+
+        project.plugins.apply("org.asciidoctor.jvm.gems.classic")
+        project.plugins.apply("org.asciidoctor.jvm.revealjs.classic")
+
+//        project.plugins.apply("org.asciidoctor.jvm.gems")
+//        project.plugins.apply("org.asciidoctor.jvm.revealjs")
         project.dependencies.add(
             "asciidoctorGems",
             "rubygems:asciidoctor-revealjs:3.1.0@gem"
@@ -631,7 +637,7 @@ class SliderPlugin : Plugin<Project> {
                 project.tasks.named(TASK_ASCIIDOCTOR_REVEALJS) { task ->
                     task.group = GROUP_TASK_SLIDER
                     task.description = "Slider settings and generation (via Docker $dockerImage)"
-                    task.dependsOn(Slides.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD)
+                    task.dependsOn(TASK_CLEAN_SLIDES_BUILD)
                     task.finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
                 }
                 // remplacer l'action de la tâche existante par Docker
@@ -662,35 +668,37 @@ class SliderPlugin : Plugin<Project> {
                         gh.setTag("3.9.1")
                     }
                 }
+                @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
                 project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
                     group = GROUP_TASK_SLIDER
                     description = "Slider settings and generation"
-                    setInProcess("JAVA_EXEC")
-                    forkOptions { fo ->
-                        fo.executable(
-                            project.serviceOf<JavaToolchainService>()
-                                .launcherFor { spec ->
-                                    spec.languageVersion.set(JavaLanguageVersion.of(17))
-                                    spec.vendor.set(ADOPTIUM)
-                                }.get()
-                                .executablePath
-                                .asFile
-                                .absolutePath
-                        )
-                    }
-                    dependsOn(RevealJsSlides.TASK_CLEAN_SLIDES_BUILD)
+                    setExecutionMode(OUT_OF_PROCESS)
+//                    setExecutionMode("JAVA_EXEC")
+//                    forkOptions { fo ->
+//                        fo.executable(
+//                            project.serviceOf<JavaToolchainService>()
+//                                .launcherFor { spec ->
+//                                    spec.languageVersion.set(JavaLanguageVersion.of(17))
+//                                    spec.vendor.set(ADOPTIUM)
+//                                }.get()
+//                                .executablePath
+//                                .asFile
+//                                .absolutePath
+//                        )
+//                    }
+                    dependsOn(TASK_CLEAN_SLIDES_BUILD)
                     finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
                     revealjsOptions {
                         project.layout.projectDirectory.asFile
-                            .resolve(Slides.Slide.SLIDES_FOLDER)
-                            .resolve(Slides.Slide.DEFAULT_SLIDES_FOLDER)
+                            .resolve(SLIDES_FOLDER)
+                            .resolve(DEFAULT_SLIDES_FOLDER)
                             .apply { println("Slide source absolute path: $absolutePath") }
                             .let(::setSourceDir)
                         baseDirFollowsSourceFile()
                         resources { spec ->
-                            spec.from(sourceDir.resolve(Slides.Slide.IMAGES)) { copy ->
+                            spec.from(sourceDir.resolve(IMAGES)) { copy ->
                                 copy.include("**")
-                                copy.into(Slides.Slide.IMAGES)
+                                copy.into(IMAGES)
                             }
                         }
                         attributes(
@@ -715,6 +723,7 @@ class SliderPlugin : Plugin<Project> {
                     }
                 }
 
+                @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
                 project.tasks.register<AsciidoctorTask>("asciidoctor") {
                     group = GROUP_TASK_SLIDER
                     dependsOn(project.tasks.findByName("asciidoctorRevealJs"))
