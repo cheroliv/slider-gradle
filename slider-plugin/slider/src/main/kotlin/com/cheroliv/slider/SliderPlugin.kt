@@ -380,20 +380,20 @@ object SliderManager {
     } catch (e: Exception) {
         // Handle exception or log error
         SlidesConfiguration(
-            "",
-            GitPushConfiguration(
-                "",
-                "",
-                RepositoryConfiguration(
-                    "",
-                    "",
-                    RepositoryCredentials(
-                        "",
-                        ""
+            srcPath = "",
+            pushSlides = GitPushConfiguration(
+                from = "",
+                to = "",
+                repo = RepositoryConfiguration(
+                    name = "",
+                    repository = "",
+                    credentials = RepositoryCredentials(
+                        username = "",
+                        password = ""
                     )
                 ),
-                "",
-                ""
+                branch = "",
+                message = ""
             )
         )
     }
@@ -600,13 +600,11 @@ class SliderPlugin : Plugin<Project> {
             repo.metadataSources { s -> s.artifact() }
             repo.content { c -> c.includeGroup("rubygems") }
         }
-        project.plugins.apply("com.github.node-gradle.node")
 
+        project.plugins.apply("com.github.node-gradle.node")
         project.plugins.apply("org.asciidoctor.jvm.gems.classic")
         project.plugins.apply("org.asciidoctor.jvm.revealjs.classic")
 
-//        project.plugins.apply("org.asciidoctor.jvm.gems")
-//        project.plugins.apply("org.asciidoctor.jvm.revealjs")
         project.dependencies.add(
             "asciidoctorGems",
             "rubygems:asciidoctor-revealjs:3.1.0@gem"
@@ -614,7 +612,7 @@ class SliderPlugin : Plugin<Project> {
 
         val isDockerAvailable = try {
             Runtime.getRuntime().exec(arrayOf("docker", "info")).waitFor() == 0
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
         val sliderExtension = project.extensions.create(
@@ -672,20 +670,8 @@ class SliderPlugin : Plugin<Project> {
                 project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
                     group = GROUP_TASK_SLIDER
                     description = "Slider settings and generation"
+                    @Suppress("UsePropertyAccessSyntax")
                     setExecutionMode(OUT_OF_PROCESS)
-//                    setExecutionMode("JAVA_EXEC")
-//                    forkOptions { fo ->
-//                        fo.executable(
-//                            project.serviceOf<JavaToolchainService>()
-//                                .launcherFor { spec ->
-//                                    spec.languageVersion.set(JavaLanguageVersion.of(17))
-//                                    spec.vendor.set(ADOPTIUM)
-//                                }.get()
-//                                .executablePath
-//                                .asFile
-//                                .absolutePath
-//                        )
-//                    }
                     dependsOn(TASK_CLEAN_SLIDES_BUILD)
                     finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
                     revealjsOptions {
@@ -802,8 +788,8 @@ class SliderPlugin : Plugin<Project> {
                         resolve("slides.json").run { if (exists()) delete() }
                         resolve("images").deleteRecursively()
                         listFiles()
-                            ?.filter { it.isFile && it.name.endsWith(".html") }
-                            ?.forEach { it.delete() }
+                            ?.filter { file -> file.isFile && file.name.endsWith(".html") }
+                            ?.forEach { file -> file.delete() }
                     }
             }
         }
@@ -834,7 +820,7 @@ class SliderPlugin : Plugin<Project> {
                     .resolve("slides")
                     .resolve("misc")
                     .apply {
-                        listFiles().find { it.name == "index.html" }!!
+                        listFiles().find { file -> file.name == "index.html" }!!
                             .readText().trimIndent()
                             .run { "index.html:\n$this" }
                             .run(project.logger::info)
@@ -882,7 +868,7 @@ class SliderPlugin : Plugin<Project> {
 
                 // Générer le fichier index.html
                 slidesDir.listFiles()
-                    .find { it.name == "index.html" }!!
+                    .find { file -> file.name == "index.html" }!!
                     .copyTo(outputDir.resolve("index.html"), true)
 
                 println("✅ Dashboard généré avec succès !")
@@ -897,7 +883,7 @@ class SliderPlugin : Plugin<Project> {
             it.group = GROUP_TASK_SLIDER
             it.description = "Deploy sliders to remote repository"
             it.dependsOn("asciidoctor")
-            it.doFirst { "Task description :\n\t${it.description}".run(project.logger::info) }
+            it.doFirst { task -> "Task description :\n\t${task.description}".run(project.logger::info) }
             it.doLast {
                 val localConf: SlidesConfiguration = project.properties[CONFIG_PATH_KEY].toString()
                     .run(project.layout.projectDirectory.asFile::resolve)
@@ -906,11 +892,11 @@ class SliderPlugin : Plugin<Project> {
 
                 val repoDir = project.layout.buildDirectory.get().asFile.resolve(localConf.pushSlides!!.to)
 
-                project.pushSlides({
+                project.pushSlides(slidesDirPath = {
                     project.layout.buildDirectory.get().asFile
                         .resolve(localConf.srcPath!!)
                         .absolutePath
-                }, { repoDir.absolutePath })
+                }, pathTo = { repoDir.absolutePath })
             }
         }
 
