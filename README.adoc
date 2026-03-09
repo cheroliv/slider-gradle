@@ -21,6 +21,8 @@ image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
 == Description
 This project demonstrates how to use **Gradle 8.14.2** with **Java 17** to create interactive presentations using *AsciidoctorJ Reveal.js*.
 
+== Version : 0.0.1
+
 == Prerequisites
 * JDK 17
 * Gradle Wrapper (version 8.14.2 included)

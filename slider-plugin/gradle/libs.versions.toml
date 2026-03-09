@@ -2,7 +2,7 @@
 #asciidoctor-gradle = "4.0.0-alpha.1"
 asciidoctor-gradle = "5.0.0-alpha.1"
 node-gradle = "7.1.0"
-slider = "0.0.0"
+slider = "0.0.1"
 commons-io = "2.13.0"
 jgit = "6.10.0.202406032230-r"
 slf4j = "2.0.17"
