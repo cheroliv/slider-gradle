@@ -583,7 +583,7 @@ class SliderPlugin : Plugin<Project> {
 
         project.repositories.maven { repo ->
             repo.url = project.uri("https://repo.gradle.org/ui/native/jcenter-backup/")
-//            repo.content { c -> c.includeGroup("rubygems") }
+            repo.content { c -> c.includeGroup("rubygems") }
         }
         project.repositories.maven { repo ->
             repo.url = project.uri("https://maven.xillio.com/artifactory/libs-release/")
