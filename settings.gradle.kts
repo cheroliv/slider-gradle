@@ -1,6 +1,8 @@
 pluginManagement.repositories {
     mavenLocal()
     gradlePluginPortal()
-    maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
+    "https://repo.gradle.org/gradle/libs-releases/"
+        .run(::uri)
+        .run(::maven)
 }
 rootProject.name = "slider-gradle"
