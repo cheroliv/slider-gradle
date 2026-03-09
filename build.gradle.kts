@@ -1,5 +1,13 @@
 plugins { alias(libs.plugins.slider) }
-apply<slides.SlidesBuildSrcPlugin>()
+repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+    maven { url = uri("https://maven.xillio.com/artifactory/libs-release/") }
+}
 
-slider { configPath = file("slides-context.yml").absolutePath }
+slider {
+    configPath = file("slides-context.yml").absolutePath
+    forceDocker = false
+}
 
