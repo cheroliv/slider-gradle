@@ -53,10 +53,10 @@ slider { configPath = file("slides-context.yml").absolutePath }
 ----
 
 === gradle/libs.versions.toml
-[source,toml]
+[source,toml,subs="attributes+"]
 ----
 [versions]
-slider = "0.0.1"
+slider = "{plugin-version}"
 
 [plugins]
 slider = { id = "com.cheroliv.slider", version.ref = "slider" }
