@@ -25,7 +25,7 @@ This project demonstrates the use of the **com.cheroliv.slider** plugin with **G
 
 All slide generation logic is fully encapsulated in the `slider-plugin/`, keeping the consumer build script minimal.
 
-== Version : {plugin-version}
+== Current version : {plugin-version}
 
 == Prerequisites
 * JDK 25 (tested with Eclipse Temurin 25.0.2), support 23+
