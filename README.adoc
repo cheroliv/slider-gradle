@@ -62,7 +62,9 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 ----
 
 == Project Structure
-```
+
+[source]
+----
 .
 ├── build.gradle.kts          # Main Gradle configuration (consumer)
 ├── settings.gradle.kts       # pluginManagement configuration
@@ -79,7 +81,7 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 ├── slider-plugin/            # Gradle plugin (plugin source)
 ├── README.adoc               # This file (English)
 └── README_fr.adoc            # French version
-```
+----
 
 == First-Use Auto-Initialisation
 
@@ -169,20 +171,22 @@ The following Gradle tasks cover the full lifecycle of your presentations:
 `asciidoctorRevealJs`::
 Compiles the `.adoc` sources into a Reveal.js HTML presentation.
 Slides are generated in `build/docs/asciidocRevealJs/`.
-+
-```bash
+
+[source,bash]
+----
 ./gradlew asciidoctorRevealJs
-```
+----
 
 `asciidoctor`::
 Runs the standard Asciidoctor conversion (depends on `asciidoctorRevealJs`).
 
 `cleanSlidesBuild`::
 Deletes the generated presentation artifacts from the `build` directory.
-+
-```bash
+
+[source,bash]
+----
 ./gradlew cleanSlidesBuild
-```
+----
 
 `dashSlidesBuild`::
 Generates the `index.html` and `slides.json` files listing all available presentations.
@@ -192,52 +196,59 @@ Generates the `index.html` and `slides.json` files listing all available present
 `serveSlides`::
 Serves the slides using the *serve* package executed via **npx**.
 Useful for a quick local preview.
-+
-```bash
+
+[source,bash]
+----
 ./gradlew serveSlides
-```
+----
 
 === Open
 
 `openChromium`::
 Opens the default deck file in **Chromium**.
-+
-```bash
+
+[source,bash]
+----
 ./gradlew openChromium
-```
+----
 
 `openFirefox`::
 Opens the presentation dashboard in **Firefox**.
-+
-```bash
+
+[source,bash]
+----
 ./gradlew openFirefox
-```
+----
 
 === Deploy
 
 `publishSlides`::
 Deploys the generated slides to the remote repository configured in `slides-context.yml`.
-+
-```bash
+
+[source,bash]
+----
 ./gradlew publishSlides
-```
+----
 
 === Typical Workflows
 
 .Build and preview locally
-```bash
+[source,bash]
+----
 ./gradlew serveSlides
-```
+----
 
 .Clean and rebuild
-```bash
+[source,bash]
+----
 ./gradlew cleanSlidesBuild asciidoctorRevealJs
-```
+----
 
 .Publish to remote repository
-```bash
+[source,bash]
+----
 ./gradlew asciidoctorRevealJs publishSlides
-```
+----
 
 == Roadmap
 * Configuration Cache support — blocked on asciidoctor-gradle `5.x` stable release.

@@ -5,7 +5,7 @@
 :icons: font
 :lang: en
 :hardbreaks-option:
-:plugin-version: 0.0.1
+:plugin-version: 0.0.3
 
 ++++
 <p align="right">
@@ -35,7 +35,8 @@ It exposes a minimal DSL to the consumer and handles all repository, dependency,
 
 == Project Structure
 
-```
+[source]
+----
 slider-plugin/
 ├── slider/
 │   ├── src/
@@ -50,7 +51,7 @@ slider-plugin/
 ├── settings.gradle.kts
 ├── README.adoc                        # This file
 └── README_fr.adoc                     # French version
-```
+----
 
 == Key Technical Decisions
 
@@ -74,9 +75,11 @@ Since `asciidoctor-gradle-jvm-slides:5.0.0-alpha.1`, the plugin IDs have changed
 
 === pluginManagement repository — `repo.gradle.org`
 The transitive dependency `grolifant:0.12` (required by `jruby-gradle-core-plugin`) is only available at:
-```
+
+[source]
+----
 https://repo.gradle.org/gradle/libs-releases/
-```
+----
 This must be declared in the consumer's `pluginManagement.repositories`.
 
 === Ivy repository for Ruby gems
@@ -111,20 +114,24 @@ A `slides/` directory is considered complete when `slides/misc/` contains:
 * at least one `*-deck.adoc` file matching a `*.deck.file` key in `deck.properties`
 
 The bundled zip must be placed at:
-```
+
+[source]
+----
 slider/src/main/resources/slides.zip
-```
+----
 
 Gradle embeds it automatically in the plugin jar. The zip entries must use relative paths
 starting with `slides/` so extraction into `projectDirectory` produces the correct layout:
-```
+
+[source]
+----
 slides/
 └── misc/
     ├── example-deck.adoc
     ├── index.html
     ├── deck.properties
     └── images/
-```
+----
 
 The completeness check is implemented as a pure function `isSlidesConfigComplete(miscDir: File)`
 inside `SliderManager.Scaffold` — testable in pure Kotlin without GradleTestKit.
@@ -161,12 +168,16 @@ Both functions are no-ops if the resource already exists — existing consumer c
 == Build & Publish
 
 === Publish to Maven Local (for local testing)
-```bash
+
+[source,bash]
+----
 ./gradlew publishToMavenLocal
-```
+----
 
 === Run tests
-```bash
+
+[source,bash]
+----
 # Unit tests
 ./gradlew test
 
@@ -175,12 +186,14 @@ Both functions are no-ops if the resource already exists — existing consumer c
 
 # Cucumber BDD tests
 ./gradlew cucumberTest
-```
+----
 
 === Publish to Gradle Plugin Portal
-```bash
+
+[source,bash]
+----
 ./gradlew publishPlugins
-```
+----
 Requires `gradle.publish.key` and `gradle.publish.secret` in `~/.gradle/gradle.properties`.
 
 == Plugin DSL
