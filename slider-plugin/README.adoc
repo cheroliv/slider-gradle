@@ -1,5 +1,248 @@
-= Slider plugin v{plugin-version}
+= Slider Plugin — Developer Guide
 :toc: left
 :toclevels: 3
 :source-highlighter: rouge
+:icons: font
+:lang: en
+:hardbreaks-option:
 :plugin-version: 0.0.2
+
+++++
+<p align="right">
+  <a href="README_fr.adoc">
+    <img src="images/lang-fr-red.svg" alt="Français" width="64"/>
+  </a>
+</p>
+++++
+
+image:https://img.shields.io/badge/Kotlin-2.x-7F52FF?logo=kotlin[Kotlin]
+image:https://img.shields.io/badge/Gradle-9.x-02303A?logo=gradle[Gradle]
+image:https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk[Java]
+image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
+
+== Description
+
+`com.cheroliv.slider` is a Gradle plugin that encapsulates the full lifecycle of *AsciidoctorJ Reveal.js* slide generation.
+It exposes a minimal DSL to the consumer and handles all repository, dependency, and task configuration internally.
+
+== Version : {plugin-version}
+
+== Prerequisites
+
+* JDK 25 (tested with Eclipse Temurin 25.0.2)
+* Gradle 9.4.0+
+* Node.js / npx (for the `serveSlides` task)
+
+== Project Structure
+
+```
+slider-plugin/
+├── slider/
+│   ├── src/
+│   │   ├── main/kotlin/com/cheroliv/slider/
+│   │   │   └── SliderPlugin.kt       # Plugin entry point + all task registration
+│   │   ├── functionalTest/kotlin/    # GradleTestKit functional tests
+│   │   └── test/                     # Unit + Cucumber tests
+│   └── build.gradle.kts              # Plugin build script
+├── gradle/
+│   ├── libs.versions.toml            # Dependency catalogue
+│   └── wrapper/                      # Gradle Wrapper
+├── settings.gradle.kts
+├── README.adoc                        # This file
+└── README_fr.adoc                     # French version
+```
+
+== Key Technical Decisions
+
+=== Plugin IDs — `.classic` suffix
+Since `asciidoctor-gradle-jvm-slides:5.0.0-alpha.1`, the plugin IDs have changed:
+
+[cols="1,1"]
+|===
+| Previous (4.x) | Current (5.x)
+
+| `org.asciidoctor.jvm.gems`
+| `org.asciidoctor.jvm.gems.classic`
+
+| `org.asciidoctor.jvm.revealjs`
+| `org.asciidoctor.jvm.revealjs.classic`
+|===
+
+=== Execution Mode — `OUT_OF_PROCESS`
+`JAVA_EXEC` was removed in `5.0.0-alpha.1` due to Gradle API changes around closure serialisation.
+`OUT_OF_PROCESS` is the correct replacement and works on Gradle 9 + Java 25.
+
+=== pluginManagement repository — `repo.gradle.org`
+The transitive dependency `grolifant:0.12` (required by `jruby-gradle-core-plugin`) is only available at:
+```
+https://repo.gradle.org/gradle/libs-releases/
+```
+This must be declared in the consumer's `pluginManagement.repositories`.
+
+=== Ivy repository for Ruby gems
+The gem `asciidoctor-revealjs` is resolved via a dedicated Ivy repository:
+[source,kotlin]
+----
+project.repositories.ivy { repo ->
+    repo.url = project.uri("https://rubygems.org/gems/")
+    repo.patternLayout { layout -> layout.artifact("[module]-[revision].gem") }
+    repo.metadataSources { s -> s.artifact() }
+    repo.content { c -> c.includeGroup("rubygems") }
+}
+----
+The `@gem` qualifier is mandatory:
+[source,kotlin]
+----
+project.dependencies.add("asciidoctorGems", "rubygems:asciidoctor-revealjs:3.1.0@gem")
+----
+
+== Build & Publish
+
+=== Publish to Maven Local (for local testing)
+```bash
+./gradlew publishToMavenLocal
+```
+
+=== Run tests
+```bash
+# Unit tests
+./gradlew test
+
+# Functional tests (GradleTestKit)
+./gradlew functionalTest
+
+# Cucumber BDD tests
+./gradlew cucumberTest
+```
+
+=== Publish to Gradle Plugin Portal
+```bash
+./gradlew publishPlugins
+```
+Requires `gradle.publish.key` and `gradle.publish.secret` in `~/.gradle/gradle.properties`.
+
+== Plugin DSL
+
+[source,kotlin]
+----
+slider {
+    // Path to the YAML configuration file (required)
+    configPath = file("slides-context.yml").absolutePath
+}
+----
+
+== Registered Tasks
+
+[cols="1,1,2"]
+|===
+| Task | Group | Description
+
+| `asciidoctorRevealJs`
+| slider
+| Compiles `.adoc` sources into a Reveal.js HTML presentation
+
+| `asciidoctor`
+| slider
+| Standard Asciidoctor conversion (depends on `asciidoctorRevealJs`)
+
+| `cleanSlidesBuild`
+| slider
+| Deletes generated presentation artifacts
+
+| `dashSlidesBuild`
+| documentation
+| Generates `index.html` and `slides.json` dashboard
+
+| `serveSlides`
+| slider
+| Serves slides via npx + serve package
+
+| `publishSlides`
+| slider
+| Deploys slides to remote Git repository
+
+| `openFirefox`
+| slider
+| Opens presentation dashboard in Firefox
+
+| `openChromium`
+| slider
+| Opens default deck in Chromium
+
+| `reportTests`
+| verification
+| Runs checks and opens test report in Firefox
+
+| `reportFunctionalTests`
+| verification
+| Runs checks and opens functional test report in Firefox
+|===
+
+== Dependencies
+
+=== Key runtime dependencies
+[cols="1,1"]
+|===
+| Dependency | Purpose
+
+| `org.asciidoctor:asciidoctor-gradle-jvm-slides:5.0.0-alpha.1`
+| Reveal.js slide generation
+
+| `org.asciidoctor:asciidoctor-gradle-jvm-gems:5.0.0-alpha.1`
+| JRuby gem management
+
+| `com.github.node-gradle:gradle-node-plugin:7.1.0`
+| Node.js / npx integration
+
+| `org.eclipse.jgit`
+| Git operations for slide publishing
+
+| `com.fasterxml.jackson` (yaml + kotlin)
+| YAML configuration parsing
+
+| `io.arrow-kt:arrow-core`
+| Functional programming utilities
+|===
+
+== Consumer Requirements
+
+The consumer configuration is minimal — the plugin handles all repository and dependency setup internally.
+
+=== settings.gradle.kts
+[source,kotlin]
+----
+pluginManagement.repositories.gradlePluginPortal()
+
+rootProject.name = "your-project-name"
+----
+
+=== build.gradle.kts
+[source,kotlin]
+----
+plugins { alias(libs.plugins.slider) }
+
+slider {
+    configPath = "slides-context.yml"
+        .run(::file)
+        .absolutePath
+}
+----
+
+=== gradle/libs.versions.toml
+[source,toml]
+----
+[versions]
+slider = "0.0.2"
+
+[plugins]
+slider = { id = "com.cheroliv.slider", version.ref = "slider" }
+----
+
+== Roadmap
+* Publish to Gradle Plugin Portal.
+* Extended DSL — configurable theme, transition, source directory.
+* Stable asciidoctor-gradle version when `5.x` leaves alpha.
+* Automated functional tests covering the full build lifecycle.
+
+== License
+This project is licensed under the Apache 2.0 License – see the `LICENCE` file.

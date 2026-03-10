@@ -5,7 +5,7 @@
 :icons: font
 :lang: en
 :hardbreaks-option:
-:plugin-version: 0.0.1
+:plugin-version: 0.0.2
 
 ++++
 <p align="right">
