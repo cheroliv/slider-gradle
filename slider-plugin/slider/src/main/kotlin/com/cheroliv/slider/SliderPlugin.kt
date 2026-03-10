@@ -8,8 +8,10 @@ import com.cheroliv.slider.SliderManager.Repositories.configureRepositories
 import com.cheroliv.slider.SliderManager.Scaffold.scaffoldSlidesContextIfAbsent
 import com.cheroliv.slider.SliderManager.Scaffold.scaffoldSlidesIfAbsent
 import com.cheroliv.slider.SliderManager.Tasks.registerTasks
+import com.cheroliv.slider.ai.AssistantPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import kotlin.jvm.java
 
 /**
  * Main entry point for the Slider Gradle plugin.
@@ -39,6 +41,8 @@ class SliderPlugin : Plugin<Project> {
             configureDependencies()
             configureExtensions()
             registerTasks()
+            // AI applied after extension been created and configured
+            afterEvaluate { plugins.apply(AssistantPlugin::class.java) }
         }
     }
 }
