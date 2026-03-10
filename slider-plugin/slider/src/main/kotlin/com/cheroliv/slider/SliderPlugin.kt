@@ -2,7 +2,6 @@ package com.cheroliv.slider
 
 import arrow.integrations.jackson.module.registerArrowModule
 import com.cheroliv.slider.FileOperationResult.Success
-import com.cheroliv.slider.SliderExtension.Companion.DEFAULT_JDK17_IMAGE
 import com.cheroliv.slider.SliderManager.CONFIG_PATH_KEY
 import com.cheroliv.slider.SliderManager.deckFile
 import com.cheroliv.slider.SliderManager.pushSlides
@@ -60,40 +59,11 @@ import javax.inject.Inject
  * ```
  * slider {
  *     configPath = file("slides-context.yml").absolutePath
- *
- *     // Optional — defaults to "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
- *     // Only used when jdk17 is not installed locally but Docker is available.
- *     java17TemurinDockerImage = "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
- *
- *     // Optional — force Docker even if jdk17 is installed locally. Default: false
- *     forceDocker = true
  * }
  * ```
  */
 open class SliderExtension @Inject constructor(objects: ObjectFactory) {
     val configPath: Property<String> = objects.property(String::class.java)
-
-    /**
-     * Docker image to use for jdk17 when jdk17 is not installed on the host.
-     * Ignored if jdk17 is available locally AND [forceDocker] is false.
-     * Defaults to [DEFAULT_JDK17_IMAGE].
-     */
-    val java17TemurinDockerImage: Property<String> = objects
-        .property(String::class.java)
-        .convention(DEFAULT_JDK17_IMAGE)
-
-    /**
-     * When true, skips the local jdk17 probe and goes straight to Docker,
-     * even if `jdk17` is available on the system PATH.
-     * Defaults to false.
-     */
-    val forceDocker: Property<Boolean> = objects
-        .property(Boolean::class.java)
-        .convention(false)
-
-    companion object {
-        const val DEFAULT_JDK17_IMAGE = "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
-    }
 }
 
 object SlidesManager {
@@ -611,118 +581,66 @@ class SliderPlugin : Plugin<Project> {
             "rubygems:asciidoctor-revealjs:3.1.0@gem"
         )
 
-        val isDockerAvailable = try {
-            Runtime.getRuntime().exec(arrayOf("docker", "info")).waitFor() == 0
-        } catch (_: Exception) {
-            false
-        }
         val sliderExtension = project.extensions.create(
             GROUP_TASK_SLIDER,
             SliderExtension::class.java
         )
-        val javaVersion = JavaVersion.current().majorVersion.toInt()
-        val forceDockerProp = project.findProperty("slider.forceDocker")?.toString()?.toBoolean() ?: false
-        val useDocker = when {
-            forceDockerProp -> false                    // dans le container, jamais Docker
-            sliderExtension.forceDocker.get() -> true   // forcé par le DSL
-            javaVersion == 17 -> false                  // Java 17 local, pas besoin de Docker
-            isDockerAvailable -> true                   // Java != 17, Docker disponible
-            else -> error("Docker requis pour Java $javaVersion")
+
+
+        project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
+            group = GROUP_TASK_SLIDER
+            description = "Slider settings and generation"
+            setExecutionMode(OUT_OF_PROCESS)
+            dependsOn(TASK_CLEAN_SLIDES_BUILD)
+            finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
+            revealjsOptions {
+                project.layout.projectDirectory.asFile
+                    .resolve(SLIDES_FOLDER)
+                    .resolve(DEFAULT_SLIDES_FOLDER)
+                    .apply { println("Slide source absolute path: $absolutePath") }
+                    .let(::setSourceDir)
+                baseDirFollowsSourceFile()
+                resources { spec ->
+                    spec.from(sourceDir.resolve(IMAGES)) { copy ->
+                        copy.include("**")
+                        copy.into(IMAGES)
+                    }
+                }
+                attributes(mapOf(
+                    BUILD_GRADLE_KEY to project.layout.projectDirectory.asFile.resolve("build.gradle.kts"),
+                    ENDPOINT_URL_KEY to "https://github.com/pages-content/slides/",
+                    SOURCE_HIGHLIGHTER_KEY to "coderay",
+                    CODERAY_CSS_KEY to "style",
+                    RevealJsSlides.IMAGEDIR_KEY to ".${SliderManager.sep}images",
+                    RevealJsSlides.TOC_KEY to "left",
+                    RevealJsSlides.ICONS_KEY to "font",
+                    RevealJsSlides.SETANCHORS_KEY to "",
+                    RevealJsSlides.IDPREFIX_KEY to "slide-",
+                    RevealJsSlides.IDSEPARATOR_KEY to "-",
+                    RevealJsSlides.DOCINFO_KEY to "shared",
+                    RevealJsSlides.REVEALJS_THEME_KEY to "black",
+                    RevealJsSlides.REVEALJS_TRANSITION_KEY to "linear",
+                    RevealJsSlides.REVEALJS_HISTORY_KEY to "true",
+                    RevealJsSlides.REVEALJS_SLIDENUMBER_KEY to "true"
+                ))
+            }
         }
 
-        when {
-            useDocker -> {
-                val dockerImage = sliderExtension.java17TemurinDockerImage.get()
-                project.tasks.named(TASK_ASCIIDOCTOR_REVEALJS) { task ->
-                    task.group = GROUP_TASK_SLIDER
-                    task.description = "Slider settings and generation (via Docker $dockerImage)"
-                    task.dependsOn(TASK_CLEAN_SLIDES_BUILD)
-                    task.finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
-                }
-                // remplacer l'action de la tâche existante par Docker
-                project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
-                    doFirst {
-                        project.exec { exec ->
-                            exec.commandLine(
-                                "docker", "run", "--rm",
-                                "-v", "${project.rootDir.absolutePath}:/workspace",
-                                "-v", "${System.getProperty("user.home")}/.gradle:/root/.gradle",
-                                "-w", "/workspace",
-                                dockerImage,
-                                "./gradlew", TASK_ASCIIDOCTOR_REVEALJS,
-                                "-Pslider.forceDocker=false"
-                            )
-                            exec.workingDir = project.rootDir
-                        }
-                    }
-                }
-            }
-
-            javaVersion == 17 -> {
-                project.extensions.getByType(RevealJSExtension::class.java).apply {
-                    version = "3.1.0"
-                    templateGitHub { gh ->
-                        gh.setOrganisation("hakimel")
-                        gh.setRepository("reveal.js")
-                        gh.setTag("3.9.1")
-                    }
-                }
-                @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
-                project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
-                    group = GROUP_TASK_SLIDER
-                    description = "Slider settings and generation"
-                    @Suppress("UsePropertyAccessSyntax")
-                    setExecutionMode(OUT_OF_PROCESS)
-                    dependsOn(TASK_CLEAN_SLIDES_BUILD)
-                    finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
-                    revealjsOptions {
-                        project.layout.projectDirectory.asFile
-                            .resolve(SLIDES_FOLDER)
-                            .resolve(DEFAULT_SLIDES_FOLDER)
-                            .apply { println("Slide source absolute path: $absolutePath") }
-                            .let(::setSourceDir)
-                        baseDirFollowsSourceFile()
-                        resources { spec ->
-                            spec.from(sourceDir.resolve(IMAGES)) { copy ->
-                                copy.include("**")
-                                copy.into(IMAGES)
-                            }
-                        }
-                        attributes(
-                            mapOf(
-                                BUILD_GRADLE_KEY to project.layout.projectDirectory.asFile.resolve("build.gradle.kts"),
-                                ENDPOINT_URL_KEY to "https://github.com/pages-content/slides/",
-                                SOURCE_HIGHLIGHTER_KEY to "coderay",
-                                CODERAY_CSS_KEY to "style",
-                                RevealJsSlides.IMAGEDIR_KEY to ".${SliderManager.sep}images",
-                                RevealJsSlides.TOC_KEY to "left",
-                                RevealJsSlides.ICONS_KEY to "font",
-                                RevealJsSlides.SETANCHORS_KEY to "",
-                                RevealJsSlides.IDPREFIX_KEY to "slide-",
-                                RevealJsSlides.IDSEPARATOR_KEY to "-",
-                                RevealJsSlides.DOCINFO_KEY to "shared",
-                                RevealJsSlides.REVEALJS_THEME_KEY to "black",
-                                RevealJsSlides.REVEALJS_TRANSITION_KEY to "linear",
-                                RevealJsSlides.REVEALJS_HISTORY_KEY to "true",
-                                RevealJsSlides.REVEALJS_SLIDENUMBER_KEY to "true"
-                            )
-                        )
-                    }
-                }
-
-                @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
-                project.tasks.register<AsciidoctorTask>("asciidoctor") {
-                    group = GROUP_TASK_SLIDER
-                    dependsOn(project.tasks.findByName("asciidoctorRevealJs"))
-                }
-            }
-
-            else -> error(
-                "Docker est requis pour exécuter $TASK_ASCIIDOCTOR_REVEALJS " +
-                        "avec Java $javaVersion. Installez Docker ou utilisez Java 17."
-            )
+        project.tasks.register<AsciidoctorTask>("asciidoctor") {
+            group = GROUP_TASK_SLIDER
+//            dependsOn(project.tasks.findByName(TASK_ASCIIDOCTOR_REVEALJS))
+            dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
         }
 
+
+        project.extensions.getByType(RevealJSExtension::class.java).apply {
+            version = "3.1.0"
+            templateGitHub { gh ->
+                gh.setOrganisation("hakimel")
+                gh.setRepository("reveal.js")
+                gh.setTag("3.9.1")
+            }
+        }
 
         project.tasks.register<NpxTask>(TASK_SERVE_SLIDES) {
             group = GROUP_TASK_SLIDER
