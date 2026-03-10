@@ -5,7 +5,7 @@
 :icons: font
 :lang: en
 :hardbreaks-option:
-:plugin-version: 0.0.2
+:plugin-version: 0.0.1
 
 ++++
 <p align="right">
@@ -25,11 +25,11 @@ image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
 `com.cheroliv.slider` is a Gradle plugin that encapsulates the full lifecycle of *AsciidoctorJ Reveal.js* slide generation.
 It exposes a minimal DSL to the consumer and handles all repository, dependency, and task configuration internally.
 
-== Current version : {plugin-version}
+== Version : {plugin-version}
 
 == Prerequisites
 
-* JDK 25 (tested with Eclipse Temurin 25.0.2), support 23+
+* JDK 25 (tested with Eclipse Temurin 25.0.2)
 * Gradle 9.4.0+
 * Node.js / npx (for the `serveSlides` task)
 
@@ -95,6 +95,68 @@ The `@gem` qualifier is mandatory:
 ----
 project.dependencies.add("asciidoctorGems", "rubygems:asciidoctor-revealjs:3.1.0@gem")
 ----
+
+=== Scaffold — First-Use Auto-Initialisation
+On the first Gradle task execution, `SliderManager.Scaffold` runs two independent checks
+and generates missing resources automatically.
+
+==== slides/ initialisation — `scaffoldSlidesIfAbsent()`
+Checks whether the consumer project has a complete `slides/` directory. If not, extracts
+the bundled `slides.zip` from the plugin classpath into the project directory.
+
+A `slides/` directory is considered complete when `slides/misc/` contains:
+
+* `deck.properties` — at least one `*.deck.file` key
+* `index.html` — presentation dashboard
+* at least one `*-deck.adoc` file matching a `*.deck.file` key in `deck.properties`
+
+The bundled zip must be placed at:
+```
+slider/src/main/resources/slides.zip
+```
+
+Gradle embeds it automatically in the plugin jar. The zip entries must use relative paths
+starting with `slides/` so extraction into `projectDirectory` produces the correct layout:
+```
+slides/
+└── misc/
+    ├── example-deck.adoc
+    ├── index.html
+    ├── deck.properties
+    └── images/
+```
+
+The completeness check is implemented as a pure function `isSlidesConfigComplete(miscDir: File)`
+inside `SliderManager.Scaffold` — testable in pure Kotlin without GradleTestKit.
+
+==== slides-context.yml initialisation — `scaffoldSlidesContextIfAbsent()`
+If `slides-context.yml` is absent from the consumer project directory, generates one automatically
+by serialising a default `SlidesConfiguration` instance via `yamlMapper`. This guarantees the
+output is structurally valid and consistent with the data model — no hardcoded YAML strings.
+
+[source,kotlin]
+----
+val default = SlidesConfiguration(
+    srcPath = "docs/asciidocRevealJs",
+    pushSlides = GitPushConfiguration(
+        from = "build/docs/asciidocRevealJs",
+        to = "build/slides-repo",
+        branch = "main",
+        message = "deploy slides",
+        repo = RepositoryConfiguration(
+            name = "slides",
+            repository = "https://github.com/your-org/your-slides-repo.git",
+            credentials = RepositoryCredentials(
+                username = "your-username",
+                password = "your-token"
+            )
+        )
+    )
+)
+yamlMapper.writeValue(slidesContext, default)
+----
+
+Both functions are no-ops if the resource already exists — existing consumer content is never overwritten.
 
 == Build & Publish
 
@@ -211,8 +273,10 @@ The consumer configuration is minimal — the plugin handles all repository and 
 === settings.gradle.kts
 [source,kotlin]
 ----
-pluginManagement.repositories.gradlePluginPortal()
-
+pluginManagement.repositories {
+    mavenLocal()
+    gradlePluginPortal()
+}
 rootProject.name = "your-project-name"
 ----
 
@@ -229,19 +293,51 @@ slider {
 ----
 
 === gradle/libs.versions.toml
-[source,toml,subs="attributes+"]
+[source,toml]
 ----
 [versions]
-slider = "{plugin-version}"
+slider = "0.0.2"
 
 [plugins]
 slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 ----
 
+== Gradle Feature Compatibility
+
+The plugin declares its compatibility with opt-in Gradle features via the
+`compatibility {}` block introduced in Plugin Publish plugin v2.1.0.
+This declaration is mandatory — the Gradle Plugin Portal emits a warning
+during `publishPlugins` if it is absent, and plans to eventually reject plugins without it.
+
+[source,kotlin]
+----
+import org.gradle.plugin.compatibility.compatibility
+
+gradlePlugin {
+    plugins {
+        create("slider") {
+            // ...
+            compatibility {
+                features {
+                    // asciidoctorRevealJs runs OUT_OF_PROCESS via JRuby —
+                    // not compatible with Configuration Cache.
+                    // Will be revisited when asciidoctor-gradle stabilises
+                    // beyond 5.0.0-alpha.1.
+                    configurationCache = false
+                }
+            }
+        }
+    }
+}
+----
+
+Declaring `configurationCache = false` is honest and recommended — it informs
+users clearly and has no negative consequences for the plugin's Portal ranking
+beyond the Configuration Cache badge.
+
 == Roadmap
-* Publish to Gradle Plugin Portal.
+* Configuration Cache support — blocked on asciidoctor-gradle `5.x` stable release.
 * Extended DSL — configurable theme, transition, source directory.
-* Stable asciidoctor-gradle version when `5.x` leaves alpha.
 * Automated functional tests covering the full build lifecycle.
 
 == License

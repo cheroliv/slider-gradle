@@ -5,7 +5,7 @@
 :icons: font
 :lang: en
 :hardbreaks-option:
-:plugin-version: 0.0.2
+:plugin-version: 0.0.3
 
 ++++
 <p align="right">
@@ -80,6 +80,58 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 ├── README.adoc               # This file (English)
 └── README_fr.adoc            # French version
 ```
+
+== First-Use Auto-Initialisation
+
+On the first Gradle task execution, the plugin checks whether the `slides/` directory and `slides-context.yml` file are present and complete in the consumer project.
+
+=== slides/ initialisation
+
+A `slides/` directory is considered **complete** if it contains inside `slides/misc/`:
+
+* `deck.properties` — deck configuration file (`*.deck.file` keys)
+* `index.html` — presentation dashboard
+* at least one `*-deck.adoc` file referenced by a `*.deck.file` key in `deck.properties`
+
+If any of these conditions is not met, the plugin automatically extracts a default `slides/` directory from the zip bundled in its classpath.
+
+=== deck.properties convention
+
+[source,properties]
+----
+# Each key follows the *.deck.file pattern
+# The value is the name of the generated HTML file (*-deck.html)
+# The corresponding AsciiDoc source file is *-deck.adoc
+
+example.deck.file=example-deck.html
+default.deck.file=default-deck.html
+asciidoc.capsule.deck.file=asciidoc.capsule-deck.html
+----
+
+The source file `example-deck.adoc` must exist in `slides/misc/` for the configuration to be considered valid.
+
+=== slides-context.yml initialisation
+
+If `slides-context.yml` is absent from the project directory, the plugin generates one automatically
+from the typed `SlidesConfiguration` model. The generated file contains placeholders to replace:
+
+[source,yaml]
+----
+srcPath: docs/asciidocRevealJs
+pushSlides:
+  from: build/docs/asciidocRevealJs
+  to: build/slides-repo
+  branch: main
+  message: deploy slides
+  repo:
+    name: slides
+    repository: https://github.com/your-org/your-slides-repo.git
+    credentials:
+      username: your-username
+      password: your-token
+----
+
+NOTE: If `slides/` already exists and is complete, and if `slides-context.yml` already exists, the plugin never touches the existing content.
 
 == Plugin DSL Configuration
 
@@ -188,10 +240,14 @@ Deploys the generated slides to the remote repository configured in `slides-cont
 ```
 
 == Roadmap
-* Publish the plugin to the Gradle Plugin Portal.
+* Configuration Cache support — blocked on asciidoctor-gradle `5.x` stable release.
 * Automated functional tests for slide generation.
 * Support for additional Reveal.js themes.
 * Extended DSL configuration (theme, transition, source dir).
+
+NOTE: The plugin explicitly declares `configurationCache = false` on the Gradle Plugin Portal.
+Do not enable Gradle Configuration Cache with this plugin — the `asciidoctorRevealJs` task
+runs `OUT_OF_PROCESS` via JRuby and is not compatible in its current state.
 
 == License
 This project is licensed under the Apache‑2.0 License – see the `LICENCE` file.
