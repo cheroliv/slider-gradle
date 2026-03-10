@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     `java-library`
@@ -227,6 +228,15 @@ gradlePlugin {
             displayName = "Slider Plugin"
             description = "Gradle plugin for slider generation."
             tags.set(listOf("revealjs", "slide-generator", "slide", "jgit", "asciidoc"))
+            @Suppress("UnstableApiUsage")
+            compatibility {
+                features {
+                    // asciidoctorRevealJs runs OUT_OF_PROCESS via JRuby — not compatible
+                    // with Configuration Cache. Will be revisited when asciidoctor-gradle
+                    // stabilises beyond 5.0.0-alpha.1.
+                    configurationCache = false
+                }
+            }
         }
     }
     website = "https://cheroliv.com"
