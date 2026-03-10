@@ -38,12 +38,8 @@ All slide generation logic is fully encapsulated in the `slider-plugin/`, keepin
 === settings.gradle.kts
 [source,kotlin]
 ----
-pluginManagement.repositories {
-    mavenLocal()
-    gradlePluginPortal()
-    maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
-}
-plugins { id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0" }
+pluginManagement.repositories.gradlePluginPortal()
+
 rootProject.name = "slider-gradle"
 ----
 
@@ -52,29 +48,14 @@ rootProject.name = "slider-gradle"
 ----
 plugins { alias(libs.plugins.slider) }
 
-repositories {
-    google()
-    mavenCentral()
-    gradlePluginPortal()
-    listOf(
-        "https://repo.gradle.org/gradle/libs-releases/",
-        "https://plugins.gradle.org/m2/",
-        "https://maven.xillio.com/artifactory/libs-release/",
-        "https://mvnrepository.com/repos/springio-plugins-release",
-        "https://archiva-repository.apache.org/archiva/repository/public/"
-    ).forEach(::maven)
-}
-
-slider {
-    configPath = file("slides-context.yml").absolutePath
-}
+slider { configPath = file("slides-context.yml").absolutePath }
 ----
 
 === gradle/libs.versions.toml
-[source,toml]
+[source,toml,subs="attributes+"]
 ----
 [versions]
-slider = "0.0.1"
+slider = "{plugin-version}"
 
 [plugins]
 slider = { id = "com.cheroliv.slider", version.ref = "slider" }
