@@ -29,7 +29,7 @@ Il expose un DSL minimal au consommateur et gère en interne toute la configurat
 
 == Prérequis
 
-* JDK 25 (testé avec Eclipse Temurin 25.0.2)
+* JDK 25 (testé avec Eclipse Temurin 25.0.2), support 23+
 * Gradle 9.4.0+
 * Node.js / npx (pour la tâche `serveSlides`)
 

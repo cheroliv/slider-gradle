@@ -29,7 +29,7 @@ La logique de génération des slides est entièrement encapsulée dans le plugi
 == Version : {plugin-version}
 
 == Prérequis
-* JDK 25 (testé avec Eclipse Temurin 25.0.2)
+* JDK 25 (testé avec Eclipse Temurin 25.0.2), support 23+
 * Gradle Wrapper (version 9.4.0 incluse)
 * Node.js / npx (pour la tâche `serveSlides`)
 * Connexion Internet (pour télécharger les dépendances Reveal.js)
