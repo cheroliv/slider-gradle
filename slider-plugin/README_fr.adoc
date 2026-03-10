@@ -25,7 +25,7 @@ image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
 `com.cheroliv.slider` est un plugin Gradle qui encapsule l'intégralité du cycle de vie de génération de présentations *AsciidoctorJ Reveal.js*.
 Il expose un DSL minimal au consommateur et gère en interne toute la configuration des dépôts, dépendances et tâches.
 
-== Version : {plugin-version}
+== Version actuel : {plugin-version}
 
 == Prérequis
 
