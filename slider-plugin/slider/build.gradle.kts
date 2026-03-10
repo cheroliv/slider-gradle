@@ -11,7 +11,7 @@ plugins {
 
 group = "com.cheroliv"
 version = libs.plugins.slider.get().version
-kotlin.jvmToolchain(JavaVersion.VERSION_17.ordinal)
+kotlin.jvmToolchain(JavaVersion.VERSION_24.ordinal)
 
 repositories {
     mavenCentral()
@@ -71,7 +71,8 @@ dependencies {
     implementation("io.arrow-kt:arrow-fx-coroutines:1.2.4")
     implementation("io.arrow-kt:arrow-integrations-jackson-module:0.14.1")
 
-    listOf("dev.langchain4j:langchain4j:${versions[langchain4jVersionKey]}",
+    listOf(
+        "dev.langchain4j:langchain4j:${versions[langchain4jVersionKey]}",
         "dev.langchain4j:langchain4j-ollama:${versions[langchain4jExtensionVersionKey]}",
         "dev.langchain4j:langchain4j-hugging-face:${versions[langchain4jExtensionVersionKey]}",
         "dev.langchain4j:langchain4j-google-ai-gemini:${versions[langchain4jExtensionVersionKey]}",
