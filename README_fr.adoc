@@ -5,6 +5,7 @@
 :icons: font
 :lang: fr
 :hardbreaks-option:
+:plugin-version: 0.0.2
 
 
 ++++
@@ -22,7 +23,7 @@ image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
 == Description
 Ce projet montre comment utiliser **Gradle 8.14.2** avec **Java 17** pour créer des présentations interactives grâce à *AsciidoctorJ Reveal.js*.
 
-== Version : 0.0.1
+== Version : {plugin-version}
 
 == Prérequis
 * JDK 17
