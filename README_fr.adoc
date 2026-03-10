@@ -5,7 +5,7 @@
 :icons: font
 :lang: fr
 :hardbreaks-option:
-:plugin-version: 0.0.1
+:plugin-version: 0.0.2
 
 
 ++++

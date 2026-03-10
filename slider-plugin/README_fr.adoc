@@ -1,5 +1,248 @@
-= Slider plugin v{plugin-version}
+= Plugin Slider — Guide Développeur
 :toc: left
 :toclevels: 3
 :source-highlighter: rouge
+:icons: font
+:lang: fr
+:hardbreaks-option:
 :plugin-version: 0.0.2
+
+++++
+<p align="right">
+  <a href="README.adoc">
+    <img src="images/lang-en-blue.svg" alt="English" width="64"/>
+  </a>
+</p>
+++++
+
+image:https://img.shields.io/badge/Kotlin-2.x-7F52FF?logo=kotlin[Kotlin]
+image:https://img.shields.io/badge/Gradle-9.x-02303A?logo=gradle[Gradle]
+image:https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk[Java]
+image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
+
+== Description
+
+`com.cheroliv.slider` est un plugin Gradle qui encapsule l'intégralité du cycle de vie de génération de présentations *AsciidoctorJ Reveal.js*.
+Il expose un DSL minimal au consommateur et gère en interne toute la configuration des dépôts, dépendances et tâches.
+
+== Version : {plugin-version}
+
+== Prérequis
+
+* JDK 25 (testé avec Eclipse Temurin 25.0.2)
+* Gradle 9.4.0+
+* Node.js / npx (pour la tâche `serveSlides`)
+
+== Structure du projet
+
+```
+slider-plugin/
+├── slider/
+│   ├── src/
+│   │   ├── main/kotlin/com/cheroliv/slider/
+│   │   │   └── SliderPlugin.kt       # Point d'entrée + enregistrement des tâches
+│   │   ├── functionalTest/kotlin/    # Tests fonctionnels GradleTestKit
+│   │   └── test/                     # Tests unitaires + Cucumber
+│   └── build.gradle.kts              # Script de build du plugin
+├── gradle/
+│   ├── libs.versions.toml            # Catalogue de dépendances
+│   └── wrapper/                      # Gradle Wrapper
+├── settings.gradle.kts
+├── README.adoc                        # Version anglaise
+└── README_fr.adoc                     # Ce fichier
+```
+
+== Décisions techniques clés
+
+=== IDs de plugin — suffixe `.classic`
+Depuis `asciidoctor-gradle-jvm-slides:5.0.0-alpha.1`, les IDs de plugin ont changé :
+
+[cols="1,1"]
+|===
+| Ancien (4.x) | Actuel (5.x)
+
+| `org.asciidoctor.jvm.gems`
+| `org.asciidoctor.jvm.gems.classic`
+
+| `org.asciidoctor.jvm.revealjs`
+| `org.asciidoctor.jvm.revealjs.classic`
+|===
+
+=== Mode d'exécution — `OUT_OF_PROCESS`
+`JAVA_EXEC` a été supprimé dans `5.0.0-alpha.1` suite aux changements de l'API Gradle sur la sérialisation des closures.
+`OUT_OF_PROCESS` est le remplacement correct et fonctionne sur Gradle 9 + Java 25.
+
+=== Dépôt pluginManagement — `repo.gradle.org`
+La dépendance transitive `grolifant:0.12` (requise par `jruby-gradle-core-plugin`) n'est disponible que sur :
+```
+https://repo.gradle.org/gradle/libs-releases/
+```
+Ce dépôt doit être déclaré dans le `pluginManagement.repositories` du consommateur.
+
+=== Dépôt Ivy pour les gems Ruby
+La gem `asciidoctor-revealjs` est résolue via un dépôt Ivy dédié :
+[source,kotlin]
+----
+project.repositories.ivy { repo ->
+    repo.url = project.uri("https://rubygems.org/gems/")
+    repo.patternLayout { layout -> layout.artifact("[module]-[revision].gem") }
+    repo.metadataSources { s -> s.artifact() }
+    repo.content { c -> c.includeGroup("rubygems") }
+}
+----
+Le qualificateur `@gem` est obligatoire :
+[source,kotlin]
+----
+project.dependencies.add("asciidoctorGems", "rubygems:asciidoctor-revealjs:3.1.0@gem")
+----
+
+== Build & Publication
+
+=== Publier en local (pour les tests)
+```bash
+./gradlew publishToMavenLocal
+```
+
+=== Lancer les tests
+```bash
+# Tests unitaires
+./gradlew test
+
+# Tests fonctionnels (GradleTestKit)
+./gradlew functionalTest
+
+# Tests BDD Cucumber
+./gradlew cucumberTest
+```
+
+=== Publier sur le Gradle Plugin Portal
+```bash
+./gradlew publishPlugins
+```
+Nécessite `gradle.publish.key` et `gradle.publish.secret` dans `~/.gradle/gradle.properties`.
+
+== DSL du plugin
+
+[source,kotlin]
+----
+slider {
+    // Chemin vers le fichier de configuration YAML (obligatoire)
+    configPath = file("slides-context.yml").absolutePath
+}
+----
+
+== Tâches enregistrées
+
+[cols="1,1,2"]
+|===
+| Tâche | Groupe | Description
+
+| `asciidoctorRevealJs`
+| slider
+| Compile les sources `.adoc` en présentation HTML Reveal.js
+
+| `asciidoctor`
+| slider
+| Conversion Asciidoctor standard (dépend de `asciidoctorRevealJs`)
+
+| `cleanSlidesBuild`
+| slider
+| Supprime les artefacts de présentation générés
+
+| `dashSlidesBuild`
+| documentation
+| Génère le dashboard `index.html` et `slides.json`
+
+| `serveSlides`
+| slider
+| Sert les slides via npx + paquet serve
+
+| `publishSlides`
+| slider
+| Déploie les slides vers le dépôt Git distant
+
+| `openFirefox`
+| slider
+| Ouvre le dashboard dans Firefox
+
+| `openChromium`
+| slider
+| Ouvre le deck par défaut dans Chromium
+
+| `reportTests`
+| verification
+| Lance les vérifications et ouvre le rapport dans Firefox
+
+| `reportFunctionalTests`
+| verification
+| Lance les vérifications fonctionnelles et ouvre le rapport
+|===
+
+== Dépendances
+
+=== Dépendances runtime principales
+[cols="1,1"]
+|===
+| Dépendance | Rôle
+
+| `org.asciidoctor:asciidoctor-gradle-jvm-slides:5.0.0-alpha.1`
+| Génération des slides Reveal.js
+
+| `org.asciidoctor:asciidoctor-gradle-jvm-gems:5.0.0-alpha.1`
+| Gestion des gems JRuby
+
+| `com.github.node-gradle:gradle-node-plugin:7.1.0`
+| Intégration Node.js / npx
+
+| `org.eclipse.jgit`
+| Opérations Git pour la publication des slides
+
+| `com.fasterxml.jackson` (yaml + kotlin)
+| Parsing de la configuration YAML
+
+| `io.arrow-kt:arrow-core`
+| Utilitaires de programmation fonctionnelle
+|===
+
+== Prérequis consommateur
+
+La configuration consommateur est minimale — le plugin gère en interne toute la configuration des dépôts et dépendances.
+
+=== settings.gradle.kts
+[source,kotlin]
+----
+pluginManagement.repositories.gradlePluginPortal()
+
+rootProject.name = "votre-projet"
+----
+
+=== build.gradle.kts
+[source,kotlin]
+----
+plugins { alias(libs.plugins.slider) }
+
+slider {
+    configPath = "slides-context.yml"
+        .run(::file)
+        .absolutePath
+}
+----
+
+=== gradle/libs.versions.toml
+[source,toml]
+----
+[versions]
+slider = "0.0.2"
+
+[plugins]
+slider = { id = "com.cheroliv.slider", version.ref = "slider" }
+----
+
+== Roadmap
+* Publication sur le Gradle Plugin Portal.
+* DSL étendu — thème, transition, répertoire source configurables.
+* Version stable d'asciidoctor-gradle quand `5.x` sort de l'alpha.
+* Tests fonctionnels automatisés couvrant l'intégralité du cycle de build.
+
+== Licence
+Ce projet est sous licence Apache 2.0 – voir le fichier `LICENCE`.
