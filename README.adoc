@@ -5,7 +5,7 @@
 :icons: font
 :lang: en
 :hardbreaks-option:
-:plugin-version: 0.0.2
+:plugin-version: 0.0.1
 
 ++++
 <p align="right">
@@ -16,43 +16,133 @@
 ++++
 
 image:https://img.shields.io/badge/Kotlin-2.x-7F52FF?logo=kotlin[Kotlin]
-image:https://img.shields.io/badge/Gradle-8.x-02303A?logo=gradle[Gradle]
+image:https://img.shields.io/badge/Gradle-9.x-02303A?logo=gradle[Gradle]
+image:https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk[Java]
 image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
 
 == Description
-This project demonstrates how to use **Gradle 8.14.2** with **Java 17** to create interactive presentations using *AsciidoctorJ Reveal.js*.
+This project demonstrates the use of the **com.cheroliv.slider** plugin with **Gradle 9.4.0** and **Java 25** to create interactive presentations using *AsciidoctorJ Reveal.js*.
+
+All slide generation logic is fully encapsulated in the `slider-plugin/`, keeping the consumer build script minimal.
 
 == Version : {plugin-version}
 
 == Prerequisites
-* JDK 17
-* Gradle Wrapper (version 8.14.2 included)
+* JDK 25 (tested with Eclipse Temurin 25.0.2)
+* Gradle Wrapper (version 9.4.0 included)
+* Node.js / npx (for the `serveSlides` task)
 * Internet connection (to download Reveal.js dependencies)
+
+== Minimal Consumer Configuration
+
+=== settings.gradle.kts
+[source,kotlin]
+----
+pluginManagement.repositories {
+    mavenLocal()
+    gradlePluginPortal()
+    maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
+}
+plugins { id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0" }
+rootProject.name = "slider-gradle"
+----
+
+=== build.gradle.kts
+[source,kotlin]
+----
+plugins { alias(libs.plugins.slider) }
+
+repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+    listOf(
+        "https://repo.gradle.org/gradle/libs-releases/",
+        "https://plugins.gradle.org/m2/",
+        "https://maven.xillio.com/artifactory/libs-release/",
+        "https://mvnrepository.com/repos/springio-plugins-release",
+        "https://archiva-repository.apache.org/archiva/repository/public/"
+    ).forEach(::maven)
+}
+
+slider {
+    configPath = file("slides-context.yml").absolutePath
+}
+----
+
+=== gradle/libs.versions.toml
+[source,toml]
+----
+[versions]
+slider = "0.0.1"
+
+[plugins]
+slider = { id = "com.cheroliv.slider", version.ref = "slider" }
+----
 
 == Project Structure
 ```
 .
-├── build.gradle.kts          # Main Gradle configuration
-├── buildSrc/                 # Shared Kotlin code for sub‑projects
-├── slides/                   # Presentation content ( *.adoc* files )
-├── slider-plugin/           # Future plugin – not used for now
-├── gradle/                  # Gradle Wrapper
-├── README.adoc               # This file
-└── ...
+├── build.gradle.kts          # Main Gradle configuration (consumer)
+├── settings.gradle.kts       # pluginManagement configuration
+├── gradle/
+│   ├── libs.versions.toml    # Dependency catalogue
+│   └── wrapper/              # Gradle Wrapper 9.4.0
+├── slides/
+│   └── misc/                 # AsciiDoc presentation sources
+│       ├── *.adoc            # Slide source files
+│       ├── index.html        # Presentation dashboard
+│       ├── deck.properties   # Deck file paths
+│       └── images/           # Image resources
+├── slides-context.yml        # Git push configuration (publishing)
+├── slider-plugin/            # Gradle plugin (plugin source)
+├── README.adoc               # This file (English)
+└── README_fr.adoc            # French version
 ```
+
+== Plugin DSL Configuration
+
+[source,kotlin]
+----
+slider {
+    // Path to the YAML configuration file (required)
+    configPath = file("slides-context.yml").absolutePath
+}
+----
+
+=== slides-context.yml format
+[source,yaml]
+----
+srcPath: docs/asciidocRevealJs
+pushSlides:
+  from: build/docs/asciidocRevealJs
+  to: build/slides-repo
+  branch: main
+  message: "deploy slides"
+  repo:
+    name: slides
+    repository: https://github.com/pages-content/slides.git
+    credentials:
+      username: your-username
+      password: your-token
+----
 
 == Slider Tasks
 
-The following Gradle tasks are available to manage the full lifecycle of your presentations:
+The following Gradle tasks cover the full lifecycle of your presentations:
 
 === Build
 
-`asciidoctor`::
-Runs the standard Asciidoctor conversion (HTML backend).
-
 `asciidoctorRevealJs`::
 Compiles the `.adoc` sources into a Reveal.js HTML presentation.
-Slides are generated in `build/docs/revealjs/`.
+Slides are generated in `build/docs/asciidocRevealJs/`.
++
+```bash
+./gradlew asciidoctorRevealJs
+```
+
+`asciidoctor`::
+Runs the standard Asciidoctor conversion (depends on `asciidoctorRevealJs`).
 
 `cleanSlidesBuild`::
 Deletes the generated presentation artifacts from the `build` directory.
@@ -61,27 +151,23 @@ Deletes the generated presentation artifacts from the `build` directory.
 ./gradlew cleanSlidesBuild
 ```
 
+`dashSlidesBuild`::
+Generates the `index.html` and `slides.json` files listing all available presentations.
+
 === Serve
 
 `serveSlides`::
 Serves the slides using the *serve* package executed via **npx**.
-Useful for a quick local preview without opening a browser manually.
+Useful for a quick local preview.
 +
 ```bash
 ./gradlew serveSlides
 ```
 
-`execServeSlides`::
-Same as `serveSlides` but invoked directly from the command line (no npx wrapper).
-+
-```bash
-./gradlew execServeSlides
-```
-
 === Open
 
 `openChromium`::
-Opens the default deck file (`default.deck.file`) in **Chromium**.
+Opens the default deck file in **Chromium**.
 +
 ```bash
 ./gradlew openChromium
@@ -97,50 +183,34 @@ Opens the presentation dashboard in **Firefox**.
 === Deploy
 
 `publishSlides`::
-Deploys the generated slides to the configured remote repository (e.g. GitHub Pages).
+Deploys the generated slides to the remote repository configured in `slides-context.yml`.
 +
 ```bash
 ./gradlew publishSlides
 ```
 
-=== Typical workflows
+=== Typical Workflows
 
 .Build and preview locally
 ```bash
-./gradlew asciidoctorRevealJs serveSlides
+./gradlew serveSlides
 ```
 
-.Clean, rebuild, and open in Chromium
+.Clean and rebuild
 ```bash
-./gradlew cleanSlidesBuild asciidoctorRevealJs openChromium
+./gradlew cleanSlidesBuild asciidoctorRevealJs
 ```
 
-.Publish to remote
+.Publish to remote repository
 ```bash
 ./gradlew asciidoctorRevealJs publishSlides
 ```
 
-== Building the slides
-```bash
-./gradlew clean asciidoctorRevealJs
-```
-The `asciidoctorRevealJs` task generates HTML files in the `build/docs/revealjs` directory.
-
-== Running the presentation
-Open the file `build/docs/revealjs/index.html` in your preferred browser.
-
-== Advanced configuration
-The `build.gradle.kts` script exposes many options via `revealjsOptions { … }`:
-* `REVEALJS_THEME_KEY` – theme (default *black*)
-* `REVEALJS_TRANSITION_KEY` – slide transition style
-* `REVEALJS_HISTORY_KEY` – enables browser history navigation
-* `SOURCE_HIGHLIGHTER_KEY` – *coderay* for code syntax highlighting
-These settings can be adjusted in the `build.gradle.kts` file.
-
 == Roadmap
-* The `slider-plugin/` directory is planned for future extensions (e.g., a dedicated Gradle plugin).
-* Add automated tests for slide generation.
+* Publish the plugin to the Gradle Plugin Portal.
+* Automated functional tests for slide generation.
 * Support for additional Reveal.js themes.
+* Extended DSL configuration (theme, transition, source dir).
 
 == License
 This project is licensed under the Apache‑2.0 License – see the `LICENCE` file.
