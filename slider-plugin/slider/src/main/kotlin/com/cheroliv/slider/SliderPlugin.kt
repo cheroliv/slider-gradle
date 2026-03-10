@@ -5,6 +5,7 @@ import com.cheroliv.slider.SliderManager.Extensions.configureExtensions
 import com.cheroliv.slider.SliderManager.Plugins.applyPlugins
 import com.cheroliv.slider.SliderManager.Prerequisites.checkJavaVersion
 import com.cheroliv.slider.SliderManager.Repositories.configureRepositories
+import com.cheroliv.slider.SliderManager.Scaffold.scaffoldSlidesIfAbsent
 import com.cheroliv.slider.SliderManager.Tasks.registerTasks
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -30,6 +31,7 @@ class SliderPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         with(project) {
             checkJavaVersion()
+            scaffoldSlidesIfAbsent()
             configureRepositories()
             applyPlugins()
             configureDependencies()
