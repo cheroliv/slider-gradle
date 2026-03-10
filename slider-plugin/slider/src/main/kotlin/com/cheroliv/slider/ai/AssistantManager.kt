@@ -111,7 +111,7 @@ object AssistantManager {
     // Generic function for chat model tasks
     fun Project.createChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
-            it.group = "school-ai"
+            it.group = "slider-ai"
             it.description = "Display the Ollama $model chatgpt prompt request."
             it.doFirst { project.runChat(model) }
         }
@@ -120,7 +120,7 @@ object AssistantManager {
     // Generic function for streaming chat model tasks
     fun Project.createStreamingChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
-            it.group = "school-ai"
+            it.group = "slider-ai"
             it.description = "Display the Ollama $model chatgpt stream prompt request."
             it.doFirst { runStreamChat(model) }
         }
