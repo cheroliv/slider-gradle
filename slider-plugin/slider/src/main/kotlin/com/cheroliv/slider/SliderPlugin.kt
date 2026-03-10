@@ -546,6 +546,10 @@ object Slides {
 class SliderPlugin : Plugin<Project> {
     @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
     override fun apply(project: Project) {
+        val javaVersion = JavaVersion.current().majorVersion.toInt()
+        require(javaVersion >= 21) {
+            "com.cheroliv.slider requires Java 21+. Current: Java $javaVersion"
+        }
         project.repositories.maven { repo ->
             repo.url = project.uri("https://plugins.gradle.org/m2/")
         }
@@ -628,7 +632,6 @@ class SliderPlugin : Plugin<Project> {
 
         project.tasks.register<AsciidoctorTask>("asciidoctor") {
             group = GROUP_TASK_SLIDER
-//            dependsOn(project.tasks.findByName(TASK_ASCIIDOCTOR_REVEALJS))
             dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
         }
 
