@@ -29,7 +29,7 @@ It exposes a minimal DSL to the consumer and handles all repository, dependency,
 
 == Prerequisites
 
-* JDK 25 (tested with Eclipse Temurin 25.0.2)
+* JDK 25 (tested with Eclipse Temurin 25.0.2), support 23+
 * Gradle 9.4.0+
 * Node.js / npx (for the `serveSlides` task)
 
