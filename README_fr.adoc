@@ -82,6 +82,57 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 └── README_fr.adoc            # Ce fichier (français)
 ```
 
+== Initialisation automatique (première utilisation)
+
+À la première exécution d'une tâche Gradle, le plugin vérifie si le dossier `slides/` et le fichier `slides-context.yml` sont présents et complets dans le projet consommateur.
+
+=== Initialisation de slides/
+
+Un dossier `slides/` est considéré **complet** s'il contient dans `slides/misc/` :
+
+* `deck.properties` — fichier de configuration des decks (clés `*.deck.file`)
+* `index.html` — dashboard des présentations
+* au moins un fichier `*-deck.adoc` référencé par une clé `*.deck.file` dans `deck.properties`
+
+Si l'une de ces conditions n'est pas remplie, le plugin extrait automatiquement un dossier `slides/` par défaut depuis le zip embarqué dans son classpath.
+
+=== Convention deck.properties
+
+[source,properties]
+----
+# Chaque clé suit le pattern *.deck.file
+# La valeur est le nom du fichier HTML généré (*-deck.html)
+# Le fichier source AsciiDoc correspondant est *-deck.adoc
+
+example.deck.file=example-deck.html
+default.deck.file=default-deck.html
+asciidoc.capsule.deck.file=asciidoc.capsule-deck.html
+----
+
+Le fichier source `example-deck.adoc` doit exister dans `slides/misc/` pour que la configuration soit considérée valide.
+
+=== Initialisation de slides-context.yml
+
+Si `slides-context.yml` est absent du répertoire du projet, le plugin en génère un automatiquement avec des valeurs par défaut à partir du modèle typé `SlidesConfiguration`. Le fichier généré contient des placeholders à remplacer :
+
+[source,yaml]
+----
+srcPath: docs/asciidocRevealJs
+pushSlides:
+  from: build/docs/asciidocRevealJs
+  to: build/slides-repo
+  branch: main
+  message: deploy slides
+  repo:
+    name: slides
+    repository: https://github.com/your-org/your-slides-repo.git
+    credentials:
+      username: your-username
+      password: your-token
+----
+
+NOTE: Si `slides/` existe et est complet, et si `slides-context.yml` existe, le plugin ne touche jamais au contenu existant.
+
 == Configuration DSL du plugin
 
 [source,kotlin]
@@ -189,10 +240,14 @@ Déploie les slides générés vers le dépôt distant configuré dans `slides-c
 ```
 
 == Roadmap
-* Publication du plugin sur le Gradle Plugin Portal.
+* Support du Configuration Cache — bloqué sur la version stable d'asciidoctor-gradle `5.x`.
 * Tests fonctionnels automatisés pour la génération des slides.
 * Support de nouvelles thématiques Reveal.js.
 * Configuration DSL étendue (thème, transition, source dir).
+
+NOTE: Le plugin déclare explicitement `configurationCache = false` sur le Gradle Plugin Portal.
+N'activez pas le Configuration Cache Gradle avec ce plugin — la tâche `asciidoctorRevealJs`
+tourne `OUT_OF_PROCESS` via JRuby et n'est pas compatible dans l'état actuel.
 
 == Licence
 Ce projet est sous licence Apache‑2.0 – voir le fichier `LICENCE`.
