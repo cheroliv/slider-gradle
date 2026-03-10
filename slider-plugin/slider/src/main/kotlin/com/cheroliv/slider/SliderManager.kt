@@ -50,6 +50,7 @@ import java.io.File
 import java.io.File.separator
 import java.io.IOException
 import java.util.*
+import java.util.zip.ZipInputStream
 
 /**
  * Root manager object for the Slider plugin.
@@ -162,6 +163,105 @@ object SliderManager {
             require(javaVersion >= 23) {
                 "com.cheroliv.slider requires Java 23+. Current: Java $javaVersion"
             }
+        }
+    }
+
+
+    // =========================================================================
+    // Scaffold
+    // =========================================================================
+
+    /**
+     * Handles first-use initialisation of the consumer project's slides/ directory.
+     *
+     * The plugin bundles a default slides.zip in its classpath resources
+     * (src/main/resources/slides.zip). On first use, if the slides/ directory
+     * is absent or incomplete, the zip is extracted into the project directory
+     * to provide a ready-to-use slide structure.
+     *
+     * This follows the scaffolding pattern used by plugins like Quarkus and
+     * Spring Initializr — the consumer gets a working default without any
+     * manual setup.
+     */
+    object Scaffold {
+
+        private const val SLIDES_ZIP = "slides.zip"
+
+        /**
+         * A complete slides configuration requires all three of the following
+         * to be present inside slides/misc/:
+         * - deck.properties         — maps *.deck.file keys to HTML filenames
+         * - index.html              — dashboard entry point
+         * - at least one *-deck.adoc matching a *.deck.file key in deck.properties
+         *
+         * The deck file convention:
+         * - Key pattern  : `*.deck.file`  (e.g. `example.deck.file`)
+         * - Value pattern: `*-deck.html`  (e.g. `example-deck.html`)
+         * - Source file  : `*-deck.adoc`  (e.g. `example-deck.adoc`)
+         */
+        private fun isSlidesConfigComplete(miscDir: File): Boolean {
+            val deckProperties = miscDir.resolve("deck.properties")
+            val indexHtml = miscDir.resolve("index.html")
+
+            if (!deckProperties.exists() || !indexHtml.exists()) return false
+
+            // At least one *.deck.file key must have a matching *-deck.adoc source file
+            val hasAtLeastOneDeck = Properties()
+                .apply { deckProperties.inputStream().use(::load) }
+                .entries
+                .filter { (key, _) -> key.toString().endsWith(".deck.file") }
+                .any { (_, value) ->
+                    value.toString()            // e.g. "example-deck.html"
+                        .removeSuffix(".html")  // → "example-deck"
+                        .let { miscDir.resolve("$it.adoc").exists() }
+                }
+
+            return hasAtLeastOneDeck
+        }
+
+        /**
+         * Extracts the bundled slides.zip into the consumer project directory
+         * if the slides/ directory is absent or its configuration is incomplete.
+         *
+         * - If slides/ exists and is complete : no-op — consumer content is never overwritten.
+         * - If slides/ is absent or incomplete: extracts the bundled zip.
+         * - If slides.zip is missing from the classpath: fails with a clear error.
+         * - On successful extraction: prints a confirmation message.
+         *
+         * Must be called before [Tasks.registerTasks] so that the slides/
+         * directory is in place when task source directories are resolved.
+         */
+        internal fun Project.scaffoldSlidesIfAbsent() {
+            val slidesDir = layout.projectDirectory.asFile.resolve(SLIDES_FOLDER)
+            val miscDir = slidesDir.resolve(DEFAULT_SLIDES_FOLDER)
+
+            // slides/ exists and all required files are present — do nothing
+            if (slidesDir.exists() && isSlidesConfigComplete(miscDir)) return
+
+            val zip = SliderPlugin::class.java
+                .classLoader
+                .getResourceAsStream(SLIDES_ZIP)
+                ?: error(
+                    "slides.zip not found in plugin classpath. " +
+                            "Please report this issue at https://github.com/cheroliv/slider-gradle"
+                )
+
+            // Extract all zip entries into the project directory
+            zip.use { input ->
+                ZipInputStream(input).use { zis ->
+                    generateSequence { zis.nextEntry }
+                        .filterNot { entry -> entry.isDirectory }
+                        .forEach { entry ->
+                            val target = layout.projectDirectory.asFile.resolve(entry.name)
+                            target.parentFile.mkdirs()
+                            target.outputStream().use { out -> zis.copyTo(out) }
+                            zis.closeEntry()
+                        }
+                }
+            }
+
+            println("✅ slides/ directory initialised from plugin defaults.")
+            println("📁 Edit slides/${DEFAULT_SLIDES_FOLDER}/*-deck.adoc to get started.")
         }
     }
 
