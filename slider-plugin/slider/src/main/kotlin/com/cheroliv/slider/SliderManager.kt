@@ -6,7 +6,9 @@ import com.cheroliv.slider.SliderManager.Git.pushSlide
 import com.cheroliv.slider.SliderManager.Git.pushSlides
 import com.cheroliv.slider.SliderManager.Tasks.registerAsciidoctorRevealJsTask
 import com.cheroliv.slider.SliderManager.Tasks.registerCleanSlidesBuildTask
+import com.cheroliv.slider.SliderManager.Tasks.registerTasks
 import com.cheroliv.slider.SliderManager.deckFile
+import com.cheroliv.slider.SliderManager.yamlMapper
 import com.cheroliv.slider.Slides.RevealJsSlides
 import com.cheroliv.slider.Slides.RevealJsSlides.BUILD_GRADLE_KEY
 import com.cheroliv.slider.Slides.RevealJsSlides.CODERAY_CSS_KEY
@@ -21,6 +23,7 @@ import com.cheroliv.slider.Slides.RevealJsSlides.TASK_SERVE_SLIDES
 import com.cheroliv.slider.Slides.Serve.SERVE_DEP
 import com.cheroliv.slider.Slides.Slide.DEFAULT_SLIDES_FOLDER
 import com.cheroliv.slider.Slides.Slide.IMAGES
+import com.cheroliv.slider.Slides.Slide.SLIDES_CONTEXT_YML
 import com.cheroliv.slider.Slides.Slide.SLIDES_FOLDER
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -263,11 +266,56 @@ object SliderManager {
             println("✅ slides/ directory initialised from plugin defaults.")
             println("📁 Edit slides/${DEFAULT_SLIDES_FOLDER}/*-deck.adoc to get started.")
         }
+
+
+        /**
+         * Generates a default slides-context.yml in the consumer project directory
+         * if the file does not already exist.
+         *
+         * The default configuration is built from a typed [SlidesConfiguration] instance
+         * and serialised to YAML via [SliderManager.yamlMapper], ensuring the output is
+         * always structurally valid and consistent with the data model.
+         *
+         * The generated file contains placeholder values that the consumer must replace
+         * with their actual Git repository URL, branch, credentials, and commit message.
+         */
+        internal fun Project.scaffoldSlidesContextIfAbsent() {
+            val slidesContext = layout.projectDirectory.asFile.resolve(SLIDES_CONTEXT_YML)
+
+            // slides-context.yml already exists — do nothing
+            if (slidesContext.exists()) return
+
+            // Build the default configuration from the typed model
+            val default = SlidesConfiguration(
+                srcPath = "docs/asciidocRevealJs",
+                pushSlides = GitPushConfiguration(
+                    from = "build/docs/asciidocRevealJs",
+                    to = "build/slides-repo",
+                    branch = "main",
+                    message = "deploy slides",
+                    repo = RepositoryConfiguration(
+                        name = "slides",
+                        repository = "https://github.com/your-org/your-slides-repo.git",
+                        credentials = RepositoryCredentials(
+                            username = "your-username",
+                            password = "your-token"
+                        )
+                    )
+                )
+            )
+
+            // Serialise to YAML using the shared mapper (Kotlin + Arrow modules enabled)
+            yamlMapper.writeValue(slidesContext, default)
+
+            println("✅ slides-context.yml generated with default values.")
+            println("✏️  Edit slides-context.yml with your actual Git repository configuration.")
+        }
     }
 
-    // =========================================================================
-    // Repositories
-    // =========================================================================
+
+// =========================================================================
+// Repositories
+// =========================================================================
 
     /**
      * Configures all Maven and Ivy repositories required by the plugin.
@@ -322,9 +370,9 @@ object SliderManager {
         }
     }
 
-    // =========================================================================
-    // Plugins
-    // =========================================================================
+// =========================================================================
+// Plugins
+// =========================================================================
 
     /**
      * Applies the external Gradle plugins required for slide generation.
@@ -347,9 +395,9 @@ object SliderManager {
         }
     }
 
-    // =========================================================================
-    // Dependencies
-    // =========================================================================
+// =========================================================================
+// Dependencies
+// =========================================================================
 
     /**
      * Declares the Ruby gem dependencies required for Reveal.js slide generation.
@@ -368,9 +416,9 @@ object SliderManager {
         }
     }
 
-    // =========================================================================
-    // Extensions
-    // =========================================================================
+// =========================================================================
+// Extensions
+// =========================================================================
 
     /**
      * Registers and configures Gradle extensions consumed by the plugin and its tasks.
@@ -398,9 +446,9 @@ object SliderManager {
         }
     }
 
-    // =========================================================================
-    // Tasks
-    // =========================================================================
+// =========================================================================
+// Tasks
+// =========================================================================
 
     /**
      * Orchestrates the registration of all Slider plugin tasks.
@@ -752,9 +800,9 @@ object SliderManager {
         }
     }
 
-    // =========================================================================
-    // Git
-    // =========================================================================
+// =========================================================================
+// Git
+// =========================================================================
 
     /**
      * Handles all Git operations required to publish slides to a remote repository.
@@ -866,9 +914,9 @@ object SliderManager {
                 .call()
     }
 
-    // =========================================================================
-    // FileOps
-    // =========================================================================
+// =========================================================================
+// FileOps
+// =========================================================================
 
     /**
      * Low-level file system operations used by the Git publish pipeline.
