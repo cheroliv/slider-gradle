@@ -35,7 +35,8 @@ Il expose un DSL minimal au consommateur et gère en interne toute la configurat
 
 == Structure du projet
 
-```
+[source]
+----
 slider-plugin/
 ├── slider/
 │   ├── src/
@@ -50,7 +51,7 @@ slider-plugin/
 ├── settings.gradle.kts
 ├── README.adoc                        # Version anglaise
 └── README_fr.adoc                     # Ce fichier
-```
+----
 
 == Décisions techniques clés
 
@@ -74,9 +75,11 @@ Depuis `asciidoctor-gradle-jvm-slides:5.0.0-alpha.1`, les IDs de plugin ont chan
 
 === Dépôt pluginManagement — `repo.gradle.org`
 La dépendance transitive `grolifant:0.12` (requise par `jruby-gradle-core-plugin`) n'est disponible que sur :
-```
+
+[source]
+----
 https://repo.gradle.org/gradle/libs-releases/
-```
+----
 Ce dépôt doit être déclaré dans le `pluginManagement.repositories` du consommateur.
 
 === Dépôt Ivy pour les gems Ruby
@@ -111,20 +114,24 @@ Un dossier `slides/` est considéré complet quand `slides/misc/` contient :
 * au moins un fichier `*-deck.adoc` référencé par une clé `*.deck.file` dans `deck.properties`
 
 Le zip embarqué doit être placé à :
-```
+
+[source]
+----
 slider/src/main/resources/slides.zip
-```
+----
 
 Gradle l'intègre automatiquement dans le jar du plugin. Les entrées du zip doivent utiliser des chemins
 relatifs commençant par `slides/` pour que l'extraction dans `projectDirectory` produise la bonne structure :
-```
+
+[source]
+----
 slides/
 └── misc/
     ├── example-deck.adoc
     ├── index.html
     ├── deck.properties
     └── images/
-```
+----
 
 La vérification de complétude est implémentée comme une fonction pure `isSlidesConfigComplete(miscDir: File)`
 dans `SliderManager.Scaffold` — testable en pur Kotlin sans GradleTestKit.
@@ -161,12 +168,16 @@ Les deux fonctions sont des no-ops si la ressource existe déjà — le contenu 
 == Build & Publication
 
 === Publier en local (pour les tests)
-```bash
+
+[source,bash]
+----
 ./gradlew publishToMavenLocal
-```
+----
 
 === Lancer les tests
-```bash
+
+[source,bash]
+----
 # Tests unitaires
 ./gradlew test
 
@@ -175,12 +186,14 @@ Les deux fonctions sont des no-ops si la ressource existe déjà — le contenu 
 
 # Tests BDD Cucumber
 ./gradlew cucumberTest
-```
+----
 
 === Publier sur le Gradle Plugin Portal
-```bash
+
+[source,bash]
+----
 ./gradlew publishPlugins
-```
+----
 Nécessite `gradle.publish.key` et `gradle.publish.secret` dans `~/.gradle/gradle.properties`.
 
 == DSL du plugin
