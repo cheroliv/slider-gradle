@@ -26,7 +26,7 @@ Ce projet illustre l'utilisation du plugin **com.cheroliv.slider** avec **Gradle
 
 La logique de génération des slides est entièrement encapsulée dans le plugin `slider-plugin/`, ce qui simplifie le script de build consommateur à l'essentiel.
 
-== Version : {plugin-version}
+== Version actuel : {plugin-version}
 
 == Prérequis
 * JDK 25 (testé avec Eclipse Temurin 25.0.2), support 23+
