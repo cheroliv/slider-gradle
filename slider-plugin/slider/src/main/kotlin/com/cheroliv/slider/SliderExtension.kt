@@ -15,5 +15,6 @@ import org.gradle.api.provider.Property
  * ```
  */
 open class SliderExtension @Inject constructor(objects: ObjectFactory) {
+    @Suppress("unused")
     val configPath: Property<String> = objects.property(String::class.java)
 }
