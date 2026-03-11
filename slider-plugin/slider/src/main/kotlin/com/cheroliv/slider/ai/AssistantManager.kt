@@ -6,6 +6,7 @@ import arrow.core.Either
 import arrow.core.Either.Companion.catch
 import arrow.core.Either.Left
 import arrow.core.Either.Right
+import com.cheroliv.slider.DeckContext
 import com.cheroliv.slider.SliderManager.localConf
 import com.cheroliv.slider.SliderManager.yamlMapper
 import dev.langchain4j.data.message.SystemMessage
@@ -78,27 +79,27 @@ object AssistantManager {
 
     @JvmStatic
     fun Project.createChatTasks() {
-        // Ollama — local models
-        localModels.forEach {
-            createChatTask(it.first, "helloOllama${it.second}")
-            createStreamingChatTask(it.first, "helloOllamaStream${it.second}")
-        }
-        // Gemini — Google AI
-        geminiModels.forEach {
-            createGeminiChatTask(it.first, "helloGemini${it.second}")
-            createGeminiStreamingChatTask(it.first, "helloGeminiStream${it.second}")
-        }
-        // HuggingFace — via OpenAI-compatible router
-        huggingFaceModels.forEach {
-            createHuggingFaceChatTask(it.first, "helloHuggingFace${it.second}")
-            createHuggingFaceStreamingChatTask(it.first, "helloHuggingFaceStream${it.second}")
-        }
-        // Display prompt
-        tasks.register("displayE3POPrompt") {
-            it.group = "slider-ai"
-            it.description = "Display on console AI prompt assistant"
-            it.doFirst { PromptManager.userMessageFr.let(::println) }
-        }
+//        // Ollama — local models
+//        localModels.forEach {
+//            createChatTask(it.first, "helloOllama${it.second}")
+//            createStreamingChatTask(it.first, "helloOllamaStream${it.second}")
+//        }
+//        // Gemini — Google AI
+//        geminiModels.forEach {
+//            createGeminiChatTask(it.first, "helloGemini${it.second}")
+//            createGeminiStreamingChatTask(it.first, "helloGeminiStream${it.second}")
+//        }
+//        // HuggingFace — via OpenAI-compatible router
+//        huggingFaceModels.forEach {
+//            createHuggingFaceChatTask(it.first, "helloHuggingFace${it.second}")
+//            createHuggingFaceStreamingChatTask(it.first, "helloHuggingFaceStream${it.second}")
+//        }
+//        // Display prompt
+//        tasks.register("displayE3POPrompt") {
+//            it.group = "slider-ai"
+//            it.description = "Display on console AI prompt assistant"
+//            it.doFirst { PromptManager.userMessageFr.let(::println) }
+//        }
         // Generate deck from *-deck-context.yml
         tasks.register("generateDeck") {
             it.group = "slider-ai"
@@ -405,11 +406,15 @@ object AssistantManager {
             | --
             |
             | // [.notes] : page notes visible in PDF/HTML exports
-            | // Use for: deeper content, references, suggested exercises
+            | // MINIMAL style   → one reference line only
+            | // DETAILED style  → deep content + references + exercises
+            | // EXERCISES_ONLY  → only practical exercises
+            | // The user message will tell you which style to apply.
             | [.notes]
             | --
             | * Reference: Clean Code, Robert C. Martin
             | * Exercise: ask learners to list what they already know
+            | * Deep dive: link to official documentation
             | --
             |
             | // SLIDE 2: standard content slide
@@ -474,34 +479,102 @@ object AssistantManager {
             |
             | ---------------- EXAMPLE END ----------------
             |
+            | === NOTES GENERATION RULES ===
+            | The user message specifies which notes to generate via speakerNotes and pageNotes flags,
+            | and a pageNotesStyle. Follow these rules strictly:
+            |
+            | speakerNotes=true  → add [NOTE.speaker] on EVERY slide
+            | speakerNotes=false → omit [NOTE.speaker] entirely
+            |
+            | pageNotes=true     → add [.notes] on EVERY slide
+            | pageNotes=false    → omit [.notes] entirely
+            |
+            | pageNotesStyle=MINIMAL       → [.notes] contains one reference line only
+            | pageNotesStyle=DETAILED      → [.notes] contains deep content + references + exercises
+            | pageNotesStyle=EXERCISES_ONLY→ [.notes] contains only practical exercises
+            |
+            | If slide hints are provided in the user message, use them to enrich the
+            | [NOTE.speaker] and [.notes] content for that specific slide.
+            |
+            | === SLIDE CONTENT SIZE CONSTRAINTS ===
+            | Reveal.js renders each slide in a fixed viewport (default 1408x792px).
+            | Content that exceeds the viewport is clipped — the audience will NOT see it.
+            | Strictly respect these limits per slide:
+            |
+            | BULLET LISTS
+            | - Maximum 5 bullet points per slide with [%step]
+            | - Maximum 7 bullet points per slide without [%step]
+            | - If you need more points, split into a sub-slide with ===
+            |
+            | CODE BLOCKS
+            | - Maximum 10 lines of code per [source,...] block
+            | - If the example requires more lines, split across two === sub-slides
+            | - Prefer minimal, focused snippets — illustrate ONE concept per block
+            |
+            | TEXT
+            | - Maximum 3 short sentences of prose per slide
+            | - Never combine a bullet list AND a code block on the same slide
+            |
+            | NOTES
+            | - [NOTE.speaker] and [.notes] are NOT rendered on screen — no size limit
+            | - Put detailed content, long explanations and references in notes, not on the slide
+            |
+            | GENERAL RULE
+            | - When in doubt: less is more. Split into sub-slides rather than overflow.
+            | - One concept per slide. One example per slide.
+            |
             | === ABSOLUTE RULES ===
             | - ALWAYS start with the full header including all :revealjs_* attributes
             | - ALWAYS include an agenda slide with [%step] as the first slide
-            | - ALWAYS add [NOTE.speaker] on every slide (presenter tips)
-            | - ALWAYS add [.notes] on every slide (deeper content + exercises)
             | - ALWAYS use [%step] for key point lists
             | - ALWAYS use [source,language] for any code block
             | - ALWAYS end with a summary + next steps slide
+            | - NEVER exceed slide content size constraints defined above
             | - Output language is specified in the user message — follow it strictly
             | - Output: raw AsciiDoc ONLY — zero markdown, zero explanation
         """.trimMargin()
 
-        fun deckUserMessage(ctx: DeckContext) = """
-            | Generate a complete AsciiDoc/Reveal.js training presentation with the following context:
-            |
-            | Subject      : ${ctx.subject}
-            | Audience     : ${ctx.audience}
-            | Duration     : ${ctx.duration} minutes
-            | Output language: ${ctx.language}
-            | Author       : ${ctx.author.name} <${ctx.author.email}>
-            | Reveal.js theme    : ${ctx.revealjs.theme}
-            | Reveal.js slideNumber: ${ctx.revealjs.slideNumber}
-            | Reveal.js width    : ${ctx.revealjs.width}
-            | Reveal.js height   : ${ctx.revealjs.height}
-            |
-            | Follow the system prompt structure strictly.
-            | Output the complete deck in one single response.
-        """.trimMargin()
+        fun deckUserMessage(ctx: DeckContext): String {
+            val slidesSection = if (ctx.slides.isEmpty()) ""
+            else buildString {
+                appendLine()
+                appendLine("=== SLIDE HINTS ===")
+                appendLine("Use these hints to enrich speaker notes and page notes for each slide:")
+                ctx.slides.forEach { slide ->
+                    appendLine("Slide: ${slide.title}")
+                    slide.speakerHint?.let { appendLine("  Speaker hint    : $it") }
+                    slide.pageNotesHint?.let { appendLine("  Page notes hint : $it") }
+                }
+            }
+
+            return """
+                | Generate a complete AsciiDoc/Reveal.js training presentation with the following context:
+                |
+                | Subject        : ${ctx.subject}
+                | Audience       : ${ctx.audience}
+                | Duration       : ${ctx.duration} minutes
+                | Output language: ${ctx.language}
+                | Author         : ${ctx.author.name} <${ctx.author.email}>
+                |
+                | === REVEAL.JS CONFIGURATION ===
+                | theme         : ${ctx.revealjs.theme}
+                | slideNumber   : ${ctx.revealjs.slideNumber}
+                | width         : ${ctx.revealjs.width}
+                | height        : ${ctx.revealjs.height}
+                | controls      : ${ctx.revealjs.controls}
+                | controlsLayout: ${ctx.revealjs.controlsLayout}
+                | history       : ${ctx.revealjs.history}
+                | fragmentInURL : ${ctx.revealjs.fragmentInURL}
+                |
+                | === NOTES CONFIGURATION ===
+                | speakerNotes  : ${ctx.notes.speakerNotes}
+                | pageNotes     : ${ctx.notes.pageNotes}
+                | pageNotesStyle: ${ctx.notes.pageNotesStyle}
+                $slidesSection
+                | Follow the system prompt structure strictly.
+                | Output the complete deck in one single response.
+            """.trimMargin()
+        }
 
         val userMessageFr = """config```--lang=fr;```.
             | Salut je suis $userName,
