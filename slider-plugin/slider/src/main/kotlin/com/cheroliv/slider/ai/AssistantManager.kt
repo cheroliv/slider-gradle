@@ -62,6 +62,7 @@ object AssistantManager {
     // Misc
     // =========================================================================
 
+    @Suppress("unused")
     @JvmStatic
     val Project.privateProps: Properties
         get() = Properties().apply {
