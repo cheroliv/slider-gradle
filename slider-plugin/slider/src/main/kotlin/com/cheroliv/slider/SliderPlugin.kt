@@ -11,7 +11,6 @@ import com.cheroliv.slider.SliderManager.Tasks.registerTasks
 import com.cheroliv.slider.ai.AssistantPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import kotlin.jvm.java
 
 /**
  * Main entry point for the Slider Gradle plugin.
