@@ -11,11 +11,15 @@ import com.cheroliv.slider.SliderManager.localConf
 import com.cheroliv.slider.SliderManager.yamlMapper
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.chat.response.ChatResponse
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
+import dev.langchain4j.model.mistralai.MistralAiChatModel
+import dev.langchain4j.model.mistralai.MistralAiChatModelName
+import dev.langchain4j.model.mistralai.MistralAiStreamingChatModel
 import dev.langchain4j.model.ollama.OllamaChatModel
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel
 import dev.langchain4j.model.openai.OpenAiChatModel
@@ -29,6 +33,34 @@ import java.util.Properties
 import kotlin.coroutines.resume
 
 object AssistantManager {
+
+    // =========================================================================
+    // Provider selection — -Pai.provider=ollama|gemini|mistral|huggingface
+    // =========================================================================
+
+    /**
+     * Gradle property key to select the AI provider at the command line.
+     *
+     * Usage:
+     *   ./gradlew generateDeck -Pai.provider=gemini -Pdeck.context=slides/misc/my.yml
+     *   ./gradlew generateDeck -Pai.provider=mistral -Pdeck.context=slides/misc/my.yml
+     *   ./gradlew generateDeck                       -Pdeck.context=slides/misc/my.yml
+     *   (no -Pai.provider → defaults to ollama)
+     */
+    const val PROP_AI_PROVIDER     = "ai.provider"
+    const val PROVIDER_OLLAMA      = "ollama"
+    const val PROVIDER_GEMINI      = "gemini"
+    const val PROVIDER_MISTRAL     = "mistral"
+    const val PROVIDER_HUGGINGFACE = "huggingface"
+
+    /** Reads -Pai.provider, defaulting to "ollama" when absent or blank. */
+    val Project.aiProvider: String
+        get() = (findProperty(PROP_AI_PROVIDER) as? String
+            ?: PROVIDER_OLLAMA).lowercase().trim()
+
+    // =========================================================================
+    // Misc
+    // =========================================================================
 
     @JvmStatic
     val Project.privateProps: Properties
@@ -53,10 +85,10 @@ object AssistantManager {
     @JvmStatic
     val localModels
         get() = setOf(
-            "smollm:135m" to "SmollM",
-            "llama3.2:3b-instruct-q8_0" to "LlamaTiny",
-            "smollm:135m-instruct-v0.2-q8_0" to "SmollMInstruct",
-            "gemma3:1b-it-fp16" to "Gemma3Instruct",
+            "smollm:135m"                      to "SmollM",
+            "llama3.2:3b-instruct-q8_0"        to "LlamaTiny",
+            "smollm:135m-instruct-v0.2-q8_0"   to "SmollMInstruct",
+            "gemma3:1b-it-fp16"                to "Gemma3Instruct",
         )
 
     @JvmStatic
@@ -67,10 +99,17 @@ object AssistantManager {
         )
 
     @JvmStatic
+    val mistralModels
+        get() = setOf(
+            MistralAiChatModelName.MISTRAL_SMALL_LATEST.toString() to "MistralSmall",
+            MistralAiChatModelName.OPEN_MISTRAL_NEMO.toString()    to "MistralNemo",
+        )
+
+    @JvmStatic
     val huggingFaceModels
         get() = setOf(
             "meta-llama/Llama-3.1-8B-Instruct:sambanova" to "Llama31Sambanova",
-            "Qwen/Qwen3.5-35B-A3B:novita" to "Qwen35Novita",
+            "Qwen/Qwen3.5-35B-A3B:novita"                to "Qwen35Novita",
         )
 
     // =========================================================================
@@ -79,49 +118,131 @@ object AssistantManager {
 
     @JvmStatic
     fun Project.createChatTasks() {
-//        // Ollama — local models
-//        localModels.forEach {
-//            createChatTask(it.first, "helloOllama${it.second}")
-//            createStreamingChatTask(it.first, "helloOllamaStream${it.second}")
-//        }
-//        // Gemini — Google AI
-//        geminiModels.forEach {
-//            createGeminiChatTask(it.first, "helloGemini${it.second}")
-//            createGeminiStreamingChatTask(it.first, "helloGeminiStream${it.second}")
-//        }
-//        // HuggingFace — via OpenAI-compatible router
-//        huggingFaceModels.forEach {
-//            createHuggingFaceChatTask(it.first, "helloHuggingFace${it.second}")
-//            createHuggingFaceStreamingChatTask(it.first, "helloHuggingFaceStream${it.second}")
-//        }
-//        // Display prompt
-//        tasks.register("displayE3POPrompt") {
-//            it.group = "slider-ai"
-//            it.description = "Display on console AI prompt assistant"
-//            it.doFirst { PromptManager.userMessageFr.let(::println) }
-//        }
-        // Generate deck from *-deck-context.yml
+        // Ollama — local models
+        localModels.forEach {
+            createChatTask(it.first, "helloOllama${it.second}")
+            createStreamingChatTask(it.first, "helloOllamaStream${it.second}")
+        }
+        // Gemini — Google AI
+        geminiModels.forEach {
+            createGeminiChatTask(it.first, "helloGemini${it.second}")
+            createGeminiStreamingChatTask(it.first, "helloGeminiStream${it.second}")
+        }
+        // Mistral AI
+        mistralModels.forEach {
+            createMistralChatTask(it.first, "helloMistral${it.second}")
+            createMistralStreamingChatTask(it.first, "helloMistralStream${it.second}")
+        }
+        // HuggingFace — via OpenAI-compatible router
+        huggingFaceModels.forEach {
+            createHuggingFaceChatTask(it.first, "helloHuggingFace${it.second}")
+            createHuggingFaceStreamingChatTask(it.first, "helloHuggingFaceStream${it.second}")
+        }
+        // generateDeck — provider resolved at runtime via -Pai.provider
+        registerGenerateDeckTask()
+    }
+
+    // =========================================================================
+    // generateDeck task
+    // =========================================================================
+
+    /**
+     * Registers the generateDeck task.
+     *
+     * Required properties:
+     *   -Pdeck.context=<path>     Path to the *-deck-context.yml file
+     *
+     * Optional properties:
+     *   -Pai.provider=<provider>  ollama (default) | gemini | mistral | huggingface
+     *
+     * Examples:
+     *   ./gradlew generateDeck -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml
+     *   ./gradlew generateDeck -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml -Pai.provider=gemini
+     *   ./gradlew generateDeck -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml -Pai.provider=mistral
+     */
+    private fun Project.registerGenerateDeckTask() {
         tasks.register("generateDeck") {
             it.group = "slider-ai"
-            it.description = "Generate a complete AsciiDoc/Reveal.js deck from a *-deck-context.yml"
-            it.doFirst {
-                val contextPath = project.findProperty("deck.context") as? String
-                    ?: error("Provide -Pdeck.context=slides/misc/my-deck-context.yml")
-                val ctx: DeckContext = project.layout.projectDirectory.asFile
-                    .resolve(contextPath)
-                    .run { yamlMapper.readValue(this, DeckContext::class.java) }
-                val output = project.layout.projectDirectory.asFile
-                    .resolve("slides/misc/${ctx.outputFile}")
-                createGeminiChatModel()
-                    .chat(
-                        SystemMessage.from(PromptManager.deckSystemPrompt),
-                        UserMessage.from(PromptManager.deckUserMessage(ctx))
-                    )
-                    .let { response ->
-                        output.writeText(response.aiMessage().text())
-                        println("✅ Deck generated : ${output.absolutePath}")
-                    }
+            it.description = buildString {
+                append("Generate a complete AsciiDoc/Reveal.js deck from a *-deck-context.yml. ")
+                append("Provider: -Pai.provider=ollama|gemini|mistral|huggingface (default: ollama). ")
+                append("Context : -Pdeck.context=<path>.")
             }
+            it.doFirst { project.runGenerateDeck() }
+        }
+    }
+
+    private fun Project.runGenerateDeck() {
+        val contextPath = findProperty("deck.context") as? String
+            ?: error(
+                "Missing required property -Pdeck.context.\n" +
+                        "Usage: ./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml"
+            )
+
+        val ctx: DeckContext = contextPath
+            .let(::File)
+            .also { require(it.exists()) { "Deck context file not found: $contextPath" } }
+            .let { yamlMapper.readValue(it, DeckContext::class.java) }
+
+        val provider = aiProvider
+        println("🤖 generateDeck — provider: $provider — context: $contextPath")
+
+        val model: ChatModel = resolveGenerateDeckModel(provider)
+
+        val systemMsg = SystemMessage.from(PromptManager.deckSystemPrompt)
+        val userMsg   = UserMessage.from(PromptManager.deckUserMessage(ctx))
+        val adocContent = model.chat(listOf(systemMsg, userMsg)).aiMessage().text()
+
+        val outputFile = layout.projectDirectory.asFile
+            .resolve("slides/misc")
+            .resolve(ctx.outputFile)
+        outputFile.parentFile.mkdirs()
+        outputFile.writeText(adocContent)
+
+        println("✅ Deck generated → ${outputFile.absolutePath}")
+    }
+
+    /**
+     * Resolves the ChatModel for generateDeck based on the value of -Pai.provider.
+     *
+     * Provider → default model used when none is specified explicitly:
+     *   ollama      → first entry in localModels  (smollm:135m)
+     *   gemini      → gemini-2.5-flash
+     *   mistral     → MISTRAL_SMALL_LATEST
+     *   huggingface → Llama-3.1-8B-Instruct:sambanova
+     *
+     * Unknown values fall back to ollama with a warning.
+     */
+    private fun Project.resolveGenerateDeckModel(provider: String): ChatModel =
+        when (provider) {
+            PROVIDER_GEMINI      -> createGeminiChatModel()
+            PROVIDER_MISTRAL     -> createMistralChatModel()
+            PROVIDER_HUGGINGFACE -> createHuggingFaceChatModel()
+            else -> {
+                if (provider != PROVIDER_OLLAMA) println(
+                    "⚠️  Unknown ai.provider='$provider'. " +
+                            "Valid values: $PROVIDER_OLLAMA, $PROVIDER_GEMINI, " +
+                            "$PROVIDER_MISTRAL, $PROVIDER_HUGGINGFACE. " +
+                            "Falling back to $PROVIDER_OLLAMA."
+                )
+                createOllamaChatModel(localModels.first().first)
+            }
+        }
+
+    // =========================================================================
+    // Shared streaming coroutine bridge
+    // =========================================================================
+
+    suspend fun generateStreamingResponse(
+        model: StreamingChatModel,
+        promptMessage: String
+    ): Either<Throwable, ChatResponse> = catch {
+        suspendCancellableCoroutine { continuation ->
+            model.chat(promptMessage, object : StreamingChatResponseHandler {
+                override fun onPartialResponse(partialResponse: String) = print(partialResponse)
+                override fun onCompleteResponse(response: ChatResponse) = continuation.resume(response)
+                override fun onError(error: Throwable) { continuation.cancel(error) }
+            })
         }
     }
 
@@ -130,24 +251,24 @@ object AssistantManager {
     // =========================================================================
 
     fun Project.createOllamaChatModel(model: String = "smollm:135m"): OllamaChatModel =
-        (findProperty("ollama.baseUrl") as? String ?: "http://localhost:11434")
-            .run(OllamaChatModel.builder()::baseUrl)
-            .modelName(findProperty("ollama.modelName") as? String ?: model)
-            .temperature(findProperty("ollama.temperature") as? Double ?: 0.8)
-            .timeout(ofSeconds(findProperty("ollama.timeout") as? Long ?: 6_000))
-            .logRequests(true)
-            .logResponses(true)
-            .build()
+        OllamaChatModel.builder().apply {
+            baseUrl(findProperty("ollama.baseUrl") as? String ?: "http://localhost:11434")
+            modelName(findProperty("ollama.modelName") as? String ?: model)
+            temperature(findProperty("ollama.temperature") as? Double ?: 0.8)
+            timeout(ofSeconds(findProperty("ollama.timeout") as? Long ?: 6_000))
+            logRequests(true)
+            logResponses(true)
+        }.build()
 
     fun Project.createOllamaStreamingChatModel(model: String = "smollm:135m"): OllamaStreamingChatModel =
-        (findProperty("ollama.baseUrl") as? String ?: "http://localhost:11434")
-            .run(OllamaStreamingChatModel.builder()::baseUrl)
-            .modelName(findProperty("ollama.modelName") as? String ?: model)
-            .temperature(findProperty("ollama.temperature") as? Double ?: 0.8)
-            .timeout(ofSeconds(findProperty("ollama.timeout") as? Long ?: 6_000))
-            .logRequests(true)
-            .logResponses(true)
-            .build()
+        OllamaStreamingChatModel.builder().apply {
+            baseUrl(findProperty("ollama.baseUrl") as? String ?: "http://localhost:11434")
+            modelName(findProperty("ollama.modelName") as? String ?: model)
+            temperature(findProperty("ollama.temperature") as? Double ?: 0.8)
+            timeout(ofSeconds(findProperty("ollama.timeout") as? Long ?: 6_000))
+            logRequests(true)
+            logResponses(true)
+        }.build()
 
     // =========================================================================
     // Gemini model factories
@@ -176,21 +297,58 @@ object AssistantManager {
             .build()
 
     // =========================================================================
-    // Shared streaming coroutine bridge
+    // Mistral AI model factories
     // =========================================================================
 
-    suspend fun generateStreamingResponse(
-        model: StreamingChatModel,
-        promptMessage: String
-    ): Either<Throwable, ChatResponse> = catch {
-        suspendCancellableCoroutine { continuation ->
-            model.chat(promptMessage, object : StreamingChatResponseHandler {
-                override fun onPartialResponse(partialResponse: String) = print(partialResponse)
-                override fun onCompleteResponse(response: ChatResponse) = continuation.resume(response)
-                override fun onError(error: Throwable) { continuation.cancel(error) }
-            })
-        }
-    }
+    fun Project.createMistralChatModel(
+        model: String = MistralAiChatModelName.MISTRAL_SMALL_LATEST.toString()
+    ): MistralAiChatModel =
+        (localConf.ai?.mistral?.firstOrNull()
+            ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
+            .run(MistralAiChatModel.builder()::apiKey)
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
+
+    fun Project.createMistralStreamingChatModel(
+        model: String = MistralAiChatModelName.MISTRAL_SMALL_LATEST.toString()
+    ): MistralAiStreamingChatModel =
+        (localConf.ai?.mistral?.firstOrNull()
+            ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
+            .run(MistralAiStreamingChatModel.builder()::apiKey)
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
+
+    // =========================================================================
+    // HuggingFace model factories (via OpenAI-compatible router)
+    // =========================================================================
+
+    fun Project.createHuggingFaceChatModel(
+        model: String = "meta-llama/Llama-3.1-8B-Instruct:sambanova"
+    ): OpenAiChatModel =
+        (localConf.ai?.huggingface?.firstOrNull()
+            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
+            .run(OpenAiChatModel.builder()::apiKey)
+            .baseUrl("https://router.huggingface.co/v1")
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
+
+    fun Project.createHuggingFaceStreamingChatModel(
+        model: String = "meta-llama/Llama-3.1-8B-Instruct:sambanova"
+    ): OpenAiStreamingChatModel =
+        (localConf.ai?.huggingface?.firstOrNull()
+            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
+            .run(OpenAiStreamingChatModel.builder()::apiKey)
+            .baseUrl("https://router.huggingface.co/v1")
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
 
     // =========================================================================
     // Ollama runners
@@ -206,7 +364,7 @@ object AssistantManager {
             createOllamaStreamingChatModel(model).run {
                 when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
                     is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                    is Left -> "Error during response generation:\n${answer.value}".run(::println)
+                    is Left  -> "Error during response generation:\n${answer.value}".run(::println)
                 }
             }
         }
@@ -226,79 +384,31 @@ object AssistantManager {
             createGeminiStreamingChatModel(model).run {
                 when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
                     is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                    is Left -> "Error during response generation:\n${answer.value}".run(::println)
+                    is Left  -> "Error during response generation:\n${answer.value}".run(::println)
                 }
             }
         }
     }
 
     // =========================================================================
-    // Ollama task factories
+    // Mistral runners
     // =========================================================================
 
-    fun Project.createChatTask(model: String, taskName: String) {
-        tasks.register(taskName) {
-            it.group = "slider-ai"
-            it.description = "Display the Ollama $model chat prompt request."
-            it.doFirst { project.runChat(model) }
-        }
+    fun Project.runMistralChat(model: String) {
+        createMistralChatModel(model = model)
+            .run { PromptManager.userMessageFr.run(::chat).let(::println) }
     }
 
-    fun Project.createStreamingChatTask(model: String, taskName: String) {
-        tasks.register(taskName) {
-            it.group = "slider-ai"
-            it.description = "Display the Ollama $model streaming chat prompt request."
-            it.doFirst { runStreamChat(model) }
+    fun Project.runMistralStreamChat(model: String) {
+        runBlocking {
+            createMistralStreamingChatModel(model).run {
+                when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
+                    is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
+                    is Left  -> "Error during response generation:\n${answer.value}".run(::println)
+                }
+            }
         }
     }
-
-    // =========================================================================
-    // Gemini task factories
-    // =========================================================================
-
-    fun Project.createGeminiChatTask(model: String, taskName: String) {
-        tasks.register(taskName) {
-            it.group = "slider-ai"
-            it.description = "Display the Gemini $model chat prompt request."
-            it.doFirst { project.runGeminiChat(model) }
-        }
-    }
-
-    fun Project.createGeminiStreamingChatTask(model: String, taskName: String) {
-        tasks.register(taskName) {
-            it.group = "slider-ai"
-            it.description = "Display the Gemini $model streaming chat prompt request."
-            it.doFirst { runGeminiStreamChat(model) }
-        }
-    }
-
-    // =========================================================================
-    // HuggingFace model factories (via OpenAI-compatible router)
-    // =========================================================================
-
-    fun Project.createHuggingFaceChatModel(
-        model: String = "HuggingFaceTB/SmolLM3-3B:hf-inference"
-    ): OpenAiChatModel =
-        (localConf.ai?.huggingface?.firstOrNull()
-            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
-            .run(OpenAiChatModel.builder()::apiKey)
-            .baseUrl("https://router.huggingface.co/v1")
-            .modelName(model)
-            .logRequests(true)
-            .logResponses(true)
-            .build()
-
-    fun Project.createHuggingFaceStreamingChatModel(
-        model: String = "HuggingFaceTB/SmolLM3-3B:hf-inference"
-    ): OpenAiStreamingChatModel =
-        (localConf.ai?.huggingface?.firstOrNull()
-            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
-            .run(OpenAiStreamingChatModel.builder()::apiKey)
-            .baseUrl("https://router.huggingface.co/v1")
-            .modelName(model)
-            .logRequests(true)
-            .logResponses(true)
-            .build()
 
     // =========================================================================
     // HuggingFace runners
@@ -314,9 +424,69 @@ object AssistantManager {
             createHuggingFaceStreamingChatModel(model).run {
                 when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
                     is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                    is Left -> "Error during response generation:\n${answer.value}".run(::println)
+                    is Left  -> "Error during response generation:\n${answer.value}".run(::println)
                 }
             }
+        }
+    }
+
+    // =========================================================================
+    // Ollama task factories
+    // =========================================================================
+
+    fun Project.createChatTask(model: String, taskName: String) {
+        tasks.register(taskName) {
+            it.group = "slider-ai"
+            it.description = "Ollama $model chat prompt."
+            it.doFirst { project.runChat(model) }
+        }
+    }
+
+    fun Project.createStreamingChatTask(model: String, taskName: String) {
+        tasks.register(taskName) {
+            it.group = "slider-ai"
+            it.description = "Ollama $model streaming chat prompt."
+            it.doFirst { runStreamChat(model) }
+        }
+    }
+
+    // =========================================================================
+    // Gemini task factories
+    // =========================================================================
+
+    fun Project.createGeminiChatTask(model: String, taskName: String) {
+        tasks.register(taskName) {
+            it.group = "slider-ai"
+            it.description = "Gemini $model chat prompt."
+            it.doFirst { project.runGeminiChat(model) }
+        }
+    }
+
+    fun Project.createGeminiStreamingChatTask(model: String, taskName: String) {
+        tasks.register(taskName) {
+            it.group = "slider-ai"
+            it.description = "Gemini $model streaming chat prompt."
+            it.doFirst { runGeminiStreamChat(model) }
+        }
+    }
+
+    // =========================================================================
+    // Mistral task factories
+    // =========================================================================
+
+    fun Project.createMistralChatTask(model: String, taskName: String) {
+        tasks.register(taskName) {
+            it.group = "slider-ai"
+            it.description = "Mistral $model chat prompt."
+            it.doFirst { project.runMistralChat(model) }
+        }
+    }
+
+    fun Project.createMistralStreamingChatTask(model: String, taskName: String) {
+        tasks.register(taskName) {
+            it.group = "slider-ai"
+            it.description = "Mistral $model streaming chat prompt."
+            it.doFirst { runMistralStreamChat(model) }
         }
     }
 
@@ -327,7 +497,7 @@ object AssistantManager {
     fun Project.createHuggingFaceChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "Display the HuggingFace $model chat prompt request."
+            it.description = "HuggingFace $model chat prompt."
             it.doFirst { project.runHuggingFaceChat(model) }
         }
     }
@@ -335,246 +505,22 @@ object AssistantManager {
     fun Project.createHuggingFaceStreamingChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "Display the HuggingFace $model streaming chat prompt request."
+            it.description = "HuggingFace $model streaming chat prompt."
             it.doFirst { runHuggingFaceStreamChat(model) }
         }
     }
-
-    // =========================================================================
-    // Misc
-    // =========================================================================
-
-    @JvmStatic
-    val Project.openAIapiKey: String
-        get() = privateProps["OPENAI_API_KEY"] as String
 
     // =========================================================================
     // PromptManager
     // =========================================================================
 
     object PromptManager {
+
         @JvmStatic
-        fun main(args: Array<String>) {
-            userMessageFr.run(::println)
-        }
+        fun main(args: Array<String>) { userMessageFr.run(::println) }
 
         const val ASSISTANT_NAME = "E-3PO"
-        val userName = System.getProperty("user.name")!!
-
-        val deckSystemPrompt = """
-            | You are E-3PO, an expert in generating AsciiDoc/Reveal.js presentations for adult professional training.
-            | You output ONLY raw AsciiDoc content — no markdown, no explanation, no wrapping code fences.
-            |
-            | === LEARN BY EXAMPLE ===
-            | Below is a fully annotated deck. Each comment (// ...) explains the role of each block.
-            | Reproduce this structure exactly for every deck you generate.
-            |
-            | ---------------- EXAMPLE START ----------------
-            |
-            | // MANDATORY HEADER: title, author, date, revealjs attributes
-            | = Presentation Title
-            | :author: First Last <email@example.com>
-            | :date: 2024-01-01
-            | :icons: font
-            | :revealjs_theme: sky
-            | :revealjs_history: true
-            | :revealjs_slideNumber: c/t
-            | :revealjs_controls: true
-            | :revealjs_controlsLayout: edges
-            | :revealjs_fragmentInURL: true
-            | :revealjs_width: 1408
-            | :revealjs_height: 792
-            | :imagesdir: images
-            | :source-highlighter: highlightjs
-            | :example-caption!:
-            |
-            | // SLIDE 1: always an agenda slide with progressive reveal
-            | // == creates a horizontal slide (left/right navigation)
-            | == Agenda
-            |
-            | // [%step] reveals each bullet point one click at a time
-            | [%step]
-            | * First topic
-            | * Second topic
-            | * Third topic
-            |
-            | // [NOTE.speaker] : notes visible ONLY in speaker mode (press 's')
-            | // Use for: timing hints, anecdotes, presenter tips
-            | [NOTE.speaker]
-            | --
-            | Introduce the agenda in 2 minutes. Ask the audience what they already know.
-            | --
-            |
-            | // [.notes] : page notes visible in PDF/HTML exports
-            | // MINIMAL style   → one reference line only
-            | // DETAILED style  → deep content + references + exercises
-            | // EXERCISES_ONLY  → only practical exercises
-            | // The user message will tell you which style to apply.
-            | [.notes]
-            | --
-            | * Reference: Clean Code, Robert C. Martin
-            | * Exercise: ask learners to list what they already know
-            | * Deep dive: link to official documentation
-            | --
-            |
-            | // SLIDE 2: standard content slide
-            | == First Topic
-            |
-            | [%step]
-            | * Key point 1
-            | * Key point 2
-            | * Key point 3
-            |
-            | [NOTE.speaker]
-            | --
-            | Emphasise key point 2 — often misunderstood. Allow 10 minutes.
-            | --
-            |
-            | [.notes]
-            | --
-            | * Deep dive: link to official documentation
-            | * Hands-on exercise: implement in pairs
-            | --
-            |
-            | // VERTICAL SUB-SLIDE: === creates a child slide, reached by pressing the down arrow
-            | // Use === to break down a complex concept across multiple screens
-            | === First Topic — Detail
-            |
-            | // CODE BLOCK: always specify the language after [source,]
-            | [source,kotlin]
-            | .Minimal example
-            | ----
-            | fun greet(name: String): String = "Hello, ${'$'}name!"
-            | ----
-            |
-            | [NOTE.speaker]
-            | --
-            | Live-code this example. Ask learners to modify it.
-            | --
-            |
-            | [.notes]
-            | --
-            | * Kotlin idiom: expression function using = instead of { return }
-            | * Exercise: rewrite in Java then compare
-            | --
-            |
-            | // LAST SLIDE: always a synthesis and next steps
-            | == Summary and Next Steps
-            |
-            | [%step]
-            | * What you can now do
-            | * What you can explore further
-            | * Recommended resources
-            |
-            | [NOTE.speaker]
-            | --
-            | Open the floor: what was new? what is still unclear?
-            | --
-            |
-            | [.notes]
-            | --
-            | * Formative assessment: 5-question quiz to distribute
-            | * Resources: documentation links, books, tutorials
-            | --
-            |
-            | ---------------- EXAMPLE END ----------------
-            |
-            | === NOTES GENERATION RULES ===
-            | The user message specifies which notes to generate via speakerNotes and pageNotes flags,
-            | and a pageNotesStyle. Follow these rules strictly:
-            |
-            | speakerNotes=true  → add [NOTE.speaker] on EVERY slide
-            | speakerNotes=false → omit [NOTE.speaker] entirely
-            |
-            | pageNotes=true     → add [.notes] on EVERY slide
-            | pageNotes=false    → omit [.notes] entirely
-            |
-            | pageNotesStyle=MINIMAL       → [.notes] contains one reference line only
-            | pageNotesStyle=DETAILED      → [.notes] contains deep content + references + exercises
-            | pageNotesStyle=EXERCISES_ONLY→ [.notes] contains only practical exercises
-            |
-            | If slide hints are provided in the user message, use them to enrich the
-            | [NOTE.speaker] and [.notes] content for that specific slide.
-            |
-            | === SLIDE CONTENT SIZE CONSTRAINTS ===
-            | Reveal.js renders each slide in a fixed viewport (default 1408x792px).
-            | Content that exceeds the viewport is clipped — the audience will NOT see it.
-            | Strictly respect these limits per slide:
-            |
-            | BULLET LISTS
-            | - Maximum 5 bullet points per slide with [%step]
-            | - Maximum 7 bullet points per slide without [%step]
-            | - If you need more points, split into a sub-slide with ===
-            |
-            | CODE BLOCKS
-            | - Maximum 10 lines of code per [source,...] block
-            | - If the example requires more lines, split across two === sub-slides
-            | - Prefer minimal, focused snippets — illustrate ONE concept per block
-            |
-            | TEXT
-            | - Maximum 3 short sentences of prose per slide
-            | - Never combine a bullet list AND a code block on the same slide
-            |
-            | NOTES
-            | - [NOTE.speaker] and [.notes] are NOT rendered on screen — no size limit
-            | - Put detailed content, long explanations and references in notes, not on the slide
-            |
-            | GENERAL RULE
-            | - When in doubt: less is more. Split into sub-slides rather than overflow.
-            | - One concept per slide. One example per slide.
-            |
-            | === ABSOLUTE RULES ===
-            | - ALWAYS start with the full header including all :revealjs_* attributes
-            | - ALWAYS include an agenda slide with [%step] as the first slide
-            | - ALWAYS use [%step] for key point lists
-            | - ALWAYS use [source,language] for any code block
-            | - ALWAYS end with a summary + next steps slide
-            | - NEVER exceed slide content size constraints defined above
-            | - Output language is specified in the user message — follow it strictly
-            | - Output: raw AsciiDoc ONLY — zero markdown, zero explanation
-        """.trimMargin()
-
-        fun deckUserMessage(ctx: DeckContext): String {
-            val slidesSection = if (ctx.slides.isEmpty()) ""
-            else buildString {
-                appendLine()
-                appendLine("=== SLIDE HINTS ===")
-                appendLine("Use these hints to enrich speaker notes and page notes for each slide:")
-                ctx.slides.forEach { slide ->
-                    appendLine("Slide: ${slide.title}")
-                    slide.speakerHint?.let { appendLine("  Speaker hint    : $it") }
-                    slide.pageNotesHint?.let { appendLine("  Page notes hint : $it") }
-                }
-            }
-
-            return """
-                | Generate a complete AsciiDoc/Reveal.js training presentation with the following context:
-                |
-                | Subject        : ${ctx.subject}
-                | Audience       : ${ctx.audience}
-                | Duration       : ${ctx.duration} minutes
-                | Output language: ${ctx.language}
-                | Author         : ${ctx.author.name} <${ctx.author.email}>
-                |
-                | === REVEAL.JS CONFIGURATION ===
-                | theme         : ${ctx.revealjs.theme}
-                | slideNumber   : ${ctx.revealjs.slideNumber}
-                | width         : ${ctx.revealjs.width}
-                | height        : ${ctx.revealjs.height}
-                | controls      : ${ctx.revealjs.controls}
-                | controlsLayout: ${ctx.revealjs.controlsLayout}
-                | history       : ${ctx.revealjs.history}
-                | fragmentInURL : ${ctx.revealjs.fragmentInURL}
-                |
-                | === NOTES CONFIGURATION ===
-                | speakerNotes  : ${ctx.notes.speakerNotes}
-                | pageNotes     : ${ctx.notes.pageNotes}
-                | pageNotesStyle: ${ctx.notes.pageNotesStyle}
-                $slidesSection
-                | Follow the system prompt structure strictly.
-                | Output the complete deck in one single response.
-            """.trimMargin()
-        }
+        val userName: String = System.getProperty("user.name")!!
 
         val userMessageFr = """config```--lang=fr;```.
             | Salut je suis $userName,
@@ -597,5 +543,125 @@ object AssistantManager {
         | 4. Provide guidance on instructional design for adult education
         | Please communicate clearly and concisely, focusing on practical solutions.
         | Keep initial responses under 120 words.""".trimMargin()
+
+        // ---------------------------------------------------------------------
+        // Deck generation prompts
+        // ---------------------------------------------------------------------
+
+        val deckSystemPrompt = """
+You are E-3PO, an expert at generating AsciiDoc/Reveal.js slide decks.
+
+## OUTPUT FORMAT — strict AsciiDoc + Reveal.js syntax
+
+Every deck must start with this exact header block (fill values from context):
+```
+= <title>
+<author name> <<author email>>
+:revealjs_theme: <theme>
+:revealjs_slideNumber: <slideNumber>
+:revealjs_width: <width>
+:revealjs_height: <height>
+:revealjs_controls: true
+:revealjs_controlsLayout: edges
+:revealjs_history: true
+:revealjs_fragmentInURL: true
+:source-highlighter: rouge
+```
+
+Each slide uses `==` as heading level:
+```
+== Slide Title
+
+Content here
+
+[NOTE.speaker]
+--
+Speaker notes here (if speakerNotes=true)
+--
+
+[.notes]
+--
+Page notes here (if pageNotes=true)
+--
+```
+
+## INCREMENTAL BULLETS — [%step]
+Use `[%step]` on a list to reveal items one by one:
+```
+[%step]
+* First point
+* Second point
+```
+
+## CODE BLOCKS
+```
+[source,kotlin]
+----
+fun hello() = println("Hello")
+----
+```
+
+## SLIDE CONTENT SIZE CONSTRAINTS
+* With `[%step]`   : maximum 5 bullet points per slide
+* Without `[%step]`: maximum 7 bullet points per slide
+* Code block       : maximum 10 lines per [source,...] block
+* Prose paragraph  : maximum 3 sentences per slide
+* NEVER mix a bullet list and a code block on the same slide
+
+## NOTES GENERATION RULES
+* speakerNotes=true   → generate a [NOTE.speaker] block on every slide
+* pageNotes=true      → generate a [.notes] block on every slide
+* pageNotesStyle controls the depth of [.notes]:
+  - MINIMAL        → one reference line only
+  - DETAILED       → deep content + references + exercises
+  - EXERCISES_ONLY → practical exercises only
+* SlideHint.speakerHint  guides [NOTE.speaker] content — do not copy it verbatim
+* SlideHint.pageNotesHint guides [.notes] content      — do not copy it verbatim
+
+## ABSOLUTE RULES
+1. Output raw AsciiDoc ONLY — no markdown, no explanations, no code fences around the deck
+2. Every slide must have a == heading
+3. The first slide after the title must be an Agenda/Plan slide
+4. The last slide must be a Summary/Conclusion slide
+5. If slide hints are provided, follow their order and titles exactly
+6. If no hints are provided, create a pedagogically sound structure for the subject
+7. Language of content must match the `language` field in the context
+""".trimIndent()
+
+        fun deckUserMessage(ctx: DeckContext): String = buildString {
+            appendLine("Generate a complete Reveal.js slide deck with the following context:")
+            appendLine()
+            appendLine("Subject   : ${ctx.subject}")
+            appendLine("Audience  : ${ctx.audience}")
+            appendLine("Duration  : ${ctx.duration} minutes")
+            appendLine("Language  : ${ctx.language}")
+            appendLine("OutputFile: ${ctx.outputFile}")
+            appendLine()
+            appendLine("Author:")
+            appendLine("  Name  : ${ctx.author.name}")
+            appendLine("  Email : ${ctx.author.email}")
+            appendLine()
+            appendLine("Reveal.js configuration:")
+            appendLine("  theme        : ${ctx.revealjs.theme}")
+            appendLine("  slideNumber  : ${ctx.revealjs.slideNumber}")
+            appendLine("  width        : ${ctx.revealjs.width}")
+            appendLine("  height       : ${ctx.revealjs.height}")
+            appendLine()
+            appendLine("Notes configuration:")
+            appendLine("  speakerNotes   : ${ctx.notes.speakerNotes}")
+            appendLine("  pageNotes      : ${ctx.notes.pageNotes}")
+            appendLine("  pageNotesStyle : ${ctx.notes.pageNotesStyle}")
+            appendLine()
+            if (ctx.slides.isEmpty()) {
+                appendLine("No slide hints provided — build a pedagogically appropriate structure.")
+            } else {
+                appendLine("Slide hints (follow this order and these titles exactly):")
+                ctx.slides.forEach { hint ->
+                    appendLine("  - title: ${hint.title}")
+                    hint.speakerHint?.let  { appendLine("    speakerHint: $it") }
+                    hint.pageNotesHint?.let { appendLine("    pageNotesHint: $it") }
+                }
+            }
+        }
     }
 }
