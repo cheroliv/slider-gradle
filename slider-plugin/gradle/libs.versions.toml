@@ -59,7 +59,7 @@ arrow-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "
 arrow-jackson = { module = "io.arrow-kt:arrow-integrations-jackson-module", version.ref = "arrow-jackson" }
 langchain4j = { module = "dev.langchain4j:langchain4j", version.ref = "langchain4j" }
 langchain4j-ollama = { module = "dev.langchain4j:langchain4j-ollama", version.ref = "langchain4j" }
-langchain4j-huggingface = { module = "dev.langchain4j:langchain4j-hugging-face", version.ref = "langchain4j-beta" }
+langchain4j-open-ai = { module = "dev.langchain4j:langchain4j-open-ai", version.ref = "langchain4j" }
 langchain4j-gemini = { module = "dev.langchain4j:langchain4j-google-ai-gemini", version.ref = "langchain4j" }
 langchain4j-mistral = { module = "dev.langchain4j:langchain4j-mistral-ai", version.ref = "langchain4j" }
 langchain4j-pgvector = { module = "dev.langchain4j:langchain4j-pgvector", version.ref = "langchain4j-beta" }
@@ -80,7 +80,7 @@ slider = [
     "arrow-jackson",
     "langchain4j",
     "langchain4j-ollama",
-    "langchain4j-huggingface",
+    "langchain4j-open-ai",
     "langchain4j-gemini",
     "langchain4j-mistral",
     "langchain4j-pgvector"
