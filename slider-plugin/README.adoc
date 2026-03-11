@@ -5,7 +5,7 @@
 :icons: font
 :lang: en
 :hardbreaks-option:
-:plugin-version: 0.0.3
+:plugin-version: 0.0.4
 
 ++++
 <p align="right">
@@ -374,13 +374,49 @@ It registers the `generateDeck` task and manages four LLM providers.
 
 === generateDeck task
 
+The provider is selected at the command line with `-Pai.provider`. Defaults to `ollama` when absent.
+
 [source,bash]
 ----
+# Default: ollama (local)
 ./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml
+
+# Gemini
+./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=gemini
+
+# Mistral AI
+./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=mistral
+
+# HuggingFace
+./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=huggingface
 ----
 
+[cols="1,2,2"]
+|===
+| `-Pai.provider` | Default model | API key
+
+| `ollama` _(default)_
+| `smollm:135m`
+| none — local inference
+
+| `gemini`
+| `gemini-2.5-flash`
+| `ai.gemini[0]`
+
+| `mistral`
+| `mistral-small-latest`
+| `ai.mistral[0]`
+
+| `huggingface`
+| `Llama-3.1-8B-Instruct:sambanova`
+| `ai.huggingface[0]`
+|===
+
+The property is read via `Project.aiProvider` (constant `AssistantManager.PROP_AI_PROVIDER = "ai.provider"`).
+Unknown values fall back to `ollama` with a console warning.
+
 The task reads the `DeckContext` from the YAML file, builds a system prompt with full
-AsciiDoc/Reveal.js syntax knowledge via an annotated example deck, and sends it to Gemini.
+AsciiDoc/Reveal.js syntax knowledge, and sends it to the resolved `ChatModel`.
 The generated `.adoc` file is written to `slides/misc/` at the path defined by `outputFile`.
 
 === Prompt strategy
