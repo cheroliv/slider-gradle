@@ -94,10 +94,7 @@ object AssistantManager {
 
     @JvmStatic
     val geminiModels
-        get() = setOf(
-            "gemini-2.5-flash" to "GeminiFlash25",
-            "gemini-2.0-flash" to "GeminiFlash20",
-        )
+        get() = setOf("gemini-2.5-flash" to "GeminiFlash25")
 
     @JvmStatic
     val mistralModels
