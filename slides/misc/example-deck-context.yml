@@ -1,0 +1,32 @@
+---
+subject: "Your presentation subject"
+audience: "Your target audience"
+duration: 45
+language: "French"
+outputFile: "example-deck.adoc"
+author:
+  name: "Your Name"
+  email: "your.email@example.com"
+revealjs:
+  theme: "sky"
+  slideNumber: "c/t"
+  width: 1408
+  height: 792
+  controls: true
+  controlsLayout: "edges"
+  history: true
+  fragmentInURL: true
+notes:
+  speakerNotes: true
+  pageNotes: true
+  pageNotesStyle: "DETAILED"
+slides:
+- title: "Agenda"
+  speakerHint: "Introduce the plan in 2 minutes, ask what the audience already knows."
+  pageNotesHint: "List prerequisite knowledge and suggested readings."
+- title: "First Topic"
+  speakerHint: "Emphasise the most common misconception."
+  pageNotesHint: "Add a hands-on exercise and a reference link."
+- title: "Summary and Next Steps"
+  speakerHint: "Open the floor: what was new? what is still unclear?"
+  pageNotesHint: "Include a 5-question formative assessment."
