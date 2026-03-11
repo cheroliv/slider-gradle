@@ -1,5 +1,5 @@
 [versions]
-slider = "0.0.3"
+slider = "0.0.4"
 asciidoctor-gradle = "5.0.0-alpha.1"
 node-gradle = "7.1.0"
 commons-io = "2.13.0"
