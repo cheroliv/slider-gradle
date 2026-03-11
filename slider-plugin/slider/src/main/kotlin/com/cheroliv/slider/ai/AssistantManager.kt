@@ -7,6 +7,9 @@ import arrow.core.Either.Companion.catch
 import arrow.core.Either.Left
 import arrow.core.Either.Right
 import com.cheroliv.slider.SliderManager.localConf
+import com.cheroliv.slider.SliderManager.yamlMapper
+import dev.langchain4j.data.message.SystemMessage
+import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.chat.response.ChatResponse
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler
@@ -95,6 +98,29 @@ object AssistantManager {
             it.group = "slider-ai"
             it.description = "Display on console AI prompt assistant"
             it.doFirst { PromptManager.userMessageFr.let(::println) }
+        }
+        // Generate deck from *-deck-context.yml
+        tasks.register("generateDeck") {
+            it.group = "slider-ai"
+            it.description = "Generate a complete AsciiDoc/Reveal.js deck from a *-deck-context.yml"
+            it.doFirst {
+                val contextPath = project.findProperty("deck.context") as? String
+                    ?: error("Provide -Pdeck.context=slides/misc/my-deck-context.yml")
+                val ctx: DeckContext = project.layout.projectDirectory.asFile
+                    .resolve(contextPath)
+                    .run { yamlMapper.readValue(this, DeckContext::class.java) }
+                val output = project.layout.projectDirectory.asFile
+                    .resolve("slides/misc/${ctx.outputFile}")
+                createGeminiChatModel()
+                    .chat(
+                        SystemMessage.from(PromptManager.deckSystemPrompt),
+                        UserMessage.from(PromptManager.deckUserMessage(ctx))
+                    )
+                    .let { response ->
+                        output.writeText(response.aiMessage().text())
+                        println("✅ Deck generated : ${output.absolutePath}")
+                    }
+            }
         }
     }
 
@@ -333,6 +359,149 @@ object AssistantManager {
 
         const val ASSISTANT_NAME = "E-3PO"
         val userName = System.getProperty("user.name")!!
+
+        val deckSystemPrompt = """
+            | You are E-3PO, an expert in generating AsciiDoc/Reveal.js presentations for adult professional training.
+            | You output ONLY raw AsciiDoc content — no markdown, no explanation, no wrapping code fences.
+            |
+            | === LEARN BY EXAMPLE ===
+            | Below is a fully annotated deck. Each comment (// ...) explains the role of each block.
+            | Reproduce this structure exactly for every deck you generate.
+            |
+            | ---------------- EXAMPLE START ----------------
+            |
+            | // MANDATORY HEADER: title, author, date, revealjs attributes
+            | = Presentation Title
+            | :author: First Last <email@example.com>
+            | :date: 2024-01-01
+            | :icons: font
+            | :revealjs_theme: sky
+            | :revealjs_history: true
+            | :revealjs_slideNumber: c/t
+            | :revealjs_controls: true
+            | :revealjs_controlsLayout: edges
+            | :revealjs_fragmentInURL: true
+            | :revealjs_width: 1408
+            | :revealjs_height: 792
+            | :imagesdir: images
+            | :source-highlighter: highlightjs
+            | :example-caption!:
+            |
+            | // SLIDE 1: always an agenda slide with progressive reveal
+            | // == creates a horizontal slide (left/right navigation)
+            | == Agenda
+            |
+            | // [%step] reveals each bullet point one click at a time
+            | [%step]
+            | * First topic
+            | * Second topic
+            | * Third topic
+            |
+            | // [NOTE.speaker] : notes visible ONLY in speaker mode (press 's')
+            | // Use for: timing hints, anecdotes, presenter tips
+            | [NOTE.speaker]
+            | --
+            | Introduce the agenda in 2 minutes. Ask the audience what they already know.
+            | --
+            |
+            | // [.notes] : page notes visible in PDF/HTML exports
+            | // Use for: deeper content, references, suggested exercises
+            | [.notes]
+            | --
+            | * Reference: Clean Code, Robert C. Martin
+            | * Exercise: ask learners to list what they already know
+            | --
+            |
+            | // SLIDE 2: standard content slide
+            | == First Topic
+            |
+            | [%step]
+            | * Key point 1
+            | * Key point 2
+            | * Key point 3
+            |
+            | [NOTE.speaker]
+            | --
+            | Emphasise key point 2 — often misunderstood. Allow 10 minutes.
+            | --
+            |
+            | [.notes]
+            | --
+            | * Deep dive: link to official documentation
+            | * Hands-on exercise: implement in pairs
+            | --
+            |
+            | // VERTICAL SUB-SLIDE: === creates a child slide, reached by pressing the down arrow
+            | // Use === to break down a complex concept across multiple screens
+            | === First Topic — Detail
+            |
+            | // CODE BLOCK: always specify the language after [source,]
+            | [source,kotlin]
+            | .Minimal example
+            | ----
+            | fun greet(name: String): String = "Hello, ${'$'}name!"
+            | ----
+            |
+            | [NOTE.speaker]
+            | --
+            | Live-code this example. Ask learners to modify it.
+            | --
+            |
+            | [.notes]
+            | --
+            | * Kotlin idiom: expression function using = instead of { return }
+            | * Exercise: rewrite in Java then compare
+            | --
+            |
+            | // LAST SLIDE: always a synthesis and next steps
+            | == Summary and Next Steps
+            |
+            | [%step]
+            | * What you can now do
+            | * What you can explore further
+            | * Recommended resources
+            |
+            | [NOTE.speaker]
+            | --
+            | Open the floor: what was new? what is still unclear?
+            | --
+            |
+            | [.notes]
+            | --
+            | * Formative assessment: 5-question quiz to distribute
+            | * Resources: documentation links, books, tutorials
+            | --
+            |
+            | ---------------- EXAMPLE END ----------------
+            |
+            | === ABSOLUTE RULES ===
+            | - ALWAYS start with the full header including all :revealjs_* attributes
+            | - ALWAYS include an agenda slide with [%step] as the first slide
+            | - ALWAYS add [NOTE.speaker] on every slide (presenter tips)
+            | - ALWAYS add [.notes] on every slide (deeper content + exercises)
+            | - ALWAYS use [%step] for key point lists
+            | - ALWAYS use [source,language] for any code block
+            | - ALWAYS end with a summary + next steps slide
+            | - Output language is specified in the user message — follow it strictly
+            | - Output: raw AsciiDoc ONLY — zero markdown, zero explanation
+        """.trimMargin()
+
+        fun deckUserMessage(ctx: DeckContext) = """
+            | Generate a complete AsciiDoc/Reveal.js training presentation with the following context:
+            |
+            | Subject      : ${ctx.subject}
+            | Audience     : ${ctx.audience}
+            | Duration     : ${ctx.duration} minutes
+            | Output language: ${ctx.language}
+            | Author       : ${ctx.author.name} <${ctx.author.email}>
+            | Reveal.js theme    : ${ctx.revealjs.theme}
+            | Reveal.js slideNumber: ${ctx.revealjs.slideNumber}
+            | Reveal.js width    : ${ctx.revealjs.width}
+            | Reveal.js height   : ${ctx.revealjs.height}
+            |
+            | Follow the system prompt structure strictly.
+            | Output the complete deck in one single response.
+        """.trimMargin()
 
         val userMessageFr = """config```--lang=fr;```.
             | Salut je suis $userName,
