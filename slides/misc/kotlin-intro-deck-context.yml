@@ -1,0 +1,49 @@
+subject: "Introduction à Kotlin"
+audience: "développeurs Java seniors"
+duration: 60
+language: "French"
+outputFile: "kotlin-intro-deck.adoc"
+author:
+  name: "cheroliv"
+  email: "cheroliv.developer@gmail.com"
+revealjs:
+  theme: "sky"
+  slideNumber: "c/t"
+  width: 1408
+  height: 792
+notes:
+  speakerNotes: true
+  pageNotes: true
+  pageNotesStyle: "DETAILED"
+slides:
+  - title: "Pourquoi Kotlin ?"
+    speakerHint: "Partir du ressenti quotidien Java : boilerplate, NPE, verbosité. Kotlin répond à chacun."
+    pageNotesHint: "Inclure statistiques adoption Kotlin JetBrains 2023 et point sur interopérabilité Java."
+
+  - title: "Null Safety"
+    speakerHint: "Montrer un NPE classique Java puis la même logique en Kotlin. Le compilateur devient le filet de sécurité."
+    pageNotesHint: "Illustrer avec un exemple Java NPE vs opérateurs Kotlin ? et ?: côte à côte. Exercice : migrer un POJO Java nullable en data class Kotlin."
+
+  - title: "Data Classes"
+    speakerHint: "Comparer le ratio lignes Java POJO vs data class Kotlin. Insister sur equals/hashCode/toString/copy gratuits."
+    pageNotesHint: "Exemple Java POJO complet vs data class Kotlin équivalente. Exercice : réécrire un POJO du projet et vérifier equals/copy."
+
+  - title: "Extension Functions"
+    speakerHint: "Insister : on n'hérite pas, on n'enveloppe pas — on étend. Montrer comment ça remplace les classes utilitaires statiques Java type StringUtils."
+    pageNotesHint: "Exemple de remplacement d'une méthode statique Java utilitaire par une extension function Kotlin sur le même type. Exercice : réécrire une classe *Utils Java du projet en extension functions."
+
+  - title: "Extension Functions — Scope et Limites"
+    speakerHint: "Clarifier : pas d'accès aux membres privés, résolution statique pas dynamique. Ce n'est pas du monkey patching."
+    pageNotesHint: "Illustrer la différence entre extension function et membre de classe avec un exemple qui montre la limite d'accès au privé. Référencer la doc officielle kotlinlang.org/docs/extensions.html"
+
+  - title: "Lambdas et Fonctions d'Ordre Supérieur"
+    speakerHint: "Connecter avec les streams Java 8 que le public connaît. Montrer la syntaxe trailing lambda qui allège l'écriture."
+    pageNotesHint: "Exemple filter/map Kotlin vs stream Java équivalent. Puis une fonction d'ordre supérieur custom simple. Exercice : remplacer une boucle for Java par une chaîne filter/map Kotlin."
+
+  - title: "Coroutines — Aperçu"
+    speakerHint: "Planter la graine uniquement — ne pas aller trop loin. Comparer conceptuellement avec CompletableFuture Java pour donner envie d'approfondir."
+    pageNotesHint: "Comparaison conceptuelle CompletableFuture Java vs coroutine Kotlin sur le même cas d'usage asynchrone. Référencer kotlinlang.org/docs/coroutines-overview.html"
+
+  - title: "Synthèse et Prochaines Étapes"
+    speakerHint: "Tour de table : qu'est-ce qui était surprenant ? qu'est-ce qui donne envie d'essayer maintenant ?"
+    pageNotesHint: "Ressources : Kotlin in Action, play.kotlinlang.org, kotlinlang.org/docs/idioms.html. Quiz formatif 5 questions null safety + extension functions. Projet fil rouge : migrer un module Java existant vers Kotlin."
