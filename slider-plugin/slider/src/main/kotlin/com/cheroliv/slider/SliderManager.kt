@@ -26,6 +26,9 @@ import com.cheroliv.slider.Slides.Slide.IMAGES
 import com.cheroliv.slider.Slides.Slide.SLIDES_CONTEXT_YML
 import com.cheroliv.slider.Slides.Slide.SLIDES_FOLDER
 import com.cheroliv.slider.ai.AiConfiguration
+import com.cheroliv.slider.ai.AuthorContext
+import com.cheroliv.slider.ai.DeckContext
+import com.cheroliv.slider.ai.RevealJsContext
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -304,9 +307,9 @@ object SliderManager {
                     )
                 ),
                 ai = AiConfiguration(
-                    gemini = emptyList(),
-                    mistral = emptyList(),
-                    huggingface = emptyList(),
+                    gemini = listOf("your-gemini-api-key"),
+                    mistral = listOf("your-mistral-api-key"),
+                    huggingface = listOf("your-huggingface-api-key"),
                 )
             )
 
@@ -316,8 +319,55 @@ object SliderManager {
             println("✅ slides-context.yml generated with default values.")
             println("✏️  Edit slides-context.yml with your actual Git repository configuration.")
         }
-    }
 
+        /**
+         * Generates a default example-deck-context.yml in slides/misc/
+         * if the file does not already exist.
+         *
+         * The default configuration is built from a typed [com.cheroliv.slider.ai.DeckContext] instance
+         * and serialised to YAML via [SliderManager.yamlMapper], providing a
+         * ready-to-use template for the generateDeck task.
+         */
+        internal fun Project.scaffoldDeckContextIfAbsent() {
+            val miscDir = layout.projectDirectory.asFile
+                .resolve(SLIDES_FOLDER)
+                .resolve(DEFAULT_SLIDES_FOLDER)
+            val deckContext = miscDir.resolve("example-deck-context.yml")
+
+            // example-deck-context.yml already exists — do nothing
+            if (deckContext.exists()) return
+
+            // Ensure misc/ directory exists (slides scaffold may not have run yet)
+            miscDir.mkdirs()
+
+            val default = DeckContext(
+                subject = "Your presentation subject",
+                audience = "Your target audience",
+                duration = 45,
+                language = "French",
+                outputFile = "example-deck.adoc",
+                author = AuthorContext(
+                    name = "Your Name",
+                    email = "your.email@example.com"
+                ),
+                revealjs = RevealJsContext(
+                    theme = "sky",
+                    slideNumber = "c/t",
+                    width = 1408,
+                    height = 792,
+                    controls = true,
+                    controlsLayout = "edges",
+                    history = true,
+                    fragmentInURL = true,
+                )
+            )
+
+            yamlMapper.writeValue(deckContext, default)
+
+            println("✅ example-deck-context.yml generated in slides/misc/.")
+            println("✏️  Edit slides/misc/example-deck-context.yml with your deck details.")
+        }
+    }
 
 
 // =========================================================================
