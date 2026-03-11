@@ -26,9 +26,6 @@ import com.cheroliv.slider.Slides.Slide.IMAGES
 import com.cheroliv.slider.Slides.Slide.SLIDES_CONTEXT_YML
 import com.cheroliv.slider.Slides.Slide.SLIDES_FOLDER
 import com.cheroliv.slider.ai.AiConfiguration
-import com.cheroliv.slider.ai.AuthorContext
-import com.cheroliv.slider.ai.DeckContext
-import com.cheroliv.slider.ai.RevealJsContext
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -277,7 +274,7 @@ object SliderManager {
          * if the file does not already exist.
          *
          * The default configuration is built from a typed [SlidesConfiguration] instance
-         * and serialised to YAML via [SliderManager.yamlMapper], ensuring the output is
+         * and serialized to YAML via [SliderManager.yamlMapper], ensuring the output is
          * always structurally valid and consistent with the data model.
          *
          * The generated file contains placeholder values that the consumer must replace
@@ -324,7 +321,7 @@ object SliderManager {
          * Generates a default example-deck-context.yml in slides/misc/
          * if the file does not already exist.
          *
-         * The default configuration is built from a typed [com.cheroliv.slider.ai.DeckContext] instance
+         * The default configuration is built from a typed [DeckContext] instance
          * and serialised to YAML via [SliderManager.yamlMapper], providing a
          * ready-to-use template for the generateDeck task.
          */
@@ -359,6 +356,28 @@ object SliderManager {
                     controlsLayout = "edges",
                     history = true,
                     fragmentInURL = true,
+                ),
+                notes = NotesConfiguration(
+                    speakerNotes = true,
+                    pageNotes = true,
+                    pageNotesStyle = PageNotesStyle.DETAILED,
+                ),
+                slides = listOf(
+                    SlideHint(
+                        title = "Agenda",
+                        speakerHint = "Introduce the plan in 2 minutes, ask what the audience already knows.",
+                        pageNotesHint = "List prerequisite knowledge and suggested readings."
+                    ),
+                    SlideHint(
+                        title = "First Topic",
+                        speakerHint = "Emphasise the most common misconception.",
+                        pageNotesHint = "Add a hands-on exercise and a reference link."
+                    ),
+                    SlideHint(
+                        title = "Summary and Next Steps",
+                        speakerHint = "Open the floor: what was new? what is still unclear?",
+                        pageNotesHint = "Include a 5-question formative assessment."
+                    ),
                 )
             )
 
