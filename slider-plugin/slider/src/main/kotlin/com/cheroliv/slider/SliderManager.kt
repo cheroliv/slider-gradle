@@ -25,6 +25,7 @@ import com.cheroliv.slider.Slides.Slide.DEFAULT_SLIDES_FOLDER
 import com.cheroliv.slider.Slides.Slide.IMAGES
 import com.cheroliv.slider.Slides.Slide.SLIDES_CONTEXT_YML
 import com.cheroliv.slider.Slides.Slide.SLIDES_FOLDER
+import com.cheroliv.slider.ai.AiConfiguration
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -301,6 +302,11 @@ object SliderManager {
                             password = "your-token"
                         )
                     )
+                ),
+                ai = AiConfiguration(
+                    gemini = emptyList(),
+                    mistral = emptyList(),
+                    huggingface = emptyList(),
                 )
             )
 
@@ -311,6 +317,7 @@ object SliderManager {
             println("✏️  Edit slides-context.yml with your actual Git repository configuration.")
         }
     }
+
 
 
 // =========================================================================
