@@ -5,7 +5,7 @@
 :icons: font
 :lang: en
 :hardbreaks-option:
-:plugin-version: 0.0.3
+:plugin-version: 0.0.4
 
 ++++
 <p align="right">
@@ -247,8 +247,8 @@ Deploys the generated slides to the remote repository configured in `slides-cont
 == AI-Assisted Deck Generation (slider-ai)
 
 The plugin integrates an AI assistant (E-3PO) that generates complete AsciiDoc/Reveal.js
-decks from a YAML context file. The `generateDeck` task uses Gemini by default and reads
-its API key from `slides-context.yml` under `ai.gemini`.
+decks from a YAML context file. Four providers are supported: `ollama` (default), `gemini`,
+`mistral`, and `huggingface`. The provider is selected at the command line with `-Pai.provider`.
 
 === generateDeck
 
@@ -256,10 +256,45 @@ Reads a `*-deck-context.yml` file and generates a complete `.adoc` deck via the 
 
 [source,bash]
 ----
+# Default provider: ollama (local)
 ./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml
+
+# Gemini
+./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=gemini
+
+# Mistral AI
+./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=mistral
+
+# HuggingFace (via OpenAI-compatible router)
+./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=huggingface
 ----
 
 The output file is written to `slides/misc/` at the path defined by `outputFile` in the context.
+
+=== Provider selection
+
+[cols="1,2,2"]
+|===
+| `-Pai.provider` | Default model | API key in slides-context.yml
+
+| `ollama` _(default)_
+| `smollm:135m` (local)
+| _none — local inference_
+
+| `gemini`
+| `gemini-2.5-flash`
+| `ai.gemini[0]`
+
+| `mistral`
+| `mistral-small-latest`
+| `ai.mistral[0]`
+
+| `huggingface`
+| `Llama-3.1-8B-Instruct:sambanova`
+| `ai.huggingface[0]`
+|===
+
+If `-Pai.provider` is absent or set to an unknown value, the task falls back to `ollama` and logs a warning.
 
 === deck-context.yml format
 
@@ -327,7 +362,8 @@ slides:
 [source,bash]
 ----
 ./gradlew generateDeck asciidoctorRevealJs serveSlides \
-  -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml
+  -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml \
+  -Pai.provider=gemini
 ----
 
 .Publish to remote repository
