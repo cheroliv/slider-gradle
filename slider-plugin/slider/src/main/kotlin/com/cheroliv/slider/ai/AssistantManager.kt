@@ -14,12 +14,14 @@ import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
 import dev.langchain4j.model.ollama.OllamaChatModel
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel
+import dev.langchain4j.model.openai.OpenAiChatModel
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.gradle.api.Project
 import java.io.File
 import java.time.Duration.ofSeconds
-import java.util.*
+import java.util.Properties
 import kotlin.coroutines.resume
 
 object AssistantManager {
@@ -60,6 +62,13 @@ object AssistantManager {
             "gemini-2.0-flash" to "GeminiFlash20",
         )
 
+    @JvmStatic
+    val huggingFaceModels
+        get() = setOf(
+            "meta-llama/Llama-3.1-8B-Instruct:sambanova" to "Llama31Sambanova",
+            "Qwen/Qwen3.5-35B-A3B:novita" to "Qwen35Novita",
+        )
+
     // =========================================================================
     // Task registration
     // =========================================================================
@@ -76,6 +85,11 @@ object AssistantManager {
             createGeminiChatTask(it.first, "helloGemini${it.second}")
             createGeminiStreamingChatTask(it.first, "helloGeminiStream${it.second}")
         }
+        // HuggingFace — via OpenAI-compatible router
+        huggingFaceModels.forEach {
+            createHuggingFaceChatTask(it.first, "helloHuggingFace${it.second}")
+            createHuggingFaceStreamingChatTask(it.first, "helloHuggingFaceStream${it.second}")
+        }
         // Display prompt
         tasks.register("displayE3POPrompt") {
             it.group = "slider-ai"
@@ -89,24 +103,24 @@ object AssistantManager {
     // =========================================================================
 
     fun Project.createOllamaChatModel(model: String = "smollm:135m"): OllamaChatModel =
-        OllamaChatModel.builder().apply {
-            baseUrl(findProperty("ollama.baseUrl") as? String ?: "http://localhost:11434")
-            modelName(findProperty("ollama.modelName") as? String ?: model)
-            temperature(findProperty("ollama.temperature") as? Double ?: 0.8)
-            timeout(ofSeconds(findProperty("ollama.timeout") as? Long ?: 6_000))
-            logRequests(true)
-            logResponses(true)
-        }.build()
+        (findProperty("ollama.baseUrl") as? String ?: "http://localhost:11434")
+            .run(OllamaChatModel.builder()::baseUrl)
+            .modelName(findProperty("ollama.modelName") as? String ?: model)
+            .temperature(findProperty("ollama.temperature") as? Double ?: 0.8)
+            .timeout(ofSeconds(findProperty("ollama.timeout") as? Long ?: 6_000))
+            .logRequests(true)
+            .logResponses(true)
+            .build()
 
     fun Project.createOllamaStreamingChatModel(model: String = "smollm:135m"): OllamaStreamingChatModel =
-        OllamaStreamingChatModel.builder().apply {
-            baseUrl(findProperty("ollama.baseUrl") as? String ?: "http://localhost:11434")
-            modelName(findProperty("ollama.modelName") as? String ?: model)
-            temperature(findProperty("ollama.temperature") as? Double ?: 0.8)
-            timeout(ofSeconds(findProperty("ollama.timeout") as? Long ?: 6_000))
-            logRequests(true)
-            logResponses(true)
-        }.build()
+        (findProperty("ollama.baseUrl") as? String ?: "http://localhost:11434")
+            .run(OllamaStreamingChatModel.builder()::baseUrl)
+            .modelName(findProperty("ollama.modelName") as? String ?: model)
+            .temperature(findProperty("ollama.temperature") as? Double ?: 0.8)
+            .timeout(ofSeconds(findProperty("ollama.timeout") as? Long ?: 6_000))
+            .logRequests(true)
+            .logResponses(true)
+            .build()
 
     // =========================================================================
     // Gemini model factories
@@ -115,11 +129,9 @@ object AssistantManager {
     fun Project.createGeminiChatModel(
         model: String = "gemini-2.5-flash"
     ): GoogleAiGeminiChatModel =
-        GoogleAiGeminiChatModel.builder()
-            .apiKey(
-                localConf.ai?.gemini?.firstOrNull()
-                    ?: error("No Gemini API key found in slides-context.yml under ai.gemini")
-            )
+        (localConf.ai?.gemini?.firstOrNull()
+            ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
+            .run(GoogleAiGeminiChatModel.builder()::apiKey)
             .modelName(model)
             .temperature(1.0)
             .logRequestsAndResponses(true)
@@ -128,11 +140,9 @@ object AssistantManager {
     fun Project.createGeminiStreamingChatModel(
         model: String = "gemini-2.5-flash"
     ): GoogleAiGeminiStreamingChatModel =
-        GoogleAiGeminiStreamingChatModel.builder()
-            .apiKey(
-                localConf.ai?.gemini?.firstOrNull()
-                    ?: error("No Gemini API key found in slides-context.yml under ai.gemini")
-            )
+        (localConf.ai?.gemini?.firstOrNull()
+            ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
+            .run(GoogleAiGeminiStreamingChatModel.builder()::apiKey)
             .modelName(model)
             .temperature(1.0)
             .logRequestsAndResponses(true)
@@ -150,9 +160,7 @@ object AssistantManager {
             model.chat(promptMessage, object : StreamingChatResponseHandler {
                 override fun onPartialResponse(partialResponse: String) = print(partialResponse)
                 override fun onCompleteResponse(response: ChatResponse) = continuation.resume(response)
-                override fun onError(error: Throwable) {
-                    continuation.cancel(error)
-                }
+                override fun onError(error: Throwable) { continuation.cancel(error) }
             })
         }
     }
@@ -234,6 +242,74 @@ object AssistantManager {
             it.group = "slider-ai"
             it.description = "Display the Gemini $model streaming chat prompt request."
             it.doFirst { runGeminiStreamChat(model) }
+        }
+    }
+
+    // =========================================================================
+    // HuggingFace model factories (via OpenAI-compatible router)
+    // =========================================================================
+
+    fun Project.createHuggingFaceChatModel(
+        model: String = "HuggingFaceTB/SmolLM3-3B:hf-inference"
+    ): OpenAiChatModel =
+        (localConf.ai?.huggingface?.firstOrNull()
+            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
+            .run(OpenAiChatModel.builder()::apiKey)
+            .baseUrl("https://router.huggingface.co/v1")
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
+
+    fun Project.createHuggingFaceStreamingChatModel(
+        model: String = "HuggingFaceTB/SmolLM3-3B:hf-inference"
+    ): OpenAiStreamingChatModel =
+        (localConf.ai?.huggingface?.firstOrNull()
+            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
+            .run(OpenAiStreamingChatModel.builder()::apiKey)
+            .baseUrl("https://router.huggingface.co/v1")
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
+
+    // =========================================================================
+    // HuggingFace runners
+    // =========================================================================
+
+    fun Project.runHuggingFaceChat(model: String) {
+        createHuggingFaceChatModel(model = model)
+            .run { PromptManager.userMessageFr.run(::chat).let(::println) }
+    }
+
+    fun Project.runHuggingFaceStreamChat(model: String) {
+        runBlocking {
+            createHuggingFaceStreamingChatModel(model).run {
+                when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
+                    is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
+                    is Left -> "Error during response generation:\n${answer.value}".run(::println)
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // HuggingFace task factories
+    // =========================================================================
+
+    fun Project.createHuggingFaceChatTask(model: String, taskName: String) {
+        tasks.register(taskName) {
+            it.group = "slider-ai"
+            it.description = "Display the HuggingFace $model chat prompt request."
+            it.doFirst { project.runHuggingFaceChat(model) }
+        }
+    }
+
+    fun Project.createHuggingFaceStreamingChatTask(model: String, taskName: String) {
+        tasks.register(taskName) {
+            it.group = "slider-ai"
+            it.description = "Display the HuggingFace $model streaming chat prompt request."
+            it.doFirst { runHuggingFaceStreamChat(model) }
         }
     }
 
