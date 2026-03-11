@@ -5,7 +5,7 @@ language: "French"
 outputFile: "kotlin-intro-deck.adoc"
 author:
   name: "cheroliv"
-  email: "cheroliv.developer@gmail.com"
+  email: "cheroliv@mail.com"
 revealjs:
   theme: "sky"
   slideNumber: "c/t"
