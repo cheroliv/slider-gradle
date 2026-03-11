@@ -12,6 +12,10 @@ import com.cheroliv.slider.SliderManager.Tasks.registerTasks
 import com.cheroliv.slider.ai.AssistantPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import javax.inject.Inject
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+
 
 /**
  * Main entry point for the Slider Gradle plugin.
@@ -46,5 +50,19 @@ class SliderPlugin : Plugin<Project> {
             // AI applied after extension has been created and configured
             afterEvaluate { plugins.apply(AssistantPlugin::class.java) }
         }
+    }
+    /**
+     * DSL extension for the slider plugin.
+     *
+     * Usage in build.gradle.kts:
+     * ```
+     * slider {
+     *     configPath = file("slides-context.yml").absolutePath
+     * }
+     * ```
+     */
+    open class SliderExtension @Inject constructor(objects: ObjectFactory) {
+        @Suppress("unused")
+        val configPath: Property<String> = objects.property(String::class.java)
     }
 }
