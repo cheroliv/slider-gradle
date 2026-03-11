@@ -26,6 +26,12 @@ import com.cheroliv.slider.Slides.Slide.IMAGES
 import com.cheroliv.slider.Slides.Slide.SLIDES_CONTEXT_YML
 import com.cheroliv.slider.Slides.Slide.SLIDES_FOLDER
 import com.cheroliv.slider.ai.AiConfiguration
+import com.cheroliv.slider.ai.AuthorContext
+import com.cheroliv.slider.ai.DeckContext
+import com.cheroliv.slider.ai.NotesConfiguration
+import com.cheroliv.slider.ai.PageNotesStyle
+import com.cheroliv.slider.ai.RevealJsContext
+import com.cheroliv.slider.ai.SlideHint
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -321,7 +327,7 @@ object SliderManager {
          * Generates a default example-deck-context.yml in slides/misc/
          * if the file does not already exist.
          *
-         * The default configuration is built from a typed [DeckContext] instance
+         * The default configuration is built from a typed [com.cheroliv.slider.ai.DeckContext] instance
          * and serialised to YAML via [SliderManager.yamlMapper], providing a
          * ready-to-use template for the generateDeck task.
          */
