@@ -24,6 +24,7 @@ image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
 
 `com.cheroliv.slider` est un plugin Gradle qui encapsule l'intégralité du cycle de vie de génération de présentations *AsciidoctorJ Reveal.js*.
 Il expose un DSL minimal au consommateur et gère en interne toute la configuration des dépôts, dépendances et tâches.
+Il intègre également un assistant IA (E-3PO) pour la génération automatisée de decks AsciiDoc via plusieurs fournisseurs LLM.
 
 == Version actuel : {plugin-version}
 
@@ -41,16 +42,23 @@ slider-plugin/
 ├── slider/
 │   ├── src/
 │   │   ├── main/kotlin/com/cheroliv/slider/
-│   │   │   └── SliderPlugin.kt       # Point d'entrée + enregistrement des tâches
-│   │   ├── functionalTest/kotlin/    # Tests fonctionnels GradleTestKit
-│   │   └── test/                     # Tests unitaires + Cucumber
-│   └── build.gradle.kts              # Script de build du plugin
+│   │   │   ├── SliderPlugin.kt         # Point d'entrée — orchestrateur pur
+│   │   │   ├── SliderManager.kt        # Toute la logique — nested objects
+│   │   │   ├── SlidesConfiguration.kt  # Modèle YAML (Git + config IA)
+│   │   │   ├── DeckContext.kt          # Modèle de génération de deck
+│   │   │   └── git.kt                  # Data classes Git
+│   │   ├── main/kotlin/com/cheroliv/slider/ai/
+│   │   │   ├── AssistantPlugin.kt      # Point d'entrée du plugin IA
+│   │   │   └── AssistantManager.kt     # Fournisseurs LLM + gestion des prompts
+│   │   ├── functionalTest/kotlin/      # Tests fonctionnels GradleTestKit
+│   │   └── test/                       # Tests unitaires + Cucumber
+│   └── build.gradle.kts                # Script de build du plugin
 ├── gradle/
-│   ├── libs.versions.toml            # Catalogue de dépendances
-│   └── wrapper/                      # Gradle Wrapper
+│   ├── libs.versions.toml              # Catalogue de dépendances
+│   └── wrapper/                        # Gradle Wrapper
 ├── settings.gradle.kts
-├── README.adoc                        # Version anglaise
-└── README_fr.adoc                     # Ce fichier
+├── README.adoc                          # Version anglaise
+└── README_fr.adoc                       # Ce fichier
 ----
 
 == Décisions techniques clés
@@ -100,7 +108,7 @@ project.dependencies.add("asciidoctorGems", "rubygems:asciidoctor-revealjs:3.1.0
 ----
 
 === Scaffold — Initialisation automatique à la première utilisation
-À la première exécution d'une tâche Gradle, `SliderManager.Scaffold` effectue deux vérifications
+À la première exécution d'une tâche Gradle, `SliderManager.Scaffold` effectue trois vérifications
 indépendantes et génère automatiquement les ressources manquantes.
 
 ==== Initialisation de slides/ — `scaffoldSlidesIfAbsent()`
@@ -158,12 +166,91 @@ val default = SlidesConfiguration(
                 password = "your-token"
             )
         )
+    ),
+    ai = AiConfiguration(
+        gemini = listOf("your-gemini-api-key"),
+        mistral = listOf("your-mistral-api-key"),
+        huggingface = listOf("your-huggingface-api-key"),
     )
 )
 yamlMapper.writeValue(slidesContext, default)
 ----
 
-Les deux fonctions sont des no-ops si la ressource existe déjà — le contenu existant du consommateur n'est jamais écrasé.
+==== Initialisation de example-deck-context.yml — `scaffoldDeckContextIfAbsent()`
+Si `slides/misc/example-deck-context.yml` est absent, génère un template prêt à l'emploi
+en sérialisant une instance `DeckContext` par défaut via `yamlMapper`.
+
+Les trois fonctions sont des no-ops si la ressource existe déjà — le contenu existant du consommateur n'est jamais écrasé.
+
+== SliderPlugin.apply() — Orchestration
+
+[source,kotlin]
+----
+override fun apply(project: Project) {
+    with(project) {
+        checkJavaVersion()
+        scaffoldSlidesIfAbsent()
+        scaffoldSlidesContextIfAbsent()
+        scaffoldDeckContextIfAbsent()
+        configureRepositories()
+        applyPlugins()
+        configureDependencies()
+        configureExtensions()
+        registerTasks()
+        afterEvaluate { plugins.apply(AssistantPlugin::class.java) }
+    }
+}
+----
+
+== Modèle de données
+
+=== SlidesConfiguration
+
+[source,kotlin]
+----
+data class AiConfiguration(
+    val gemini: List<String> = emptyList(),
+    val mistral: List<String> = emptyList(),
+    val huggingface: List<String> = emptyList(),
+)
+
+data class SlidesConfiguration(
+    val srcPath: String? = null,
+    val pushSlides: GitPushConfiguration? = null,
+    val ai: AiConfiguration? = null,
+)
+----
+
+=== DeckContext
+
+[source,kotlin]
+----
+enum class PageNotesStyle { MINIMAL, DETAILED, EXERCISES_ONLY }
+
+data class NotesConfiguration(
+    val speakerNotes: Boolean = true,  // génère [NOTE.speaker] sur chaque slide
+    val pageNotes: Boolean = true,     // génère [.notes] sur chaque slide
+    val pageNotesStyle: PageNotesStyle = PageNotesStyle.DETAILED,
+)
+
+data class SlideHint(
+    val title: String,
+    val speakerHint: String? = null,   // intention formateur — guide [NOTE.speaker]
+    val pageNotesHint: String? = null, // intention pédagogique — guide [.notes]
+)
+
+data class DeckContext(
+    val subject: String,
+    val audience: String,
+    val duration: Int,
+    val language: String = "French",
+    val outputFile: String,
+    val author: AuthorContext,
+    val revealjs: RevealJsContext = RevealJsContext(),
+    val notes: NotesConfiguration = NotesConfiguration(),
+    val slides: List<SlideHint> = emptyList(),
+)
+----
 
 == Build & Publication
 
@@ -244,6 +331,10 @@ slider {
 | slider
 | Ouvre le deck par défaut dans Chromium
 
+| `generateDeck`
+| slider-ai
+| Génère un deck AsciiDoc/Reveal.js complet depuis un `*-deck-context.yml` via Gemini
+
 | `reportTests`
 | verification
 | Lance les vérifications et ouvre le rapport dans Firefox
@@ -252,6 +343,56 @@ slider {
 | verification
 | Lance les vérifications fonctionnelles et ouvre le rapport
 |===
+
+== Intégration IA — AssistantPlugin
+
+`AssistantPlugin` est appliqué automatiquement dans `SliderPlugin.apply()` via `afterEvaluate`.
+Il enregistre la tâche `generateDeck` et gère quatre fournisseurs LLM.
+
+=== Fournisseurs supportés
+
+[cols="1,1,1"]
+|===
+| Fournisseur | Module | Clé dans slides-context.yml
+
+| Ollama (local)
+| `langchain4j-ollama`
+| — (aucune clé requise)
+
+| Google Gemini
+| `langchain4j-google-ai-gemini`
+| `ai.gemini`
+
+| Mistral AI
+| `langchain4j-mistral-ai`
+| `ai.mistral`
+
+| HuggingFace (via router OpenAI)
+| `langchain4j-open-ai`
+| `ai.huggingface`
+|===
+
+=== Tâche generateDeck
+
+[source,bash]
+----
+./gradlew generateDeck -Pdeck.context=slides/misc/mon-deck-context.yml
+----
+
+La tâche lit le `DeckContext` depuis le fichier YAML, construit un prompt système avec
+la connaissance complète de la syntaxe AsciiDoc/Reveal.js via un deck exemple entièrement annoté,
+et l'envoie à Gemini. Le fichier `.adoc` généré est écrit dans `slides/misc/` au chemin défini par `outputFile`.
+
+=== Stratégie de prompt
+
+Le prompt système (`deckSystemPrompt`) enseigne au LLM la syntaxe AsciiDoc/Reveal.js.
+Cette approche est efficace même pour les petits modèles (1B–8B). Règles clés appliquées :
+
+* Maximum 5 points par slide avec `[%step]`, 7 sans
+* Maximum 10 lignes de code par bloc `[source,...]`
+* Jamais liste à puces et bloc de code sur la même slide
+* Présence de `[NOTE.speaker]` et `[.notes]` contrôlée par `NotesConfiguration`
+* Les valeurs `SlideHint` guident le contenu par slide sans remplacer la génération LLM
 
 == Dépendances
 
@@ -277,6 +418,21 @@ slider {
 
 | `io.arrow-kt:arrow-core`
 | Utilitaires de programmation fonctionnelle
+
+| `dev.langchain4j:langchain4j-google-ai-gemini`
+| Intégration LLM Gemini
+
+| `dev.langchain4j:langchain4j-mistral-ai`
+| Intégration Mistral AI
+
+| `dev.langchain4j:langchain4j-open-ai`
+| HuggingFace via router OpenAI-compatible
+
+| `dev.langchain4j:langchain4j-ollama`
+| Intégration modèles Ollama locaux
+
+| `org.jetbrains.kotlinx:kotlinx-coroutines-core`
+| Bridge coroutine pour le streaming asynchrone
 |===
 
 == Prérequis consommateur
