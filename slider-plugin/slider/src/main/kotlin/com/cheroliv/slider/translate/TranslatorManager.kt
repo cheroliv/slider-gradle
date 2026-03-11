@@ -155,7 +155,7 @@ $text""".trimMargin()
         createOllamaStreamingChatModel(model).run {
             when (val answer = generateStreamingResponse(this, text)) {
                 is Right -> "Complete response received:\n${
-                    answer.value.content().text()
+                    answer.value.aiMessage().text()
                 }".run(::println)
 
                 is Left -> "Error during response generation:\n${answer.value}".run(::println)
