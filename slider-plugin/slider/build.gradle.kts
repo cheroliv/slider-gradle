@@ -121,12 +121,11 @@ tasks.named<ProcessResources>(functionalTest.processResourcesTaskName) {
 }
 
 // 4. Configurer les sources sets pour Cucumber (test standard)
-sourceSets {
-    test {
-        resources.srcDir("src/test/features")
-        java.srcDir("src/test/scenarios")  // Steps dans scenarios/
-    }
+sourceSets.test {
+    resources.srcDir("src/test/features")
+    java.srcDir("src/test/scenarios")  // Steps dans scenarios/
 }
+
 
 // 5. Faire hériter testImplementation de functionalTest (pas l'inverse !)
 configurations.named("testImplementation").configure {
@@ -199,7 +198,20 @@ gradlePlugin {
             implementationClass = "${libs.plugins.slider.get().pluginId}.SliderPlugin"
             displayName = "Slider Plugin"
             description = "Gradle plugin for slider generation."
-            tags.set(listOf("revealjs", "slide-generator", "slide", "jgit", "asciidoc"))
+            listOf(
+                "revealjs",
+                "slide-generator",
+                "slide",
+                "jgit",
+                "asciidoc",
+                "langchain4j",
+                "ollama",
+                "mistal-ai",
+                "huggingface",
+                "gemini",
+                "kotlin-DSL"
+            ).run(tags::set)
+
             @Suppress("UnstableApiUsage")
             compatibility {
                 features {
@@ -254,11 +266,9 @@ publishing {
     repositories {
         maven {
             name = "sonatype"
-            url = if (version.toString().endsWith("-SNAPSHOT")) {
+            url = (if (version.toString().endsWith("-SNAPSHOT"))
                 uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-            } else {
-                uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            }
+            else uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"))
             credentials {
                 username = project.findProperty("ossrhUsername") as? String
                 password = project.findProperty("ossrhPassword") as? String
@@ -270,8 +280,6 @@ publishing {
 
 signing {
     val isReleaseVersion = !version.toString().endsWith("-SNAPSHOT")
-    if (isReleaseVersion) {
-        sign(publishing.publications)
-    }
+    if (isReleaseVersion) sign(publishing.publications)
     useGpgCmd()
 }
