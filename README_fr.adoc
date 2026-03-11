@@ -5,7 +5,7 @@
 :icons: font
 :lang: fr
 :hardbreaks-option:
-:plugin-version: 0.0.3
+:plugin-version: 0.0.4
 
 ++++
 <p align="right">
@@ -247,8 +247,8 @@ Déploie les slides générés vers le dépôt distant configuré dans `slides-c
 == Génération de deck assistée par IA (slider-ai)
 
 Le plugin intègre un assistant IA (E-3PO) qui génère des decks AsciiDoc/Reveal.js complets
-à partir d'un fichier de contexte YAML. La tâche `generateDeck` utilise Gemini par défaut et
-lit sa clé API dans `slides-context.yml` sous `ai.gemini`.
+à partir d'un fichier de contexte YAML. Quatre fournisseurs sont disponibles : `ollama` (défaut),
+`gemini`, `mistral` et `huggingface`. Le fournisseur se sélectionne en ligne de commande avec `-Pai.provider`.
 
 === generateDeck
 
@@ -256,10 +256,45 @@ Lit un fichier `*-deck-context.yml` et génère un deck `.adoc` complet via le L
 
 [source,bash]
 ----
+# Fournisseur par défaut : ollama (local)
 ./gradlew generateDeck -Pdeck.context=slides/misc/mon-deck-context.yml
+
+# Gemini
+./gradlew generateDeck -Pdeck.context=slides/misc/mon-deck-context.yml -Pai.provider=gemini
+
+# Mistral AI
+./gradlew generateDeck -Pdeck.context=slides/misc/mon-deck-context.yml -Pai.provider=mistral
+
+# HuggingFace (via routeur OpenAI-compatible)
+./gradlew generateDeck -Pdeck.context=slides/misc/mon-deck-context.yml -Pai.provider=huggingface
 ----
 
 Le fichier de sortie est écrit dans `slides/misc/` au chemin défini par `outputFile` dans le contexte.
+
+=== Sélection du fournisseur
+
+[cols="1,2,2"]
+|===
+| `-Pai.provider` | Modèle par défaut | Clé API dans slides-context.yml
+
+| `ollama` _(défaut)_
+| `smollm:135m` (local)
+| _aucune — inférence locale_
+
+| `gemini`
+| `gemini-2.5-flash`
+| `ai.gemini[0]`
+
+| `mistral`
+| `mistral-small-latest`
+| `ai.mistral[0]`
+
+| `huggingface`
+| `Llama-3.1-8B-Instruct:sambanova`
+| `ai.huggingface[0]`
+|===
+
+Si `-Pai.provider` est absent ou contient une valeur inconnue, la tâche bascule sur `ollama` et affiche un avertissement.
 
 === Format du deck-context.yml
 
@@ -327,7 +362,8 @@ slides:
 [source,bash]
 ----
 ./gradlew generateDeck asciidoctorRevealJs serveSlides \
-  -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml
+  -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml \
+  -Pai.provider=gemini
 ----
 
 .Publier vers le dépôt distant
