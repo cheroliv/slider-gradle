@@ -74,10 +74,11 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 ├── slides/
 │   └── misc/                 # AsciiDoc presentation sources
 │       ├── *.adoc            # Slide source files
+│       ├── *-deck-context.yml# AI generation context per deck
 │       ├── index.html        # Presentation dashboard
 │       ├── deck.properties   # Deck file paths
 │       └── images/           # Image resources
-├── slides-context.yml        # Git push configuration (publishing)
+├── slides-context.yml        # Git push + AI API keys configuration
 ├── slider-plugin/            # Gradle plugin (plugin source)
 ├── README.adoc               # This file (English)
 └── README_fr.adoc            # French version
@@ -85,7 +86,8 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 
 == First-Use Auto-Initialisation
 
-On the first Gradle task execution, the plugin checks whether the `slides/` directory and `slides-context.yml` file are present and complete in the consumer project.
+On the first Gradle task execution, the plugin checks whether the `slides/` directory,
+`slides-context.yml`, and `slides/misc/example-deck-context.yml` are present and complete.
 
 === slides/ initialisation
 
@@ -95,7 +97,8 @@ A `slides/` directory is considered **complete** if it contains inside `slides/m
 * `index.html` — presentation dashboard
 * at least one `*-deck.adoc` file referenced by a `*.deck.file` key in `deck.properties`
 
-If any of these conditions is not met, the plugin automatically extracts a default `slides/` directory from the zip bundled in its classpath.
+If any of these conditions is not met, the plugin automatically extracts a default `slides/`
+directory from the zip bundled in its classpath.
 
 === deck.properties convention
 
@@ -114,8 +117,9 @@ The source file `example-deck.adoc` must exist in `slides/misc/` for the configu
 
 === slides-context.yml initialisation
 
-If `slides-context.yml` is absent from the project directory, the plugin generates one automatically
-from the typed `SlidesConfiguration` model. The generated file contains placeholders to replace:
+If `slides-context.yml` is absent, the plugin generates one automatically from the typed
+`SlidesConfiguration` model. This file holds both the Git push configuration and the AI
+provider API keys:
 
 [source,yaml]
 ----
@@ -131,9 +135,48 @@ pushSlides:
     credentials:
       username: your-username
       password: your-token
+ai:
+  gemini:
+    - your-gemini-api-key
+  mistral:
+    - your-mistral-api-key
+  huggingface:
+    - your-huggingface-api-key
 ----
 
-NOTE: If `slides/` already exists and is complete, and if `slides-context.yml` already exists, the plugin never touches the existing content.
+NOTE: `slides-context.yml` contains sensitive credentials — add it to `.gitignore`.
+
+=== example-deck-context.yml initialisation
+
+If `slides/misc/example-deck-context.yml` is absent, the plugin generates a ready-to-use
+template for the `generateDeck` task:
+
+[source,yaml]
+----
+subject: "Your presentation subject"
+audience: "Your target audience"
+duration: 45
+language: "French"
+outputFile: "example-deck.adoc"
+author:
+  name: "Your Name"
+  email: "your.email@example.com"
+revealjs:
+  theme: "sky"
+  slideNumber: "c/t"
+  width: 1408
+  height: 792
+notes:
+  speakerNotes: true
+  pageNotes: true
+  pageNotesStyle: "DETAILED"
+slides:
+  - title: "Agenda"
+    speakerHint: "Introduce the plan in 2 minutes, ask what the audience already knows."
+    pageNotesHint: "List prerequisite knowledge and suggested readings."
+----
+
+NOTE: If all three resources already exist, the plugin never overwrites existing content.
 
 == Plugin DSL Configuration
 
@@ -145,26 +188,7 @@ slider {
 }
 ----
 
-=== slides-context.yml format
-[source,yaml]
-----
-srcPath: docs/asciidocRevealJs
-pushSlides:
-  from: build/docs/asciidocRevealJs
-  to: build/slides-repo
-  branch: main
-  message: "deploy slides"
-  repo:
-    name: slides
-    repository: https://github.com/pages-content/slides.git
-    credentials:
-      username: your-username
-      password: your-token
-----
-
 == Slider Tasks
-
-The following Gradle tasks cover the full lifecycle of your presentations:
 
 === Build
 
@@ -207,18 +231,8 @@ Useful for a quick local preview.
 `openChromium`::
 Opens the default deck file in **Chromium**.
 
-[source,bash]
-----
-./gradlew openChromium
-----
-
 `openFirefox`::
 Opens the presentation dashboard in **Firefox**.
-
-[source,bash]
-----
-./gradlew openFirefox
-----
 
 === Deploy
 
@@ -229,6 +243,71 @@ Deploys the generated slides to the remote repository configured in `slides-cont
 ----
 ./gradlew publishSlides
 ----
+
+== AI-Assisted Deck Generation (slider-ai)
+
+The plugin integrates an AI assistant (E-3PO) that generates complete AsciiDoc/Reveal.js
+decks from a YAML context file. The `generateDeck` task uses Gemini by default and reads
+its API key from `slides-context.yml` under `ai.gemini`.
+
+=== generateDeck
+
+Reads a `*-deck-context.yml` file and generates a complete `.adoc` deck via the configured LLM.
+
+[source,bash]
+----
+./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml
+----
+
+The output file is written to `slides/misc/` at the path defined by `outputFile` in the context.
+
+=== deck-context.yml format
+
+[source,yaml]
+----
+subject: "Introduction à Kotlin"
+audience: "développeurs Java seniors"
+duration: 60
+language: "French"
+outputFile: "kotlin-intro-deck.adoc"
+author:
+  name: "cheroliv"
+  email: "cheroliv@mail.com"
+revealjs:
+  theme: "sky"
+  slideNumber: "c/t"
+  width: 1408
+  height: 792
+notes:
+  speakerNotes: true    # generates [NOTE.speaker] on every slide
+  pageNotes: true       # generates [.notes] on every slide
+  pageNotesStyle: "DETAILED"  # MINIMAL | DETAILED | EXERCISES_ONLY
+slides:
+  - title: "Pourquoi Kotlin ?"
+    speakerHint: "Partir du ressenti quotidien Java : boilerplate, NPE, verbosité."
+    pageNotesHint: "Inclure statistiques adoption Kotlin JetBrains 2023."
+  - title: "Null Safety"
+    speakerHint: "Montrer un NPE Java puis la même logique en Kotlin."
+    pageNotesHint: "Exercice : migrer un POJO Java nullable en data class Kotlin."
+----
+
+`slides` is optional — if empty, the LLM decides the slide structure freely.
+
+=== Notes styles
+
+[cols="1,2"]
+|===
+| Style | Content generated in [.notes]
+
+| `MINIMAL`
+| One reference line only
+
+| `DETAILED`
+| Deep content + references + exercises
+
+| `EXERCISES_ONLY`
+| Practical exercises only
+|===
 
 === Typical Workflows
 
@@ -242,6 +321,13 @@ Deploys the generated slides to the remote repository configured in `slides-cont
 [source,bash]
 ----
 ./gradlew cleanSlidesBuild asciidoctorRevealJs
+----
+
+.Generate deck + compile + serve in one command
+[source,bash]
+----
+./gradlew generateDeck asciidoctorRevealJs serveSlides \
+  -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml
 ----
 
 .Publish to remote repository
