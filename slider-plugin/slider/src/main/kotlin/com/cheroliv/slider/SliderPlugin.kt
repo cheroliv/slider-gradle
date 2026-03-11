@@ -5,6 +5,7 @@ import com.cheroliv.slider.SliderManager.Extensions.configureExtensions
 import com.cheroliv.slider.SliderManager.Plugins.applyPlugins
 import com.cheroliv.slider.SliderManager.Prerequisites.checkJavaVersion
 import com.cheroliv.slider.SliderManager.Repositories.configureRepositories
+import com.cheroliv.slider.SliderManager.Scaffold.scaffoldDeckContextIfAbsent
 import com.cheroliv.slider.SliderManager.Scaffold.scaffoldSlidesContextIfAbsent
 import com.cheroliv.slider.SliderManager.Scaffold.scaffoldSlidesIfAbsent
 import com.cheroliv.slider.SliderManager.Tasks.registerTasks
@@ -18,6 +19,7 @@ import org.gradle.api.Project
  * Orchestrates the full plugin setup by delegating each responsibility
  * to a focused nested object inside [SliderManager]:
  * - [SliderManager.Prerequisites] — Java version guard
+ * - [SliderManager.Scaffold]      — first-use scaffolding
  * - [SliderManager.Repositories]  — Maven/Ivy repository configuration
  * - [SliderManager.Plugins]       — external plugin application
  * - [SliderManager.Dependencies]  — Ruby gem dependency declaration
@@ -35,12 +37,13 @@ class SliderPlugin : Plugin<Project> {
             checkJavaVersion()
             scaffoldSlidesIfAbsent()
             scaffoldSlidesContextIfAbsent()
+            scaffoldDeckContextIfAbsent()
             configureRepositories()
             applyPlugins()
             configureDependencies()
             configureExtensions()
             registerTasks()
-            // AI applied after extension been created and configured
+            // AI applied after extension has been created and configured
             afterEvaluate { plugins.apply(AssistantPlugin::class.java) }
         }
     }
