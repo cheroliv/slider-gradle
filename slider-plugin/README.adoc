@@ -344,9 +344,9 @@ slider {
 | Runs checks and opens functional test report in Firefox
 |===
 
-== AI Integration — AssistantPlugin
+== AI Integration — project.createChatTasks()
 
-`AssistantPlugin` is applied automatically inside `SliderPlugin.apply()` via `afterEvaluate`.
+`project.createChatTasks()` is applied automatically inside `SliderPlugin.apply()` via `afterEvaluate`.
 It registers the `generateDeck` task and manages four LLM providers.
 
 === Supported providers

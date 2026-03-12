@@ -344,9 +344,9 @@ slider {
 | Lance les vérifications fonctionnelles et ouvre le rapport
 |===
 
-== Intégration IA — AssistantPlugin
+== Intégration IA — project.createChatTasks()
 
-`AssistantPlugin` est appliqué automatiquement dans `SliderPlugin.apply()` via `afterEvaluate`.
+`project.createChatTasks()` est appliqué automatiquement dans `SliderPlugin.apply()` via `afterEvaluate`.
 Il enregistre la tâche `generateDeck` et gère quatre fournisseurs LLM.
 
 === Fournisseurs supportés
