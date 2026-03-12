@@ -9,12 +9,12 @@ import com.cheroliv.slider.SliderManager.Scaffold.scaffoldDeckContextIfAbsent
 import com.cheroliv.slider.SliderManager.Scaffold.scaffoldSlidesContextIfAbsent
 import com.cheroliv.slider.SliderManager.Scaffold.scaffoldSlidesIfAbsent
 import com.cheroliv.slider.SliderManager.Tasks.registerTasks
-import com.cheroliv.slider.ai.AssistantPlugin
+import com.cheroliv.slider.ai.AssistantManager.createChatTasks
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import javax.inject.Inject
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
+import javax.inject.Inject
 
 
 /**
@@ -48,9 +48,11 @@ class SliderPlugin : Plugin<Project> {
             configureExtensions()
             registerTasks()
             // AI applied after extension has been created and configured
-            afterEvaluate { plugins.apply(AssistantPlugin::class.java) }
+            // Creating tasks for each model
+            afterEvaluate { createChatTasks() }
         }
     }
+
     /**
      * DSL extension for the slider plugin.
      *
