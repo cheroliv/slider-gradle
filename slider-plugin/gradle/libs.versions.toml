@@ -63,6 +63,7 @@ langchain4j-open-ai = { module = "dev.langchain4j:langchain4j-open-ai", version.
 langchain4j-gemini = { module = "dev.langchain4j:langchain4j-google-ai-gemini", version.ref = "langchain4j" }
 langchain4j-mistral = { module = "dev.langchain4j:langchain4j-mistral-ai", version.ref = "langchain4j" }
 langchain4j-pgvector = { module = "dev.langchain4j:langchain4j-pgvector", version.ref = "langchain4j-beta" }
+langchain4j-minilm = { module = "dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2", version.ref = "langchain4j-beta" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -83,7 +84,8 @@ slider = [
     "langchain4j-open-ai",
     "langchain4j-gemini",
     "langchain4j-mistral",
-    "langchain4j-pgvector"
+    "langchain4j-pgvector",
+    "langchain4j-minilm"
 ]
 jgit = [
     "jgit-core",
