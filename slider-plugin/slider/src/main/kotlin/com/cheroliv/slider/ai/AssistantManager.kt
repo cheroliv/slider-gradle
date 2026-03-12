@@ -7,8 +7,8 @@ import arrow.core.Either.Companion.catch
 import arrow.core.Either.Left
 import arrow.core.Either.Right
 import com.cheroliv.slider.DeckContext
-import com.cheroliv.slider.SliderManager.localConf
-import com.cheroliv.slider.SliderManager.yamlMapper
+import com.cheroliv.slider.SliderManager.Configuration.localConf
+import com.cheroliv.slider.SliderManager.Configuration.yamlMapper
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.ChatModel
@@ -49,10 +49,10 @@ object AssistantManager {
      *   ./gradlew generateDeck                       -Pdeck.context=slides/misc/my.yml
      *   (no -Pai.provider → defaults to ollama)
      */
-    const val PROP_AI_PROVIDER     = "ai.provider"
-    const val PROVIDER_OLLAMA      = "ollama"
-    const val PROVIDER_GEMINI      = "gemini"
-    const val PROVIDER_MISTRAL     = "mistral"
+    const val PROP_AI_PROVIDER = "ai.provider"
+    const val PROVIDER_OLLAMA = "ollama"
+    const val PROVIDER_GEMINI = "gemini"
+    const val PROVIDER_MISTRAL = "mistral"
     const val PROVIDER_HUGGINGFACE = "huggingface"
 
     /** Reads -Pai.provider, defaulting to "ollama" when absent or blank. */
@@ -78,10 +78,10 @@ object AssistantManager {
     @JvmStatic
     val localModels
         get() = setOf(
-            "smollm:135m"                      to "SmollM",
-            "llama3.2:3b-instruct-q8_0"        to "LlamaTiny",
-            "smollm:135m-instruct-v0.2-q8_0"   to "SmollMInstruct",
-            "gemma3:1b-it-fp16"                to "Gemma3Instruct",
+            "smollm:135m" to "SmollM",
+            "llama3.2:3b-instruct-q8_0" to "LlamaTiny",
+            "smollm:135m-instruct-v0.2-q8_0" to "SmollMInstruct",
+            "gemma3:1b-it-fp16" to "Gemma3Instruct",
         )
 
     @JvmStatic
@@ -92,14 +92,14 @@ object AssistantManager {
     val mistralModels
         get() = setOf(
             MISTRAL_SMALL_LATEST.toString() to "MistralSmall",
-            OPEN_MISTRAL_NEMO.toString()    to "MistralNemo",
+            OPEN_MISTRAL_NEMO.toString() to "MistralNemo",
         )
 
     @JvmStatic
     val huggingFaceModels
         get() = setOf(
             "meta-llama/Llama-3.1-8B-Instruct:sambanova" to "Llama31Sambanova",
-            "Qwen/Qwen3.5-35B-A3B:novita"                to "Qwen35Novita",
+            "Qwen/Qwen3.5-35B-A3B:novita" to "Qwen35Novita",
         )
 
     // =========================================================================
@@ -180,7 +180,7 @@ object AssistantManager {
         val model: ChatModel = resolveGenerateDeckModel(provider)
 
         val systemMsg = SystemMessage.from(PromptManager.deckSystemPrompt)
-        val userMsg   = UserMessage.from(PromptManager.deckUserMessage(ctx))
+        val userMsg = UserMessage.from(PromptManager.deckUserMessage(ctx))
         val adocContent = model.chat(listOf(systemMsg, userMsg)).aiMessage().text()
 
         val outputFile = layout.projectDirectory.asFile
@@ -205,8 +205,8 @@ object AssistantManager {
      */
     private fun Project.resolveGenerateDeckModel(provider: String): ChatModel =
         when (provider) {
-            PROVIDER_GEMINI      -> createGeminiChatModel()
-            PROVIDER_MISTRAL     -> createMistralChatModel()
+            PROVIDER_GEMINI -> createGeminiChatModel()
+            PROVIDER_MISTRAL -> createMistralChatModel()
             PROVIDER_HUGGINGFACE -> createHuggingFaceChatModel()
             else -> {
                 if (provider != PROVIDER_OLLAMA) println(
@@ -231,7 +231,9 @@ object AssistantManager {
             model.chat(promptMessage, object : StreamingChatResponseHandler {
                 override fun onPartialResponse(partialResponse: String) = print(partialResponse)
                 override fun onCompleteResponse(response: ChatResponse) = continuation.resume(response)
-                override fun onError(error: Throwable) { continuation.cancel(error) }
+                override fun onError(error: Throwable) {
+                    continuation.cancel(error)
+                }
             })
         }
     }
@@ -266,25 +268,23 @@ object AssistantManager {
 
     fun Project.createGeminiChatModel(
         model: String = GEMINI_2_5_FLASH
-    ): GoogleAiGeminiChatModel =
-        (localConf.ai?.gemini?.firstOrNull()
-            ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
-            .run(GoogleAiGeminiChatModel.builder()::apiKey)
-            .modelName(model)
-            .temperature(1.0)
-            .logRequestsAndResponses(true)
-            .build()
+    ): GoogleAiGeminiChatModel = (localConf.ai?.gemini?.firstOrNull()
+        ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
+        .run(GoogleAiGeminiChatModel.builder()::apiKey)
+        .modelName(model)
+        .temperature(1.0)
+        .logRequestsAndResponses(true)
+        .build()
 
     fun Project.createGeminiStreamingChatModel(
         model: String = GEMINI_2_5_FLASH
-    ): GoogleAiGeminiStreamingChatModel =
-        (localConf.ai?.gemini?.firstOrNull()
-            ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
-            .run(GoogleAiGeminiStreamingChatModel.builder()::apiKey)
-            .modelName(model)
-            .temperature(1.0)
-            .logRequestsAndResponses(true)
-            .build()
+    ): GoogleAiGeminiStreamingChatModel = (localConf.ai?.gemini?.firstOrNull()
+        ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
+        .run(GoogleAiGeminiStreamingChatModel.builder()::apiKey)
+        .modelName(model)
+        .temperature(1.0)
+        .logRequestsAndResponses(true)
+        .build()
 
     // =========================================================================
     // Mistral AI model factories
@@ -292,25 +292,23 @@ object AssistantManager {
 
     fun Project.createMistralChatModel(
         model: String = MISTRAL_SMALL_LATEST.toString()
-    ): MistralAiChatModel =
-        (localConf.ai?.mistral?.firstOrNull()
-            ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
-            .run(MistralAiChatModel.builder()::apiKey)
-            .modelName(model)
-            .logRequests(true)
-            .logResponses(true)
-            .build()
+    ): MistralAiChatModel = (localConf.ai?.mistral?.firstOrNull()
+        ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
+        .run(MistralAiChatModel.builder()::apiKey)
+        .modelName(model)
+        .logRequests(true)
+        .logResponses(true)
+        .build()
 
     fun Project.createMistralStreamingChatModel(
         model: String = MISTRAL_SMALL_LATEST.toString()
-    ): MistralAiStreamingChatModel =
-        (localConf.ai?.mistral?.firstOrNull()
-            ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
-            .run(MistralAiStreamingChatModel.builder()::apiKey)
-            .modelName(model)
-            .logRequests(true)
-            .logResponses(true)
-            .build()
+    ): MistralAiStreamingChatModel = (localConf.ai?.mistral?.firstOrNull()
+        ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
+        .run(MistralAiStreamingChatModel.builder()::apiKey)
+        .modelName(model)
+        .logRequests(true)
+        .logResponses(true)
+        .build()
 
     // =========================================================================
     // HuggingFace model factories (via OpenAI-compatible router)
@@ -318,44 +316,38 @@ object AssistantManager {
 
     fun Project.createHuggingFaceChatModel(
         model: String = "meta-llama/Llama-3.1-8B-Instruct:sambanova"
-    ): OpenAiChatModel =
-        (localConf.ai?.huggingface?.firstOrNull()
-            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
-            .run(OpenAiChatModel.builder()::apiKey)
-            .baseUrl("https://router.huggingface.co/v1")
-            .modelName(model)
-            .logRequests(true)
-            .logResponses(true)
-            .build()
+    ): OpenAiChatModel = (localConf.ai?.huggingface?.firstOrNull()
+        ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
+        .run(OpenAiChatModel.builder()::apiKey)
+        .baseUrl("https://router.huggingface.co/v1")
+        .modelName(model)
+        .logRequests(true)
+        .logResponses(true)
+        .build()
 
     fun Project.createHuggingFaceStreamingChatModel(
         model: String = "meta-llama/Llama-3.1-8B-Instruct:sambanova"
-    ): OpenAiStreamingChatModel =
-        (localConf.ai?.huggingface?.firstOrNull()
-            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
-            .run(OpenAiStreamingChatModel.builder()::apiKey)
-            .baseUrl("https://router.huggingface.co/v1")
-            .modelName(model)
-            .logRequests(true)
-            .logResponses(true)
-            .build()
+    ): OpenAiStreamingChatModel = (localConf.ai?.huggingface?.firstOrNull()
+        ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
+        .run(OpenAiStreamingChatModel.builder()::apiKey)
+        .baseUrl("https://router.huggingface.co/v1")
+        .modelName(model)
+        .logRequests(true)
+        .logResponses(true)
+        .build()
 
     // =========================================================================
     // Ollama runners
     // =========================================================================
 
-    fun Project.runChat(model: String) {
-        createOllamaChatModel(model = model)
-            .run { PromptManager.userMessageFr.run(::chat).let(::println) }
-    }
+    fun Project.runChat(model: String) = createOllamaChatModel(model = model)
+        .run { PromptManager.userMessageFr.run(::chat).let(::println) }
 
-    fun Project.runStreamChat(model: String) {
-        runBlocking {
-            createOllamaStreamingChatModel(model).run {
-                when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
-                    is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                    is Left  -> "Error during response generation:\n${answer.value}".run(::println)
-                }
+    fun Project.runStreamChat(model: String) = runBlocking {
+        createOllamaStreamingChatModel(model).run {
+            when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
+                is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
+                is Left -> "Error during response generation:\n${answer.value}".run(::println)
             }
         }
     }
@@ -364,18 +356,14 @@ object AssistantManager {
     // Gemini runners
     // =========================================================================
 
-    fun Project.runGeminiChat(model: String) {
-        createGeminiChatModel(model = model)
-            .run { PromptManager.userMessageFr.run(::chat).let(::println) }
-    }
+    fun Project.runGeminiChat(model: String) = createGeminiChatModel(model = model)
+        .run { PromptManager.userMessageFr.run(::chat).let(::println) }
 
-    fun Project.runGeminiStreamChat(model: String) {
-        runBlocking {
-            createGeminiStreamingChatModel(model).run {
-                when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
-                    is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                    is Left  -> "Error during response generation:\n${answer.value}".run(::println)
-                }
+    fun Project.runGeminiStreamChat(model: String) = runBlocking {
+        createGeminiStreamingChatModel(model).run {
+            when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
+                is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
+                is Left -> "Error during response generation:\n${answer.value}".run(::println)
             }
         }
     }
@@ -384,18 +372,14 @@ object AssistantManager {
     // Mistral runners
     // =========================================================================
 
-    fun Project.runMistralChat(model: String) {
-        createMistralChatModel(model = model)
-            .run { PromptManager.userMessageFr.run(::chat).let(::println) }
-    }
+    fun Project.runMistralChat(model: String) = createMistralChatModel(model = model)
+        .run { PromptManager.userMessageFr.run(::chat).let(::println) }
 
-    fun Project.runMistralStreamChat(model: String) {
-        runBlocking {
-            createMistralStreamingChatModel(model).run {
-                when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
-                    is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                    is Left  -> "Error during response generation:\n${answer.value}".run(::println)
-                }
+    fun Project.runMistralStreamChat(model: String) = runBlocking {
+        createMistralStreamingChatModel(model).run {
+            when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
+                is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
+                is Left -> "Error during response generation:\n${answer.value}".run(::println)
             }
         }
     }
@@ -404,18 +388,14 @@ object AssistantManager {
     // HuggingFace runners
     // =========================================================================
 
-    fun Project.runHuggingFaceChat(model: String) {
-        createHuggingFaceChatModel(model = model)
-            .run { PromptManager.userMessageFr.run(::chat).let(::println) }
-    }
+    fun Project.runHuggingFaceChat(model: String) = createHuggingFaceChatModel(model = model)
+        .run { PromptManager.userMessageFr.run(::chat).let(::println) }
 
-    fun Project.runHuggingFaceStreamChat(model: String) {
-        runBlocking {
-            createHuggingFaceStreamingChatModel(model).run {
-                when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
-                    is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                    is Left  -> "Error during response generation:\n${answer.value}".run(::println)
-                }
+    fun Project.runHuggingFaceStreamChat(model: String) = runBlocking {
+        createHuggingFaceStreamingChatModel(model).run {
+            when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
+                is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
+                is Left -> "Error during response generation:\n${answer.value}".run(::println)
             }
         }
     }
@@ -507,7 +487,7 @@ object AssistantManager {
     object PromptManager {
 
         @JvmStatic
-        fun main(args: Array<String>) { userMessageFr.run(::println) }
+        fun main(args: Array<String>) = userMessageFr.run(::println)
 
         const val ASSISTANT_NAME = "E-3PO"
         val userName: String = System.getProperty("user.name")!!
@@ -642,13 +622,13 @@ fun hello() = println("Hello")
             appendLine("  pageNotes      : ${ctx.notes.pageNotes}")
             appendLine("  pageNotesStyle : ${ctx.notes.pageNotesStyle}")
             appendLine()
-            if (ctx.slides.isEmpty()) {
+            if (ctx.slides.isEmpty())
                 appendLine("No slide hints provided — build a pedagogically appropriate structure.")
-            } else {
+            else {
                 appendLine("Slide hints (follow this order and these titles exactly):")
                 ctx.slides.forEach { hint ->
                     appendLine("  - title: ${hint.title}")
-                    hint.speakerHint?.let  { appendLine("    speakerHint: $it") }
+                    hint.speakerHint?.let { appendLine("    speakerHint: $it") }
                     hint.pageNotesHint?.let { appendLine("    pageNotesHint: $it") }
                 }
             }
