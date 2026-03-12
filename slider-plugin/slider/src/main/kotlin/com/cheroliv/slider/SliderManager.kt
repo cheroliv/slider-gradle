@@ -1,13 +1,16 @@
 package com.cheroliv.slider
 
 import arrow.integrations.jackson.module.registerArrowModule
+import com.cheroliv.slider.SliderManager.Configuration.CONFIG_PATH_KEY
+import com.cheroliv.slider.SliderManager.Configuration.deckFile
+import com.cheroliv.slider.SliderManager.Configuration.localConf
+import com.cheroliv.slider.SliderManager.Configuration.yamlMapper
 import com.cheroliv.slider.SliderManager.Git.initAddCommitToSlides
 import com.cheroliv.slider.SliderManager.Git.pushSlide
 import com.cheroliv.slider.SliderManager.Git.pushSlides
 import com.cheroliv.slider.SliderManager.Tasks.registerAsciidoctorRevealJsTask
 import com.cheroliv.slider.SliderManager.Tasks.registerCleanSlidesBuildTask
 import com.cheroliv.slider.SliderManager.Tasks.registerTasks
-import com.cheroliv.slider.SliderManager.deckFile
 import com.cheroliv.slider.SliderPlugin.SliderExtension
 import com.cheroliv.slider.Slides.RevealJsSlides
 import com.cheroliv.slider.Slides.RevealJsSlides.BUILD_GRADLE_KEY
@@ -26,7 +29,7 @@ import com.cheroliv.slider.Slides.Slide.IMAGES
 import com.cheroliv.slider.Slides.Slide.SLIDES_CONTEXT_YML
 import com.cheroliv.slider.Slides.Slide.SLIDES_FOLDER
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -71,69 +74,68 @@ import java.util.zip.ZipInputStream
  */
 object SliderManager {
 
-    const val CVS_ORIGIN: String = "origin"
-    const val CVS_REMOTE: String = "remote"
-    const val CONFIG_PATH_KEY = "managed_config_path"
+    object Configuration {
+        const val CONFIG_PATH_KEY = "managed_config_path"
+        // -------------------------------------------------------------------------
+        // Shared Project extensions
+        // -------------------------------------------------------------------------
 
-    // -------------------------------------------------------------------------
-    // Shared Project extensions
-    // -------------------------------------------------------------------------
+        /** Reads and returns the slides YAML configuration bound to this project. */
+        val Project.localConf: SlidesConfiguration
+            get() = readSlidesConfigurationFile { "$rootDir$separator${properties[CONFIG_PATH_KEY]}" }
 
-    /** Reads and returns the slides YAML configuration bound to this project. */
-    val Project.localConf: SlidesConfiguration
-        get() = readSlidesConfigurationFile { "$rootDir$separator${properties[CONFIG_PATH_KEY]}" }
-
-    /**
-     * Resolves a deck file path from deck.properties for a given key.
-     * Prepends the standard asciidocRevealJs output directory.
-     *
-     * TODO: replace hardcoded path with a reference to sliderConfig model.
-     */
-    fun Project.deckFile(key: String): String = buildString {
-        append("build/docs/asciidocRevealJs/")
-        append(
-            Properties().apply {
-                layout.projectDirectory.asFile
-                    .resolve("slides")
-                    .resolve("misc")
-                    .resolve("deck.properties")
-                    .inputStream()
-                    .use(::load)
-            }[key].toString()
-        )
-    }
-
-    /** Jackson ObjectMapper configured for YAML, Kotlin, and Arrow support. */
-    val yamlMapper: ObjectMapper
-        get() = YAMLFactory()
-            .let(::ObjectMapper)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .registerKotlinModule()
-            .registerArrowModule()
-
-    /**
-     * Reads and deserialises the slides configuration YAML file.
-     * Returns an empty [SlidesConfiguration] on any parsing failure
-     * to allow the build to continue with degraded behaviour.
-     */
-    fun readSlidesConfigurationFile(
-        configPath: () -> String
-    ): SlidesConfiguration = try {
-        configPath()
-            .run(::File)
-            .run(yamlMapper::readValue)
-    } catch (_: Exception) {
-        SlidesConfiguration(
-            srcPath = "",
-            pushSlides = GitPushConfiguration(
-                from = "", to = "",
-                repo = RepositoryConfiguration(
-                    name = "", repository = "",
-                    credentials = RepositoryCredentials(username = "", password = "")
-                ),
-                branch = "", message = ""
+        /**
+         * Resolves a deck file path from deck.properties for a given key.
+         * Prepends the standard asciidocRevealJs output directory.
+         *
+         * TODO: replace hardcoded path with a reference to sliderConfig model.
+         */
+        fun Project.deckFile(key: String): String = buildString {
+            append("build/docs/asciidocRevealJs/")
+            append(
+                Properties().apply {
+                    layout.projectDirectory.asFile
+                        .resolve("slides")
+                        .resolve("misc")
+                        .resolve("deck.properties")
+                        .inputStream()
+                        .use(::load)
+                }[key].toString()
             )
-        )
+        }
+
+        /** Jackson ObjectMapper configured for YAML, Kotlin, and Arrow support. */
+        val yamlMapper: ObjectMapper
+            get() = YAMLFactory()
+                .let(::ObjectMapper)
+                .disable(WRITE_DATES_AS_TIMESTAMPS)
+                .registerKotlinModule()
+                .registerArrowModule()
+
+        /**
+         * Reads and deserialises the slides configuration YAML file.
+         * Returns an empty [SlidesConfiguration] on any parsing failure
+         * to allow the build to continue with degraded behaviour.
+         */
+        fun readSlidesConfigurationFile(
+            configPath: () -> String
+        ): SlidesConfiguration = try {
+            configPath()
+                .run(::File)
+                .run(yamlMapper::readValue)
+        } catch (_: Exception) {
+            SlidesConfiguration(
+                srcPath = "",
+                pushSlides = GitPushConfiguration(
+                    from = "", to = "",
+                    repo = RepositoryConfiguration(
+                        name = "", repository = "",
+                        credentials = RepositoryCredentials(username = "", password = "")
+                    ),
+                    branch = "", message = ""
+                )
+            )
+        }
     }
 
     // =========================================================================
@@ -151,12 +153,15 @@ object SliderManager {
          * Fails fast with a clear message if the current JVM is below Java 23.
          * Called as the very first step in [SliderPlugin.apply].
          */
-        internal fun Project.checkJavaVersion() {
-            val javaVersion = JavaVersion.current().majorVersion.toInt()
-            require(javaVersion >= 23) {
-                "com.cheroliv.slider requires Java 23+. Current: Java $javaVersion"
+        internal fun checkJavaVersion() = JavaVersion
+            .current()
+            .majorVersion
+            .toInt()
+            .run {
+                require(JavaVersion.current().majorVersion.toInt() >= 23) {
+                    "com.cheroliv.slider requires Java 23+. Current: Java $this"
+                }
             }
-        }
     }
 
 
@@ -263,7 +268,7 @@ object SliderManager {
          * if the file does not already exist.
          *
          * The default configuration is built from a typed [SlidesConfiguration] instance
-         * and serialized to YAML via [SliderManager.yamlMapper], ensuring the output is
+         * and serialized to YAML via [SliderManager.Configuration.yamlMapper], ensuring the output is
          * always structurally valid and consistent with the data model.
          *
          * The generated file contains placeholder values that the consumer must replace
@@ -311,7 +316,7 @@ object SliderManager {
          * if the file does not already exist.
          *
          * The default configuration is built from a typed [com.cheroliv.slider.DeckContext] instance
-         * and serialized to YAML via [SliderManager.yamlMapper], providing a
+         * and serialized to YAML via [SliderManager.Configuration.yamlMapper], providing a
          * ready-to-use template for the generateDeck task.
          */
         internal fun Project.scaffoldDeckContextIfAbsent() {
@@ -756,7 +761,7 @@ object SliderManager {
                     logger.info("Task description :\n\t${task.description}")
                 }
                 doLast {
-                    // Deserialise the YAML configuration from the path stored in project properties
+                    // Deserialize the YAML configuration from the path stored in project properties
                     val localConf: SlidesConfiguration = properties[CONFIG_PATH_KEY].toString()
                         .run(layout.projectDirectory.asFile::resolve)
                         .readText().trimIndent()
@@ -782,7 +787,7 @@ object SliderManager {
 
         /**
          * Opens the default presentation deck in Firefox.
-         * Deck file path is resolved from deck.properties via [SliderManager.deckFile].
+         * Deck file path is resolved from deck.properties via [SliderManager.Configuration.deckFile].
          */
         private fun Project.registerOpenFirefoxTask() {
             tasks.register<Exec>("openFirefox") {
@@ -796,7 +801,7 @@ object SliderManager {
 
         /**
          * Opens the default presentation deck in Chromium.
-         * Deck file path is resolved from deck.properties via [SliderManager.deckFile].
+         * Deck file path is resolved from deck.properties via [SliderManager.Configuration.deckFile].
          */
         private fun Project.registerOpenChromiumTask() {
             tasks.register<Exec>("openChromium") {
@@ -878,6 +883,8 @@ object SliderManager {
      * 3. [pushSlide]             → authenticates and force-pushes to the remote
      */
     object Git {
+        const val CVS_ORIGIN: String = "origin"
+        const val CVS_REMOTE: String = "remote"
 
         /**
          * Full publish pipeline:
