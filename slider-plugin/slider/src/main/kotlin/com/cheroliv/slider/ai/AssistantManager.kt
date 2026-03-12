@@ -18,7 +18,8 @@ import dev.langchain4j.model.chat.response.StreamingChatResponseHandler
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel
 import dev.langchain4j.model.mistralai.MistralAiChatModel
-import dev.langchain4j.model.mistralai.MistralAiChatModelName
+import dev.langchain4j.model.mistralai.MistralAiChatModelName.MISTRAL_SMALL_LATEST
+import dev.langchain4j.model.mistralai.MistralAiChatModelName.OPEN_MISTRAL_NEMO
 import dev.langchain4j.model.mistralai.MistralAiStreamingChatModel
 import dev.langchain4j.model.ollama.OllamaChatModel
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel
@@ -29,10 +30,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.gradle.api.Project
 import java.io.File
 import java.time.Duration.ofSeconds
-import java.util.Properties
 import kotlin.coroutines.resume
 
+
 object AssistantManager {
+    const val GEMINI_2_5_FLASH = "gemini-2.5-flash"
 
     // =========================================================================
     // Provider selection — -Pai.provider=ollama|gemini|mistral|huggingface
@@ -62,16 +64,6 @@ object AssistantManager {
     // Misc
     // =========================================================================
 
-    @Suppress("unused")
-    @JvmStatic
-    val Project.privateProps: Properties
-        get() = Properties().apply {
-            "$projectDir/private.properties"
-                .let(::File)
-                .inputStream()
-                .let(::load)
-        }
-
     @JvmStatic
     fun main(args: Array<String>) {
         PromptManager.userMessageFr.run { "userMessageFr : $this" }.run(::println)
@@ -94,13 +86,13 @@ object AssistantManager {
 
     @JvmStatic
     val geminiModels
-        get() = setOf("gemini-2.5-flash" to "GeminiFlash25")
+        get() = setOf(GEMINI_2_5_FLASH to "GeminiFlash25")
 
     @JvmStatic
     val mistralModels
         get() = setOf(
-            MistralAiChatModelName.MISTRAL_SMALL_LATEST.toString() to "MistralSmall",
-            MistralAiChatModelName.OPEN_MISTRAL_NEMO.toString()    to "MistralNemo",
+            MISTRAL_SMALL_LATEST.toString() to "MistralSmall",
+            OPEN_MISTRAL_NEMO.toString()    to "MistralNemo",
         )
 
     @JvmStatic
@@ -273,7 +265,7 @@ object AssistantManager {
     // =========================================================================
 
     fun Project.createGeminiChatModel(
-        model: String = "gemini-2.5-flash"
+        model: String = GEMINI_2_5_FLASH
     ): GoogleAiGeminiChatModel =
         (localConf.ai?.gemini?.firstOrNull()
             ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
@@ -284,7 +276,7 @@ object AssistantManager {
             .build()
 
     fun Project.createGeminiStreamingChatModel(
-        model: String = "gemini-2.5-flash"
+        model: String = GEMINI_2_5_FLASH
     ): GoogleAiGeminiStreamingChatModel =
         (localConf.ai?.gemini?.firstOrNull()
             ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
@@ -299,7 +291,7 @@ object AssistantManager {
     // =========================================================================
 
     fun Project.createMistralChatModel(
-        model: String = MistralAiChatModelName.MISTRAL_SMALL_LATEST.toString()
+        model: String = MISTRAL_SMALL_LATEST.toString()
     ): MistralAiChatModel =
         (localConf.ai?.mistral?.firstOrNull()
             ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
@@ -310,7 +302,7 @@ object AssistantManager {
             .build()
 
     fun Project.createMistralStreamingChatModel(
-        model: String = MistralAiChatModelName.MISTRAL_SMALL_LATEST.toString()
+        model: String = MISTRAL_SMALL_LATEST.toString()
     ): MistralAiStreamingChatModel =
         (localConf.ai?.mistral?.firstOrNull()
             ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
