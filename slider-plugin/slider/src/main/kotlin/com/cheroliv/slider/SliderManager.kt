@@ -8,7 +8,7 @@ import com.cheroliv.slider.SliderManager.Tasks.registerAsciidoctorRevealJsTask
 import com.cheroliv.slider.SliderManager.Tasks.registerCleanSlidesBuildTask
 import com.cheroliv.slider.SliderManager.Tasks.registerTasks
 import com.cheroliv.slider.SliderManager.deckFile
-import com.cheroliv.slider.SliderManager.yamlMapper
+import com.cheroliv.slider.SliderPlugin.SliderExtension
 import com.cheroliv.slider.Slides.RevealJsSlides
 import com.cheroliv.slider.Slides.RevealJsSlides.BUILD_GRADLE_KEY
 import com.cheroliv.slider.Slides.RevealJsSlides.CODERAY_CSS_KEY
@@ -25,13 +25,6 @@ import com.cheroliv.slider.Slides.Slide.DEFAULT_SLIDES_FOLDER
 import com.cheroliv.slider.Slides.Slide.IMAGES
 import com.cheroliv.slider.Slides.Slide.SLIDES_CONTEXT_YML
 import com.cheroliv.slider.Slides.Slide.SLIDES_FOLDER
-import com.cheroliv.slider.ai.AiConfiguration
-import com.cheroliv.slider.ai.AuthorContext
-import com.cheroliv.slider.ai.DeckContext
-import com.cheroliv.slider.ai.NotesConfiguration
-import com.cheroliv.slider.ai.PageNotesStyle
-import com.cheroliv.slider.ai.RevealJsContext
-import com.cheroliv.slider.ai.SlideHint
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -88,17 +81,7 @@ object SliderManager {
 
     /** Reads and returns the slides YAML configuration bound to this project. */
     val Project.localConf: SlidesConfiguration
-        get() = readSlidesConfigurationFile {
-            "$rootDir${File.separator}${properties[CONFIG_PATH_KEY]}"
-        }
-
-    /** Absolute path to the generated slides source directory. */
-    val Project.slideSrcPath: String
-        get() = "${layout.buildDirectory.get().asFile.absolutePath}/${localConf.srcPath}/"
-
-    /** Absolute path to the slides publish destination directory. */
-    val Project.slideDestDirPath: String
-        get() = localConf.pushSlides?.to!!
+        get() = readSlidesConfigurationFile { "$rootDir$separator${properties[CONFIG_PATH_KEY]}" }
 
     /**
      * Resolves a deck file path from deck.properties for a given key.
@@ -121,7 +104,7 @@ object SliderManager {
     }
 
     /** Jackson ObjectMapper configured for YAML, Kotlin, and Arrow support. */
-    val Project.yamlMapper: ObjectMapper
+    val yamlMapper: ObjectMapper
         get() = YAMLFactory()
             .let(::ObjectMapper)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
@@ -133,7 +116,7 @@ object SliderManager {
      * Returns an empty [SlidesConfiguration] on any parsing failure
      * to allow the build to continue with degraded behaviour.
      */
-    fun Project.readSlidesConfigurationFile(
+    fun readSlidesConfigurationFile(
         configPath: () -> String
     ): SlidesConfiguration = try {
         configPath()
@@ -327,8 +310,8 @@ object SliderManager {
          * Generates a default example-deck-context.yml in slides/misc/
          * if the file does not already exist.
          *
-         * The default configuration is built from a typed [com.cheroliv.slider.ai.DeckContext] instance
-         * and serialised to YAML via [SliderManager.yamlMapper], providing a
+         * The default configuration is built from a typed [com.cheroliv.slider.DeckContext] instance
+         * and serialized to YAML via [SliderManager.yamlMapper], providing a
          * ready-to-use template for the generateDeck task.
          */
         internal fun Project.scaffoldDeckContextIfAbsent() {
@@ -915,7 +898,7 @@ object SliderManager {
                         initAddCommitToSlides(repoDir, localConf)
                         pushSlide(
                             repoDir,
-                            "${project.rootDir}${File.separator}${project.properties[CONFIG_PATH_KEY]}"
+                            "${project.rootDir}${separator}${project.properties[CONFIG_PATH_KEY]}"
                                 .run(::File)
                                 .readText()
                                 .trimIndent()
@@ -970,7 +953,7 @@ object SliderManager {
         ): MutableIterable<PushResult>? =
             FileRepositoryBuilder()
                 .setInitialBranch("main")
-                .setGitDir("${repoDir.absolutePath}${File.separator}.git".let(::File))
+                .setGitDir("${repoDir.absolutePath}${separator}.git".let(::File))
                 .readEnvironment()
                 .findGitDir()
                 .setMustExist(true)
