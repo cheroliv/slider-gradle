@@ -15,6 +15,7 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.options.Option
 import org.gradle.kotlin.dsl.register
+import org.gradle.work.DisableCachingByDefault
 import java.lang.System.getProperty
 import java.util.Locale.*
 
@@ -106,6 +107,7 @@ $text""".trimMargin()
             }
     }
 
+    @DisableCachingByDefault(because = "jruby")
     open class InputTranslationTextTask : DefaultTask() {
         @set:Option(option = "text", description = "The text to translate")
         @get:Input
