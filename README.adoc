@@ -95,46 +95,8 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 
 === Global Architecture
 
-[plantuml]
-....
-@startuml
+image::readme_images/diag-plantuml-md5-5ef32ae9205e4dc13bbed7a94f0f55a6.png[]
 
-package "Consumer Gradle Project" {
-  [build.gradle.kts]
-  [slides-context.yml]
-  [slides/]
-}
-
-package "Slider Gradle Plugin" {
-  [SliderPlugin]
-  [SliderExtension]
-  [SlidesInitializer]
-  [DeckGenerator\n(E-3PO)]
-  [SlidesBuilder]
-  [SlidesPublisher]
-  [SlidesServer]
-}
-
-package "External Systems" {
-  [AsciidoctorJ Reveal.js]
-  [Node npx serve]
-  [Git]
-  [AI Providers\n(Ollama / Gemini / Mistral / HF)]
-}
-
-[build.gradle.kts] --> [SliderPlugin]
-[SliderPlugin] --> [SliderExtension]
-[SliderPlugin] --> [SlidesInitializer]
-[SliderPlugin] --> [DeckGenerator\n(E-3PO)]
-[SliderPlugin] --> [SlidesBuilder]
-[SliderPlugin] --> [SlidesPublisher]
-[SliderPlugin] --> [SlidesServer]
-[SlidesBuilder] --> [AsciidoctorJ Reveal.js]
-[SlidesServer] --> [Node npx serve]
-[SlidesPublisher] --> [Git]
-[DeckGenerator\n(E-3PO)] --> [AI Providers\n(Ollama / Gemini / Mistral / HF)]
-@enduml
-....
 
 === Gradle Execution Cycle
 
