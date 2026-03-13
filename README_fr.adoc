@@ -105,36 +105,7 @@ image::readme_images/diag-plantuml-md5-68611c1f55ad4279b2d0b5e910479d53.png[]
 À la première exécution d'une tâche Gradle, le plugin vérifie si le dossier `slides/`,
 le fichier `slides-context.yml` et `slides/misc/example-deck-context.yml` sont présents et complets.
 
-[plantuml]
-....
-@startuml
-start
-:Exécution d'une tâche Gradle;
-
-if (slides/ existe ?) then (oui)
-  if (deck.properties OK ?) then (oui)
-    :continuer;
-  else (non)
-    :extraire template slides;
-  endif
-else (non)
-  :extraire slides.zip du classpath;
-endif
-
-if (slides-context.yml existe ?) then (oui)
-  :charger configuration;
-else (non)
-  :générer SlidesConfiguration par défaut;
-endif
-
-if (example-deck-context.yml existe ?) then (oui)
-  :continuer;
-else (non)
-  :générer template deck-context;
-endif
-stop
-@enduml
-....
+image::readme_images/diag-plantuml-md5-68611c1f55ad4279b2d0b5e910479d53.png[]
 
 === Initialisation de slides/
 
