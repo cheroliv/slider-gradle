@@ -133,7 +133,8 @@ object SliderManager {
                         credentials = RepositoryCredentials(username = "", password = "")
                     ),
                     branch = "", message = ""
-                )
+                ),
+                ai = AiConfiguration()
             )
         }
     }
