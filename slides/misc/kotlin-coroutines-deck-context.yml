@@ -1,0 +1,95 @@
+---
+subject: "Kotlin Coroutines"
+audience: "Kotlin Developers familiar with asynchronous concepts"
+duration: 25
+language: "en"
+outputFile: "kotlin-coroutines-deck.adoc"
+author:
+  name: "E-3PO"
+  email: "e3po@example.com"
+revealjs:
+  theme: "simple"
+  slideNumber: "c/t"
+  width: 1408
+  height: 792
+  controls: true
+  controlsLayout: "edges"
+  history: true
+  fragmentInURL: true
+notes:
+  speakerNotes: true
+  pageNotes: true
+  pageNotesStyle: "DETAILED"
+slides:
+- title: "Agenda"
+  speakerHint: "Briefly outline what we'll cover today to manage expectations and\
+    \ provide a roadmap for our deep dive into Kotlin Coroutines."
+  pageNotesHint: "List the key learning objectives: understanding coroutines, structured\
+    \ concurrency, dispatchers, error handling, and testing."
+- title: "What are Kotlin Coroutines?"
+  speakerHint: "Introduce coroutines as a lightweight, non-blocking solution for asynchronous\
+    \ programming in Kotlin. Contrast them with traditional threading models and callback-based\
+    \ approaches, highlighting their role in simplifying complex asynchronous code."
+  pageNotesHint: "Discuss the 'blocking vs suspending' difference. Emphasize that\
+    \ coroutines are not threads but a framework for managing concurrent execution.\
+    \ Refer to the official Kotlin Coroutines Overview: link:https://kotlinlang.org/docs/coroutines-overview.html[kotlinlang.org/docs/coroutines-overview.html]"
+- title: "Core Concepts: Suspending Functions"
+  speakerHint: "Explain the `suspend` keyword and its significance. Detail how suspending\
+    \ functions can pause their execution without blocking the underlying thread,\
+    \ allowing the thread to perform other work, and later resume from where they\
+    \ left off."
+  pageNotesHint: "Provide a simple code example of a suspending function and illustrate\
+    \ its use. Briefly explain the compiler transformation behind suspending functions\
+    \ (state machines, continuations) without going into excessive detail."
+- title: "Coroutine Builders: `launch` vs `async`"
+  speakerHint: "Differentiate between the two primary coroutine builders: `launch`\
+    \ for fire-and-forget operations that return a `Job`, and `async` for operations\
+    \ that compute a result and return a `Deferred<T>`."
+  pageNotesHint: "Show clear code examples for both `launch` and `async` (including\
+    \ using `await()`). Discuss typical use cases for each, such as background tasks\
+    \ vs parallel computations that require a result."
+- title: "Coroutine Scope & Context"
+  speakerHint: "Introduce `CoroutineScope` as a crucial concept for structured concurrency\
+    \ and managing the lifecycle of coroutines. Briefly touch upon the elements of\
+    \ `CoroutineContext` (Job, Dispatcher, CoroutineExceptionHandler)."
+  pageNotesHint: "Compare `GlobalScope` (and its potential pitfalls) with custom `CoroutineScope`\
+    \ instances, like those often seen in Android development (`viewModelScope`, `lifecycleScope`).\
+    \ Explain how `Job` forms a parental hierarchy."
+- title: "Dispatchers: Where Coroutines Run"
+  speakerHint: "Explain the role of `CoroutineDispatcher` in determining the thread\
+    \ or thread pool where a coroutine will execute. Detail the most common dispatchers:\
+    \ `Dispatchers.Main`, `IO`, `Default`, and `Unconfined`."
+  pageNotesHint: "Provide code examples demonstrating how to switch dispatchers using\
+    \ `withContext`. Discuss the appropriate use cases for each dispatcher, e.g.,\
+    \ `IO` for network/disk operations, `Default` for CPU-bound tasks."
+- title: "Structured Concurrency: Safety First"
+  speakerHint: "Highlight the benefits of structured concurrency: automatic cancellation\
+    \ propagation, simplified error handling, and preventing coroutine leaks. Introduce\
+    \ `coroutineScope` and `supervisorScope`."
+  pageNotesHint: "Illustrate how `coroutineScope` cancels all its children if any\
+    \ child fails, ensuring 'all or nothing' behavior. Contrast this with `supervisorScope`,\
+    \ where child failures are isolated, allowing other children to continue. Provide\
+    \ examples."
+- title: "Error Handling in Coroutines"
+  speakerHint: "Cover strategies for handling exceptions in coroutines, including\
+    \ standard `try-catch` blocks for suspending calls, `CoroutineExceptionHandler`\
+    \ for uncaught exceptions in root coroutines, and how exceptions propagate up\
+    \ the Job hierarchy."
+  pageNotesHint: "Demonstrate the difference in error propagation between `launch`\
+    \ (exceptions are thrown immediately) and `async` (exceptions are deferred until\
+    \ `await()` is called). Show how to use `CoroutineExceptionHandler`."
+- title: "Testing Coroutines with `runTest`"
+  speakerHint: "Introduce `kotlinx-coroutines-test` and specifically the `runTest`\
+    \ function as the standard way to write unit tests for suspending functions and\
+    \ coroutine code. Explain its benefits, like virtual time control."
+  pageNotesHint: "Provide a simple test example using `runTest` and demonstrate how\
+    \ `advanceUntilIdle()` or `delay(time)` can be used to control the virtual time\
+    \ in tests, making them faster and more deterministic. Reference the `kotlinx-coroutines-test`\
+    \ module."
+- title: "Summary & Next Steps"
+  speakerHint: "Recap the main concepts covered: what coroutines are, structured concurrency,\
+    \ builders, dispatchers, and error handling. Emphasize the benefits of using coroutines\
+    \ for cleaner, more maintainable asynchronous code."
+  pageNotesHint: "Encourage further exploration into advanced topics like Kotlin Flows,\
+    \ Channels, and StateFlow/SharedFlow. Provide links to the official documentation\
+    \ and community resources for continued learning."
