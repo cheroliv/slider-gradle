@@ -281,53 +281,7 @@ decks from a YAML context file. Four providers are supported: `ollama` (default)
 The E-3PO engine transforms a pedagogical configuration file into an AsciiDoc deck ready
 to be compiled with Reveal.js. It is designed to be modular, provider-agnostic and extensible.
 
-[plantuml]
-....
-@startuml
-skinparam componentStyle uml2
-
-package "Gradle Slider Plugin" {
-  component "DeckGenerator" as Generator
-  component "PromptBuilder" as PB
-  component "SlidesContextLoader" as Loader
-  component "SlideStructurePlanner" as Planner
-  component "ContentGenerator" as CG
-  component "AsciiDocRenderer" as Renderer
-}
-
-package "AI Layer (E-3PO)" {
-  component "LLM Client" as Client
-  component "Prompt Templates" as Templates
-  component "Response Parser" as Parser
-}
-
-package "External Providers" {
-  component "Ollama"
-  component "Mistral"
-  component "Gemini"
-  component "HuggingFace"
-}
-
-component "slides-context.yml" as Config
-component "Generated AsciiDoc Deck" as Output
-
-Config --> Loader
-Loader --> Generator
-Generator --> PB
-Generator --> Planner
-Planner --> PB
-PB --> Templates
-PB --> Client
-Client --> Ollama
-Client --> Mistral
-Client --> Gemini
-Client --> HuggingFace
-Client --> Parser
-Parser --> CG
-CG --> Renderer
-Renderer --> Output
-@enduml
-....
+image::readme_images/diag-plantuml-md5-e4b452c7b932a3cb10ea28c472cf6e42.png[]
 
 === Pedagogical Pipeline (Instructional Design → Slides)
 
