@@ -113,6 +113,7 @@ val functionalTestTask = tasks.register<Test>("functionalTest") {
         events("passed", "skipped", "failed")
         showStandardStreams = true
     }
+    failOnNoDiscoveredTests = false
 }
 
 // CORRECTION: Gérer les duplications de ressources pour functionalTest
