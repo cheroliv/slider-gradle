@@ -425,54 +425,7 @@ slides:
 
 The C4 model represents software architecture at multiple levels; here the complete system context.
 
-[plantuml]
-....
-@startuml
-actor Developer
-
-rectangle "Developer Environment" {
-  rectangle "Gradle Build System" {
-    component "Slider Gradle Plugin"
-  }
-}
-
-rectangle "Slider Internal Components" {
-  component "Slides Initializer"
-  component "Deck Generator"
-  component "Slides Builder"
-  component "Slides Publisher"
-}
-
-rectangle "AI Engine (E-3PO)" {
-  component "Prompt Builder"
-  component "LLM Client"
-  component "Response Parser"
-}
-
-rectangle "External Systems" {
-  component "LLM Providers\n(Ollama / Gemini / HF / Mistral)"
-  component "Reveal.js / Asciidoctor"
-  component "Git Repository"
-}
-
-Developer --> "Gradle Build System"
-"Gradle Build System" --> "Slider Gradle Plugin"
-
-"Slider Gradle Plugin" --> "Slides Initializer"
-"Slider Gradle Plugin" --> "Deck Generator"
-"Slider Gradle Plugin" --> "Slides Builder"
-"Slider Gradle Plugin" --> "Slides Publisher"
-
-"Deck Generator" --> "Prompt Builder"
-"Prompt Builder" --> "LLM Client"
-"LLM Client" --> "LLM Providers\n(Ollama / Gemini / HF / Mistral)"
-"LLM Client" --> "Response Parser"
-"Response Parser" --> "Deck Generator"
-
-"Slides Builder" --> "Reveal.js / Asciidoctor"
-"Slides Publisher" --> "Git Repository"
-@enduml
-....
+image::readme_images/diag-plantuml-md5-11fa2eea08edb6cf7a5d9a650f019590.png[]
 
 === Hexagonal Architecture (Ports & Adapters)
 
