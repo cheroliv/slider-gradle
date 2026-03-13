@@ -316,53 +316,7 @@ The output file is written to `slides/misc/` at the path defined by `outputFile`
 
 ==== Full Generation Sequence
 
-[plantuml]
-....
-@startuml
-actor Developer
-
-participant "Gradle Task\n(generateDeck)" as GradleTask
-participant "DeckGenerator"
-participant "SlidesContextLoader"
-participant "SlideStructurePlanner"
-participant "PromptBuilder"
-participant "LLM Client"
-participant "LLM Provider"
-participant "ResponseParser"
-participant "AsciiDocRenderer"
-collections "Generated Deck\n(slides/*.adoc)" as Output
-
-Developer -> GradleTask : ./gradlew generateDeck
-
-activate GradleTask
-GradleTask -> DeckGenerator : generate()
-
-activate DeckGenerator
-DeckGenerator -> SlidesContextLoader : load(slides-context.yml)
-SlidesContextLoader --> DeckGenerator : SlidesContext
-
-DeckGenerator -> SlideStructurePlanner : planSlides()
-SlideStructurePlanner --> DeckGenerator : slidePlan
-
-DeckGenerator -> PromptBuilder : buildPrompt(context, plan)
-PromptBuilder --> DeckGenerator : prompt
-
-DeckGenerator -> "LLM Client" : generateSlides(prompt)
-activate "LLM Client"
-"LLM Client" -> "LLM Provider" : API Request
-"LLM Provider" --> "LLM Client" : generated content
-"LLM Client" --> DeckGenerator : rawResponse
-deactivate "LLM Client"
-
-DeckGenerator -> ResponseParser : parse(rawResponse)
-ResponseParser --> DeckGenerator : structuredSlides
-
-DeckGenerator -> AsciiDocRenderer : render(structuredSlides)
-AsciiDocRenderer --> Output : write()
-deactivate DeckGenerator
-deactivate GradleTask
-@enduml
-....
+image::readme_images/diag-plantuml-md5-5da1666cb76eeaf0d2d0d29f19483450.png[]
 
 === Provider Selection
 
