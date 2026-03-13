@@ -140,8 +140,15 @@ object RagManager {
      * was resolved from the Docker API after container start — no hardcoded
      * value, no env variable lookup needed here.
      */
-    private fun buildStore(pgService: PgVectorService): PgVectorEmbeddingStore =
-        PgVectorEmbeddingStore.builder()
+    private fun buildStore(pgService: PgVectorService): PgVectorEmbeddingStore {
+        // The pgvector Docker container has no SSL configured.
+        // The PostgreSQL JDBC driver negotiates SSL by default → EOFException.
+        // PgVectorEmbeddingStore.builder() uses PGSimpleDataSource internally
+        // with no way to pass sslmode. We override it via the system property
+        // recognised by the JDBC driver for all new connections.
+        System.setProperty("ssl", "false")
+        System.setProperty("sslmode", "disable")
+        return PgVectorEmbeddingStore.builder()
             .host("localhost")
             .port(pgService.port)
             .database(pgService.database)
@@ -152,6 +159,7 @@ object RagManager {
             .createTable(true)
             .dropTableFirst(false)
             .build()
+    }
 
     // -------------------------------------------------------------------------
     // Incremental indexation
