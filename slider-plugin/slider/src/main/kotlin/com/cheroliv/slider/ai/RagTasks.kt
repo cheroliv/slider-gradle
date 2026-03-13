@@ -1,16 +1,14 @@
 package com.cheroliv.slider.ai
 
 import com.cheroliv.slider.DeckContext
-import com.cheroliv.slider.SliderManager.Configuration.localConf
 import com.cheroliv.slider.SliderManager.Configuration.yamlMapper
 import com.cheroliv.slider.ai.AssistantManager.aiProvider
 import com.cheroliv.slider.ai.AssistantManager.resolveModel
-import com.cheroliv.slider.ai.RagManager.retrieve
-import com.cheroliv.slider.ai.RagManager.reindex
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import java.io.File
 
 // =============================================================================
@@ -26,6 +24,7 @@ import java.io.File
  * Usage:
  *   ./gradlew reindexRag
  */
+@DisableCachingByDefault(because = "org.asciidoctor.jvm.gems.classic")
 abstract class ReindexRagTask : RagTask() {
 
     @TaskAction
@@ -55,6 +54,7 @@ abstract class ReindexRagTask : RagTask() {
  * Usage:
  *   ./gradlew proposeDeckContext -Psubject="Kotlin coroutines" -Pai.provider=gemini
  */
+@DisableCachingByDefault(because = "org.asciidoctor.jvm.gems.classic")
 abstract class ProposeDeckContextTask : RagTask() {
 
     @TaskAction
@@ -82,7 +82,7 @@ abstract class ProposeDeckContextTask : RagTask() {
 
         val model = project.resolveModel(provider)
         val systemMsg = SystemMessage.from(AssistantManager.PromptManager.contextSystemPrompt)
-        val userMsg   = UserMessage.from(AssistantManager.PromptManager.contextUserMessage(subject, ragContext))
+        val userMsg = UserMessage.from(AssistantManager.PromptManager.contextUserMessage(subject, ragContext))
 
         println("🤖 [LLM] Proposing DeckContext…")
         val rawJson = model.chat(listOf(systemMsg, userMsg)).aiMessage().text()
@@ -108,11 +108,11 @@ abstract class ProposeDeckContextTask : RagTask() {
     private fun String.toSlug(): String =
         lowercase()
             .replace(Regex("[àáâãäå]"), "a")
-            .replace(Regex("[èéêë]"),   "e")
-            .replace(Regex("[ìíîï]"),   "i")
-            .replace(Regex("[òóôõö]"),  "o")
-            .replace(Regex("[ùúûü]"),   "u")
-            .replace(Regex("[ç]"),      "c")
+            .replace(Regex("[èéêë]"), "e")
+            .replace(Regex("[ìíîï]"), "i")
+            .replace(Regex("[òóôõö]"), "o")
+            .replace(Regex("[ùúûü]"), "u")
+            .replace(Regex("[ç]"), "c")
             .replace(Regex("[^a-z0-9]+"), "-")
             .trim('-')
 }
@@ -137,6 +137,7 @@ abstract class ProposeDeckContextTask : RagTask() {
  *   ./gradlew generateDeck -Pdeck.context=slides/misc/kotlin-coroutines-deck-context.yml
  *   ./gradlew generateDeck -Pdeck.context=slides/misc/kotlin-coroutines-deck-context.yml -Pai.provider=gemini
  */
+@DisableCachingByDefault(because = "org.asciidoctor.jvm.gems.classic")
 abstract class GenerateDeckTask : RagTask() {
 
     @TaskAction
@@ -167,7 +168,7 @@ abstract class GenerateDeckTask : RagTask() {
 
         val model = project.resolveModel(provider)
         val systemMsg = SystemMessage.from(AssistantManager.PromptManager.deckSystemPrompt)
-        val userMsg   = UserMessage.from(AssistantManager.PromptManager.deckUserMessage(ctx, ragContext))
+        val userMsg = UserMessage.from(AssistantManager.PromptManager.deckUserMessage(ctx, ragContext))
 
         println("🤖 [LLM] Generating deck…")
         val adocContent = model.chat(listOf(systemMsg, userMsg)).aiMessage().text()
