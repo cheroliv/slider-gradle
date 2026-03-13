@@ -287,50 +287,7 @@ image::readme_images/diag-plantuml-md5-606c749d964387926d1570b085011bfe.png[]
 
 === Responsabilités internes (E-3PO)
 
-[plantuml]
-....
-@startmindmap
-* E-3PO AI Engine
-
-** Chargement du contexte
-*** slides-context.yml
-*** public cible
-*** durée
-*** objectifs
-
-** Ingénierie des prompts
-*** templates de prompt
-*** cadrage pédagogique
-*** structure des slides
-
-** Planification du deck
-*** sections
-*** ordre pédagogique
-*** estimation temporelle
-
-** Interaction LLM
-*** Ollama
-*** HuggingFace
-*** Gemini
-*** Mistral
-
-** Traitement des réponses
-*** parsing
-*** nettoyage
-*** validation
-
-** Rendu
-*** AsciiDoc
-*** Reveal.js
-*** blocs de code
-*** diagrammes
-
-** Intégration
-*** tâches Gradle
-*** génération de deck
-*** workflow documentaire
-@endmindmap
-....
+image::readme_images/diag-plantuml-md5-9f90be41e11260eff32eb1a817a9eea5.png[]
 
 === generateDeck
 
