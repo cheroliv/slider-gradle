@@ -421,54 +421,7 @@ slides:
 
 Le modèle C4 représente l'architecture logicielle à plusieurs niveaux, ici le contexte système complet.
 
-[plantuml]
-....
-@startuml
-actor Développeur
-
-rectangle "Environnement développeur" {
-  rectangle "Gradle Build System" {
-    component "Slider Gradle Plugin"
-  }
-}
-
-rectangle "Composants internes Slider" {
-  component "Slides Initializer"
-  component "Deck Generator"
-  component "Slides Builder"
-  component "Slides Publisher"
-}
-
-rectangle "Moteur IA (E-3PO)" {
-  component "Prompt Builder"
-  component "LLM Client"
-  component "Response Parser"
-}
-
-rectangle "Systèmes externes" {
-  component "Fournisseurs LLM\n(Ollama / Gemini / HF / Mistral)"
-  component "Reveal.js / Asciidoctor"
-  component "Dépôt Git"
-}
-
-Développeur --> "Gradle Build System"
-"Gradle Build System" --> "Slider Gradle Plugin"
-
-"Slider Gradle Plugin" --> "Slides Initializer"
-"Slider Gradle Plugin" --> "Deck Generator"
-"Slider Gradle Plugin" --> "Slides Builder"
-"Slider Gradle Plugin" --> "Slides Publisher"
-
-"Deck Generator" --> "Prompt Builder"
-"Prompt Builder" --> "LLM Client"
-"LLM Client" --> "Fournisseurs LLM\n(Ollama / Gemini / HF / Mistral)"
-"LLM Client" --> "Response Parser"
-"Response Parser" --> "Deck Generator"
-
-"Slides Builder" --> "Reveal.js / Asciidoctor"
-"Slides Publisher" --> "Dépôt Git"
-@enduml
-....
+image::readme_images/diag-plantuml-md5-36a1dd0038c0211c8e1fbbf7c57ef38a.png[]
 
 === Architecture hexagonale (Ports & Adapters)
 
@@ -476,56 +429,8 @@ Le plugin suit une architecture hexagonale permettant de séparer la logique mé
 les interfaces externes et les technologies d'infrastructure.
 Cette conception garantit l'indépendance vis-à-vis des fournisseurs LLM et la testabilité.
 
-[plantuml]
-....
-@startuml
-skinparam componentStyle rectangle
+image::readme_images/diag-plantuml-md5-a257c0e86f73ee8870f3d232be82dd7a.png[]
 
-package "Domain Core" {
-  component "Deck Generation Logic"
-  component "Slides Structure"
-  component "Presentation Context"
-}
-
-package "Application Layer" {
-  component "DeckGenerator"
-  component "SlidesInitializer"
-  component "SlidesPublisher"
-}
-
-package "Ports" {
-  interface "LLM Port"
-  interface "Slides Renderer Port"
-  interface "Git Repository Port"
-}
-
-package "Adapters" {
-  component "Ollama Adapter"
-  component "Gemini Adapter"
-  component "Mistral Adapter"
-  component "HuggingFace Adapter"
-  component "RevealJS Adapter"
-  component "Git Adapter"
-  component "Gradle Task Adapter"
-}
-
-"DeckGenerator" --> "LLM Port"
-"SlidesPublisher" --> "Git Repository Port"
-"SlidesInitializer" --> "Slides Renderer Port"
-
-"LLM Port" --> "Ollama Adapter"
-"LLM Port" --> "Gemini Adapter"
-"LLM Port" --> "Mistral Adapter"
-"LLM Port" --> "HuggingFace Adapter"
-
-"Slides Renderer Port" --> "RevealJS Adapter"
-"Git Repository Port" --> "Git Adapter"
-
-"Gradle Task Adapter" --> "DeckGenerator"
-"Gradle Task Adapter" --> "SlidesInitializer"
-"Gradle Task Adapter" --> "SlidesPublisher"
-@enduml
-....
 
 Cette architecture apporte :
 
