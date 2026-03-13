@@ -10,7 +10,7 @@
 ++++
 <p align="right">
   <a href="README_fr.adoc">
-    <img src="slider-plugin/images/lang-fr-blue.svg" alt="Français" width="64"/>
+    <img src="slider-plugin/images/lang-fr-red.svg" alt="Français" width="64"/>
   </a>
 </p>
 ++++
@@ -27,28 +27,8 @@ All slide generation logic is fully encapsulated in the `slider-plugin/`, keepin
 
 === Use Cases
 
-[plantuml]
-....
-@startuml
-left to right direction
+image::img/diag-plantuml-md5-55a778e2db52e7503068618bacfb65ee.png[]
 
-actor "Developer" as Dev
-actor "AI Provider\n(Ollama, Gemini, Mistral, HF)" as AI
-actor "Git Repository" as Git
-
-rectangle "Gradle Slider Plugin" {
-  Dev --> (Initialize slides project)
-  Dev --> (Generate a deck)
-  Dev --> (Compile slides)
-  Dev --> (Serve slides locally)
-  Dev --> (Open dashboard)
-  Dev --> (Publish slides)
-
-  (Generate a deck) --> AI
-  (Publish slides) --> Git
-}
-@enduml
-....
 
 === Global Flow Overview
 
