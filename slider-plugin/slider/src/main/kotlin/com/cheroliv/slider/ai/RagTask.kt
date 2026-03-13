@@ -3,6 +3,7 @@ package com.cheroliv.slider.ai
 import org.gradle.api.DefaultTask
 import org.gradle.api.provider.Property
 import org.gradle.api.services.ServiceReference
+import org.gradle.work.DisableCachingByDefault
 
 /**
  * Base class for all RAG Gradle tasks.
@@ -23,6 +24,7 @@ import org.gradle.api.services.ServiceReference
  * `maxParallelUsages(1)` on the service spec, this is the only approach
  * that fully prevents premature container shutdown.
  */
+@DisableCachingByDefault(because = "jruby")
 abstract class RagTask : DefaultTask() {
 
     @get:ServiceReference
