@@ -98,24 +98,7 @@ image::readme_images/diag-plantuml-md5-3e06f99737cc3c4c05d25585175937fc.png[]
 
 === Cycle d'exécution Gradle
 
-[plantuml]
-....
-@startuml
-actor Développeur
-
-participant "Gradle" as Gradle
-participant "SliderPlugin"
-participant "SlidesInitializer"
-participant "Tasks"
-
-Développeur -> Gradle : ./gradlew <tâche>
-Gradle -> SliderPlugin : apply()
-SliderPlugin -> SlidesInitializer : vérifierStructure()
-SlidesInitializer --> SliderPlugin : structure OK / ressources générées
-SliderPlugin -> Tasks : enregistrement des tâches
-Gradle -> Tasks : exécution de la tâche
-@enduml
-....
+image::readme_images/diag-plantuml-md5-68611c1f55ad4279b2d0b5e910479d53.png[]
 
 == Initialisation automatique (première utilisation)
 
