@@ -462,7 +462,7 @@ no explanation, no preamble:
   "audience": "string",
   "duration": <integer minutes>,
   "language": "string",
-  "outputFile": "string (kebab-case, ends with -deck.adoc)",
+  "outputFile": "string (kebab-case, ends with -deck_<lang>.adoc where <lang> is the ISO 639-1 language code, e.g. kotlin-coroutines-deck_fr.adoc)",
   "author": { "name": "string", "email": "string" },
   "revealjs": {
     "theme": "string",
@@ -491,6 +491,7 @@ no explanation, no preamble:
 - Adapt depth and number of slides to the audience level
 - speakerHint: what the presenter should say/demonstrate on that slide
 - pageNotesHint: references, exercises or deeper content for learners
+- outputFile: must follow the pattern <subject-slug>-deck_<lang>.adoc (e.g. kotlin-coroutines-deck_fr.adoc, spring-boot-intro-deck_en.adoc)
 """.trimIndent()
 
         fun contextUserMessage(subject: String, ragContext: String): String = buildString {
