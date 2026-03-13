@@ -2,36 +2,35 @@ package com.cheroliv.slider.ai
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Internal
+import org.gradle.api.services.ServiceReference
 
 /**
  * Base class for all RAG Gradle tasks.
  *
- * Declares [pgVectorService] as an `@Internal` property so Gradle correctly
- * tracks the [PgVectorService] dependency and keeps the service alive for the
- * entire duration of the task execution — including `doFirst` and `doLast`
- * actions registered after the fact.
+ * ## Why @ServiceReference and not @Internal?
  *
- * ## Why a typed task class instead of `tasks.register { usesService() }`?
+ * `@Internal` tells Gradle the property doesn't affect task outputs — it says
+ * nothing about service lifecycle. Gradle can therefore call [PgVectorService.close]
+ * at any point, including mid-task, causing "Failed to execute 'init'" JDBC errors.
  *
- * `usesService()` called inside a `tasks.register { }` configuration block
- * is not always honoured by Gradle's build service lifecycle manager —
- * the service can be closed before the task action completes.
+ * `@ServiceReference` (Gradle 7.4+) is the correct annotation for BuildService
+ * properties. It tells Gradle's build service manager:
+ *   1. Instantiate the service before the task starts
+ *   2. Keep it alive for the FULL duration of the task action
+ *   3. Call close() only AFTER all tasks that declare this reference have finished
  *
- * Declaring the service as an `@Internal` [Property] on a typed [DefaultTask]
- * subclass is the only approach that guarantees Gradle will:
- *   1. Instantiate the service before the task runs
- *   2. Keep it alive for the full duration of the task (including doFirst/doLast)
- *   3. Call `close()` only after all tasks that reference it have finished
+ * Combined with `usesService()` in the registration block and
+ * `maxParallelUsages(1)` on the service spec, this is the only approach
+ * that fully prevents premature container shutdown.
  */
 abstract class RagTask : DefaultTask() {
 
-    @get:Internal
+    @get:ServiceReference
     abstract val pgVectorService: Property<PgVectorService>
 
     /**
-     * Convenience accessor — starts the container on first call (idempotent),
-     * then returns the live [PgVectorService] instance.
+     * Starts the container on first call (idempotent), then returns the live
+     * [PgVectorService] instance. Safe to call multiple times in a task action.
      */
     protected fun service(): PgVectorService =
         pgVectorService.get().also { it.start() }
