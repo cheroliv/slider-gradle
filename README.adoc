@@ -433,56 +433,7 @@ The plugin follows a hexagonal architecture that separates business logic,
 external interfaces and infrastructure technologies.
 This design guarantees LLM provider independence and high testability.
 
-[plantuml]
-....
-@startuml
-skinparam componentStyle rectangle
-
-package "Domain Core" {
-  component "Deck Generation Logic"
-  component "Slides Structure"
-  component "Presentation Context"
-}
-
-package "Application Layer" {
-  component "DeckGenerator"
-  component "SlidesInitializer"
-  component "SlidesPublisher"
-}
-
-package "Ports" {
-  interface "LLM Port"
-  interface "Slides Renderer Port"
-  interface "Git Repository Port"
-}
-
-package "Adapters" {
-  component "Ollama Adapter"
-  component "Gemini Adapter"
-  component "Mistral Adapter"
-  component "HuggingFace Adapter"
-  component "RevealJS Adapter"
-  component "Git Adapter"
-  component "Gradle Task Adapter"
-}
-
-"DeckGenerator" --> "LLM Port"
-"SlidesPublisher" --> "Git Repository Port"
-"SlidesInitializer" --> "Slides Renderer Port"
-
-"LLM Port" --> "Ollama Adapter"
-"LLM Port" --> "Gemini Adapter"
-"LLM Port" --> "Mistral Adapter"
-"LLM Port" --> "HuggingFace Adapter"
-
-"Slides Renderer Port" --> "RevealJS Adapter"
-"Git Repository Port" --> "Git Adapter"
-
-"Gradle Task Adapter" --> "DeckGenerator"
-"Gradle Task Adapter" --> "SlidesInitializer"
-"Gradle Task Adapter" --> "SlidesPublisher"
-@enduml
-....
+image::readme_images/diag-plantuml-md5-a257c0e86f73ee8870f3d232be82dd7a.png[]
 
 This architecture delivers:
 
