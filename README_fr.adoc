@@ -264,25 +264,7 @@ Déploie les slides générés vers le dépôt distant configuré dans `slides-c
 
 ==== Pipeline de déploiement
 
-[plantuml]
-....
-@startuml
-actor Développeur
-
-participant Gradle
-participant publishSlides
-participant "Build local"
-participant Git
-
-Développeur -> Gradle : ./gradlew publishSlides
-Gradle -> publishSlides
-publishSlides -> "Build local" : collecte les slides compilés
-publishSlides -> Git : clone dépôt distant
-publishSlides -> Git : copie les slides
-publishSlides -> Git : commit
-publishSlides -> Git : push (force)
-@enduml
-....
+image::readme_images/diag-plantuml-md5-e80502389eb62625289a8d1bef7faa99.png[]
 
 == Génération de deck assistée par IA (slider-ai)
 
@@ -295,53 +277,7 @@ Le plugin intègre un assistant IA (E-3PO) qui génère des decks AsciiDoc/Revea
 Le moteur E-3PO transforme un fichier de configuration pédagogique en deck AsciiDoc prêt à être
 compilé avec Reveal.js. Il est conçu pour être modulaire, indépendant du fournisseur d'IA et extensible.
 
-[plantuml]
-....
-@startuml
-skinparam componentStyle uml2
-
-package "Gradle Slider Plugin" {
-  component "DeckGenerator" as Generator
-  component "PromptBuilder" as PB
-  component "SlidesContextLoader" as Loader
-  component "SlideStructurePlanner" as Planner
-  component "ContentGenerator" as CG
-  component "AsciiDocRenderer" as Renderer
-}
-
-package "Couche IA (E-3PO)" {
-  component "LLM Client" as Client
-  component "Prompt Templates" as Templates
-  component "Response Parser" as Parser
-}
-
-package "Fournisseurs externes" {
-  component "Ollama"
-  component "Mistral"
-  component "Gemini"
-  component "HuggingFace"
-}
-
-component "slides-context.yml" as Config
-component "Deck AsciiDoc généré" as Output
-
-Config --> Loader
-Loader --> Generator
-Generator --> PB
-Generator --> Planner
-Planner --> PB
-PB --> Templates
-PB --> Client
-Client --> Ollama
-Client --> Mistral
-Client --> Gemini
-Client --> HuggingFace
-Client --> Parser
-Parser --> CG
-CG --> Renderer
-Renderer --> Output
-@enduml
-....
+image::readme_images/diag-plantuml-md5-e80502389eb62625289a8d1bef7faa99.png[]
 
 === Pipeline pédagogique (Instructional Design → Slides)
 
