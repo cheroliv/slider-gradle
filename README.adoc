@@ -287,35 +287,7 @@ image::readme_images/diag-plantuml-md5-e4b452c7b932a3cb10ea28c472cf6e42.png[]
 
 The engine follows a transformation pipeline inspired by instructional design practices.
 
-[plantuml]
-....
-@startuml
-start
-:Training subject;
-:Context analysis;
-note right
-  Target audience
-  technical level
-  duration
-  objectives
-end note
-:Load slides-context.yml;
-:Define learning objectives;
-:Plan the structure;
-note right
-  Sections
-  pedagogical order
-  number of slides
-end note
-:Build AI prompts;
-:Interact with the LLM;
-:Extract pedagogical content;
-:Structure the slides;
-:Transform to AsciiDoc;
-:Compile with Reveal.js;
-stop
-@enduml
-....
+image::readme_images/diag-plantuml-md5-6ac35e0a104668d5263a0f661552b006.png[]
 
 === Internal Responsibilities (E-3PO)
 
