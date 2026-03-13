@@ -31,33 +31,7 @@ image::img/diag-plantuml-md5-a1bc171da75b15209b2eaa37c2118502.png[]
 
 === Vue d'ensemble du flux
 
-[plantuml]
-....
-@startuml
-start
-:Gradle démarre;
-:Plugin appliqué;
-:Initialisation du projet slides;
-
-if (generateDeck ?) then (oui)
-  :Appel IA (E-3PO);
-  :Génération AsciiDoc;
-endif
-
-if (build slides ?) then (oui)
-  :Asciidoctor RevealJS;
-endif
-
-if (serve ?) then (oui)
-  :npx serve;
-endif
-
-if (publish ?) then (oui)
-  :push Git;
-endif
-stop
-@enduml
-....
+image::readme_images/diag-plantuml-md5-4068bec43d8aca8cef432dcf55cf0a2d.png[]
 
 == Version actuel : {plugin-version}
 
