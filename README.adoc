@@ -27,38 +27,12 @@ All slide generation logic is fully encapsulated in the `slider-plugin/`, keepin
 
 === Use Cases
 
-image::img/diag-plantuml-md5-55a778e2db52e7503068618bacfb65ee.png[]
+image::readme_images/diag-plantuml-md5-55a778e2db52e7503068618bacfb65ee.png[]
 
 
 === Global Flow Overview
 
-[plantuml]
-....
-@startuml
-start
-:Gradle starts;
-:Plugin applied;
-:Slides project initialization;
-
-if (generateDeck ?) then (yes)
-  :AI call (E-3PO);
-  :AsciiDoc generation;
-endif
-
-if (build slides ?) then (yes)
-  :Asciidoctor RevealJS;
-endif
-
-if (serve ?) then (yes)
-  :npx serve;
-endif
-
-if (publish ?) then (yes)
-  :Git push;
-endif
-stop
-@enduml
-....
+image::readme_images/diag-plantuml-md5-ff05c55645179f6361691831baa50471.png[]
 
 == Current version: {plugin-version}
 

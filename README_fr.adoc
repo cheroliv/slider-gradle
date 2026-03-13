@@ -27,28 +27,7 @@ La logique de génération des slides est entièrement encapsulée dans le plugi
 
 === Cas d'usage
 
-[plantuml]
-....
-@startuml
-left to right direction
-
-actor "Développeur" as Dev
-actor "IA Provider\n(Ollama, Gemini, Mistral, HF)" as AI
-actor "Dépôt Git" as Git
-
-rectangle "Gradle Slider Plugin" {
-  Dev --> (Initialiser projet slides)
-  Dev --> (Générer un deck)
-  Dev --> (Compiler les slides)
-  Dev --> (Servir les slides localement)
-  Dev --> (Ouvrir dashboard)
-  Dev --> (Publier les slides)
-
-  (Générer un deck) --> AI
-  (Publier les slides) --> Git
-}
-@enduml
-....
+image::img/diag-plantuml-md5-a1bc171da75b15209b2eaa37c2118502.png[]
 
 === Vue d'ensemble du flux
 
