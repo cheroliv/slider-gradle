@@ -283,35 +283,7 @@ image::readme_images/diag-plantuml-md5-e80502389eb62625289a8d1bef7faa99.png[]
 
 Le moteur suit un pipeline de transformation inspiré des pratiques d'ingénierie pédagogique.
 
-[plantuml]
-....
-@startuml
-start
-:Sujet de formation;
-:Analyse du contexte;
-note right
-  Public cible
-  niveau technique
-  durée
-  objectifs
-end note
-:Chargement slides-context.yml;
-:Définition des objectifs pédagogiques;
-:Planification de la structure;
-note right
-  Sections
-  ordre pédagogique
-  nombre de slides
-end note
-:Construction des prompts IA;
-:Interaction avec le LLM;
-:Extraction du contenu pédagogique;
-:Structuration des slides;
-:Transformation en AsciiDoc;
-:Compilation Reveal.js;
-stop
-@enduml
-....
+image::readme_images/diag-plantuml-md5-606c749d964387926d1570b085011bfe.png[]
 
 === Responsabilités internes (E-3PO)
 
