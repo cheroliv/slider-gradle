@@ -112,7 +112,7 @@ abstract class ProposeDeckContextTask : RagTask() {
             .replace(Regex("[ìíîï]"), "i")
             .replace(Regex("[òóôõö]"), "o")
             .replace(Regex("[ùúûü]"), "u")
-            .replace(Regex("[ç]"), "c")
+            .replace(Regex("ç"), "c")
             .replace(Regex("[^a-z0-9]+"), "-")
             .trim('-')
 }
