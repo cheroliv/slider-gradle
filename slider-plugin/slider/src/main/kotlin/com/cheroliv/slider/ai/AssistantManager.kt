@@ -8,9 +8,6 @@ import arrow.core.Either.Left
 import arrow.core.Either.Right
 import com.cheroliv.slider.DeckContext
 import com.cheroliv.slider.SliderManager.Configuration.localConf
-import com.cheroliv.slider.SliderManager.Configuration.yamlMapper
-import dev.langchain4j.data.message.SystemMessage
-import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.chat.response.ChatResponse
@@ -28,190 +25,179 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.gradle.api.Project
-import java.io.File
+import org.gradle.api.provider.Provider
+import org.gradle.api.services.BuildServiceSpec
 import java.time.Duration.ofSeconds
 import kotlin.coroutines.resume
 
-
+/**
+ * Central AI orchestrator for the Slider Gradle plugin.
+ *
+ * Responsibilities:
+ * - Provider selection via `-Pai.provider`
+ * - Model factory methods (ChatModel + StreamingChatModel) for each provider
+ * - Task registration: hello* smoke-test tasks + RAG pipeline tasks
+ * - [PromptManager]: system and user prompts for both pipeline steps
+ *
+ * ## Provider selection
+ * Pass `-Pai.provider=ollama|gemini|mistral|huggingface` on the command line.
+ * Defaults to `ollama` when absent.
+ *
+ * ## Two-step RAG pipeline
+ *   1. `proposeDeckContext` → [ProposeDeckContextTask]
+ *   2. `generateDeck`       → [GenerateDeckTask]
+ *
+ * Both tasks share the same model instance resolved by [resolveModel].
+ */
 object AssistantManager {
+
     const val GEMINI_2_5_FLASH = "gemini-2.5-flash"
 
     // =========================================================================
-    // Provider selection — -Pai.provider=ollama|gemini|mistral|huggingface
+    // Provider selection
     // =========================================================================
 
-    /**
-     * Gradle property key to select the AI provider at the command line.
-     *
-     * Usage:
-     *   ./gradlew generateDeck -Pai.provider=gemini -Pdeck.context=slides/misc/my.yml
-     *   ./gradlew generateDeck -Pai.provider=mistral -Pdeck.context=slides/misc/my.yml
-     *   ./gradlew generateDeck                       -Pdeck.context=slides/misc/my.yml
-     *   (no -Pai.provider → defaults to ollama)
-     */
-    const val PROP_AI_PROVIDER = "ai.provider"
-    const val PROVIDER_OLLAMA = "ollama"
-    const val PROVIDER_GEMINI = "gemini"
-    const val PROVIDER_MISTRAL = "mistral"
+    const val PROP_AI_PROVIDER     = "ai.provider"
+    const val PROVIDER_OLLAMA      = "ollama"
+    const val PROVIDER_GEMINI      = "gemini"
+    const val PROVIDER_MISTRAL     = "mistral"
     const val PROVIDER_HUGGINGFACE = "huggingface"
 
-    /** Reads -Pai.provider, defaulting to "ollama" when absent or blank. */
+    /** Reads `-Pai.provider`, defaulting to `"ollama"` when absent or blank. */
     val Project.aiProvider: String
         get() = (findProperty(PROP_AI_PROVIDER) as? String
             ?: PROVIDER_OLLAMA).lowercase().trim()
 
     // =========================================================================
-    // Misc
-    // =========================================================================
-
-    @JvmStatic
-    fun main(args: Array<String>) {
-        PromptManager.userMessageFr.run { "userMessageFr : $this" }.run(::println)
-        println()
-        PromptManager.userMessageEn.run { "userMessageEn : $this" }.run(::println)
-    }
-
-    // =========================================================================
     // Model catalogs
     // =========================================================================
 
-    @JvmStatic
     val localModels
         get() = setOf(
-            "smollm:135m" to "SmollM",
-            "llama3.2:3b-instruct-q8_0" to "LlamaTiny",
+            "smollm:135m"                    to "SmollM",
+            "llama3.2:3b-instruct-q8_0"      to "LlamaTiny",
             "smollm:135m-instruct-v0.2-q8_0" to "SmollMInstruct",
-            "gemma3:1b-it-fp16" to "Gemma3Instruct",
+            "gemma3:1b-it-fp16"              to "Gemma3Instruct",
         )
 
-    @JvmStatic
     val geminiModels
         get() = setOf(GEMINI_2_5_FLASH to "GeminiFlash25")
 
-    @JvmStatic
     val mistralModels
         get() = setOf(
             MISTRAL_SMALL_LATEST.toString() to "MistralSmall",
-            OPEN_MISTRAL_NEMO.toString() to "MistralNemo",
+            OPEN_MISTRAL_NEMO.toString()    to "MistralNemo",
         )
 
-    @JvmStatic
     val huggingFaceModels
         get() = setOf(
             "meta-llama/Llama-3.1-8B-Instruct:sambanova" to "Llama31Sambanova",
-            "Qwen/Qwen3.5-35B-A3B:novita" to "Qwen35Novita",
+            "Qwen/Qwen3.5-35B-A3B:novita"                to "Qwen35Novita",
         )
 
     // =========================================================================
     // Task registration
     // =========================================================================
 
-    @JvmStatic
     fun Project.createChatTasks() {
-        // Ollama — local models
+        val pgServiceProvider = gradle.sharedServices.registerIfAbsent(
+            "pgVectorService", PgVectorService::class.java
+        ) { spec: BuildServiceSpec<PgVectorService.Params> ->
+            spec.parameters.image.convention(PgVectorService.DEFAULT_IMAGE)
+            spec.parameters.database.convention(PgVectorService.DEFAULT_DATABASE)
+            spec.parameters.user.convention(PgVectorService.DEFAULT_USER)
+            spec.parameters.password.convention(PgVectorService.DEFAULT_PASSWORD)
+            spec.parameters.table.convention(PgVectorService.DEFAULT_TABLE)
+            spec.parameters.startupTimeout.convention(PgVectorService.DEFAULT_TIMEOUT)
+            spec.maxParallelUsages.set(1)
+        }
+
         localModels.forEach {
-            createChatTask(it.first, "helloOllama${it.second}")
-            createStreamingChatTask(it.first, "helloOllamaStream${it.second}")
+            registerHelloChatTask(it.first, "helloOllama${it.second}")
+            registerHelloStreamingChatTask(it.first, "helloOllamaStream${it.second}")
         }
-        // Gemini — Google AI
         geminiModels.forEach {
-            createGeminiChatTask(it.first, "helloGemini${it.second}")
-            createGeminiStreamingChatTask(it.first, "helloGeminiStream${it.second}")
+            registerHelloGeminiChatTask(it.first, "helloGemini${it.second}")
+            registerHelloGeminiStreamingChatTask(it.first, "helloGeminiStream${it.second}")
         }
-        // Mistral AI
         mistralModels.forEach {
-            createMistralChatTask(it.first, "helloMistral${it.second}")
-            createMistralStreamingChatTask(it.first, "helloMistralStream${it.second}")
+            registerHelloMistralChatTask(it.first, "helloMistral${it.second}")
+            registerHelloMistralStreamingChatTask(it.first, "helloMistralStream${it.second}")
         }
-        // HuggingFace — via OpenAI-compatible router
         huggingFaceModels.forEach {
-            createHuggingFaceChatTask(it.first, "helloHuggingFace${it.second}")
-            createHuggingFaceStreamingChatTask(it.first, "helloHuggingFaceStream${it.second}")
+            registerHelloHuggingFaceChatTask(it.first, "helloHuggingFace${it.second}")
+            registerHelloHuggingFaceStreamingChatTask(it.first, "helloHuggingFaceStream${it.second}")
         }
-        // generateDeck — provider resolved at runtime via -Pai.provider
-        registerGenerateDeckTask()
+
+        registerReindexRagTask(pgServiceProvider)
+        registerProposeDeckContextTask(pgServiceProvider)
+        registerGenerateDeckTask(pgServiceProvider)
     }
 
     // =========================================================================
-    // generateDeck task
+    // RAG task registration
     // =========================================================================
 
-    /**
-     * Registers the generateDeck task.
-     *
-     * Required properties:
-     *   -Pdeck.context=<path>     Path to the *-deck-context.yml file
-     *
-     * Optional properties:
-     *   -Pai.provider=<provider>  ollama (default) | gemini | mistral | huggingface
-     *
-     * Examples:
-     *   ./gradlew generateDeck -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml
-     *   ./gradlew generateDeck -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml -Pai.provider=gemini
-     *   ./gradlew generateDeck -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml -Pai.provider=mistral
-     */
-    private fun Project.registerGenerateDeckTask() {
-        tasks.register("generateDeck") {
+    private fun Project.registerReindexRagTask(
+        pgServiceProvider: Provider<PgVectorService>
+    ) {
+        tasks.register("reindexRag", ReindexRagTask::class.java) {
+            it.group = "slider-ai"
+            it.description = "Force a full rebuild of the RAG embedding index."
+            it.pgVectorService.set(pgServiceProvider)
+            it.usesService(pgServiceProvider)
+        }
+    }
+
+    private fun Project.registerProposeDeckContextTask(
+        pgServiceProvider: Provider<PgVectorService>
+    ) {
+        tasks.register("proposeDeckContext", ProposeDeckContextTask::class.java) {
             it.group = "slider-ai"
             it.description = buildString {
-                append("Generate a complete AsciiDoc/Reveal.js deck from a *-deck-context.yml. ")
-                append("Provider: -Pai.provider=ollama|gemini|mistral|huggingface (default: ollama). ")
-                append("Context : -Pdeck.context=<path>.")
+                append("Propose a deck-context.yml for a given subject using RAG + LLM (step 1/2). ")
+                append("Required: -Psubject=<text>. ")
+                append("Optional: -Poutput=<path>, -Pai.provider=ollama|gemini|mistral|huggingface.")
             }
-            it.doFirst { project.runGenerateDeck() }
+            it.pgVectorService.set(pgServiceProvider)
+            it.usesService(pgServiceProvider)
         }
     }
 
-    private fun Project.runGenerateDeck() {
-        val contextPath = findProperty("deck.context") as? String
-            ?: error(
-                "Missing required property -Pdeck.context.\n" +
-                        "Usage: ./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml"
-            )
-
-        val ctx: DeckContext = contextPath
-            .let(::File)
-            .also { require(it.exists()) { "Deck context file not found: $contextPath" } }
-            .let { yamlMapper.readValue(it, DeckContext::class.java) }
-
-        val provider = aiProvider
-        println("🤖 generateDeck — provider: $provider — context: $contextPath")
-
-        val model: ChatModel = resolveGenerateDeckModel(provider)
-
-        val systemMsg = SystemMessage.from(PromptManager.deckSystemPrompt)
-        val userMsg = UserMessage.from(PromptManager.deckUserMessage(ctx))
-        val adocContent = model.chat(listOf(systemMsg, userMsg)).aiMessage().text()
-
-        val outputFile = layout.projectDirectory.asFile
-            .resolve("slides/misc")
-            .resolve(ctx.outputFile)
-        outputFile.parentFile.mkdirs()
-        outputFile.writeText(adocContent)
-
-        println("✅ Deck generated → ${outputFile.absolutePath}")
+    private fun Project.registerGenerateDeckTask(
+        pgServiceProvider: Provider<PgVectorService>
+    ) {
+        tasks.register("generateDeck", GenerateDeckTask::class.java) {
+            it.group = "slider-ai"
+            it.description = buildString {
+                append("Generate a complete AsciiDoc/Reveal.js deck from a *-deck-context.yml (step 2/2). ")
+                append("Required: -Pdeck.context=<path>. ")
+                append("Optional: -Pai.provider=ollama|gemini|mistral|huggingface (default: ollama).")
+            }
+            it.pgVectorService.set(pgServiceProvider)
+            it.usesService(pgServiceProvider)
+        }
     }
 
+    // =========================================================================
+    // Model resolution — single model per execution
+    // =========================================================================
+
     /**
-     * Resolves the ChatModel for generateDeck based on the value of -Pai.provider.
+     * Resolves the [ChatModel] for the given [provider].
      *
-     * Provider → default model used when none is specified explicitly:
-     *   ollama      → first entry in localModels  (smollm:135m)
-     *   gemini      → gemini-2.5-flash
-     *   mistral     → MISTRAL_SMALL_LATEST
-     *   huggingface → Llama-3.1-8B-Instruct:sambanova
-     *
-     * Unknown values fall back to ollama with a warning.
+     * Single resolution point used by both [ProposeDeckContextTask] and
+     * [GenerateDeckTask], enforcing the one-model-per-execution constraint.
      */
-    private fun Project.resolveGenerateDeckModel(provider: String): ChatModel =
+    fun Project.resolveModel(provider: String): ChatModel =
         when (provider) {
-            PROVIDER_GEMINI -> createGeminiChatModel()
-            PROVIDER_MISTRAL -> createMistralChatModel()
+            PROVIDER_GEMINI      -> createGeminiChatModel()
+            PROVIDER_MISTRAL     -> createMistralChatModel()
             PROVIDER_HUGGINGFACE -> createHuggingFaceChatModel()
             else -> {
                 if (provider != PROVIDER_OLLAMA) println(
                     "⚠️  Unknown ai.provider='$provider'. " +
-                            "Valid values: $PROVIDER_OLLAMA, $PROVIDER_GEMINI, " +
+                            "Valid: $PROVIDER_OLLAMA, $PROVIDER_GEMINI, " +
                             "$PROVIDER_MISTRAL, $PROVIDER_HUGGINGFACE. " +
                             "Falling back to $PROVIDER_OLLAMA."
                 )
@@ -220,7 +206,7 @@ object AssistantManager {
         }
 
     // =========================================================================
-    // Shared streaming coroutine bridge
+    // Streaming coroutine bridge
     // =========================================================================
 
     suspend fun generateStreamingResponse(
@@ -231,9 +217,7 @@ object AssistantManager {
             model.chat(promptMessage, object : StreamingChatResponseHandler {
                 override fun onPartialResponse(partialResponse: String) = print(partialResponse)
                 override fun onCompleteResponse(response: ChatResponse) = continuation.resume(response)
-                override fun onError(error: Throwable) {
-                    continuation.cancel(error)
-                }
+                override fun onError(error: Throwable) { continuation.cancel(error) }
             })
         }
     }
@@ -268,214 +252,188 @@ object AssistantManager {
 
     fun Project.createGeminiChatModel(
         model: String = GEMINI_2_5_FLASH
-    ): GoogleAiGeminiChatModel = (localConf.ai?.gemini?.firstOrNull()
-        ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
-        .run(GoogleAiGeminiChatModel.builder()::apiKey)
-        .modelName(model)
-        .temperature(1.0)
-        .logRequestsAndResponses(true)
-        .build()
+    ): GoogleAiGeminiChatModel =
+        (localConf.ai?.gemini?.firstOrNull()
+            ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
+            .run(GoogleAiGeminiChatModel.builder()::apiKey)
+            .modelName(model)
+            .temperature(1.0)
+            .logRequestsAndResponses(true)
+            .build()
 
     fun Project.createGeminiStreamingChatModel(
         model: String = GEMINI_2_5_FLASH
-    ): GoogleAiGeminiStreamingChatModel = (localConf.ai?.gemini?.firstOrNull()
-        ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
-        .run(GoogleAiGeminiStreamingChatModel.builder()::apiKey)
-        .modelName(model)
-        .temperature(1.0)
-        .logRequestsAndResponses(true)
-        .build()
+    ): GoogleAiGeminiStreamingChatModel =
+        (localConf.ai?.gemini?.firstOrNull()
+            ?: error("No Gemini API key found in slides-context.yml under ai.gemini"))
+            .run(GoogleAiGeminiStreamingChatModel.builder()::apiKey)
+            .modelName(model)
+            .temperature(1.0)
+            .logRequestsAndResponses(true)
+            .build()
 
     // =========================================================================
-    // Mistral AI model factories
+    // Mistral model factories
     // =========================================================================
 
     fun Project.createMistralChatModel(
         model: String = MISTRAL_SMALL_LATEST.toString()
-    ): MistralAiChatModel = (localConf.ai?.mistral?.firstOrNull()
-        ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
-        .run(MistralAiChatModel.builder()::apiKey)
-        .modelName(model)
-        .logRequests(true)
-        .logResponses(true)
-        .build()
+    ): MistralAiChatModel =
+        (localConf.ai?.mistral?.firstOrNull()
+            ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
+            .run(MistralAiChatModel.builder()::apiKey)
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
 
     fun Project.createMistralStreamingChatModel(
         model: String = MISTRAL_SMALL_LATEST.toString()
-    ): MistralAiStreamingChatModel = (localConf.ai?.mistral?.firstOrNull()
-        ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
-        .run(MistralAiStreamingChatModel.builder()::apiKey)
-        .modelName(model)
-        .logRequests(true)
-        .logResponses(true)
-        .build()
+    ): MistralAiStreamingChatModel =
+        (localConf.ai?.mistral?.firstOrNull()
+            ?: error("No Mistral API key found in slides-context.yml under ai.mistral"))
+            .run(MistralAiStreamingChatModel.builder()::apiKey)
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
 
     // =========================================================================
-    // HuggingFace model factories (via OpenAI-compatible router)
+    // HuggingFace model factories
     // =========================================================================
 
     fun Project.createHuggingFaceChatModel(
         model: String = "meta-llama/Llama-3.1-8B-Instruct:sambanova"
-    ): OpenAiChatModel = (localConf.ai?.huggingface?.firstOrNull()
-        ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
-        .run(OpenAiChatModel.builder()::apiKey)
-        .baseUrl("https://router.huggingface.co/v1")
-        .modelName(model)
-        .logRequests(true)
-        .logResponses(true)
-        .build()
+    ): OpenAiChatModel =
+        (localConf.ai?.huggingface?.firstOrNull()
+            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
+            .run(OpenAiChatModel.builder()::apiKey)
+            .baseUrl("https://router.huggingface.co/v1")
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
 
     fun Project.createHuggingFaceStreamingChatModel(
         model: String = "meta-llama/Llama-3.1-8B-Instruct:sambanova"
-    ): OpenAiStreamingChatModel = (localConf.ai?.huggingface?.firstOrNull()
-        ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
-        .run(OpenAiStreamingChatModel.builder()::apiKey)
-        .baseUrl("https://router.huggingface.co/v1")
-        .modelName(model)
-        .logRequests(true)
-        .logResponses(true)
-        .build()
+    ): OpenAiStreamingChatModel =
+        (localConf.ai?.huggingface?.firstOrNull()
+            ?: error("No HuggingFace token found in slides-context.yml under ai.huggingface"))
+            .run(OpenAiStreamingChatModel.builder()::apiKey)
+            .baseUrl("https://router.huggingface.co/v1")
+            .modelName(model)
+            .logRequests(true)
+            .logResponses(true)
+            .build()
 
     // =========================================================================
-    // Ollama runners
+    // Hello task runners (smoke tests — send a bare "Hello" to each provider)
     // =========================================================================
 
-    fun Project.runChat(model: String) = createOllamaChatModel(model = model)
-        .run { PromptManager.userMessageFr.run(::chat).let(::println) }
+    private fun Project.runOllamaChat(model: String) =
+        createOllamaChatModel(model).chat("Hello").let(::println)
 
-    fun Project.runStreamChat(model: String) = runBlocking {
-        createOllamaStreamingChatModel(model).run {
-            when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
-                is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                is Left -> "Error during response generation:\n${answer.value}".run(::println)
-            }
+    private fun Project.runOllamaStreamChat(model: String) = runBlocking {
+        when (val r = generateStreamingResponse(createOllamaStreamingChatModel(model), "Hello")) {
+            is Right -> println(r.value.aiMessage().text())
+            is Left  -> println("Error: ${r.value}")
+        }
+    }
+
+    private fun Project.runGeminiChat(model: String) =
+        createGeminiChatModel(model).chat("Hello").let(::println)
+
+    private fun Project.runGeminiStreamChat(model: String) = runBlocking {
+        when (val r = generateStreamingResponse(createGeminiStreamingChatModel(model), "Hello")) {
+            is Right -> println(r.value.aiMessage().text())
+            is Left  -> println("Error: ${r.value}")
+        }
+    }
+
+    private fun Project.runMistralChat(model: String) =
+        createMistralChatModel(model).chat("Hello").let(::println)
+
+    private fun Project.runMistralStreamChat(model: String) = runBlocking {
+        when (val r = generateStreamingResponse(createMistralStreamingChatModel(model), "Hello")) {
+            is Right -> println(r.value.aiMessage().text())
+            is Left  -> println("Error: ${r.value}")
+        }
+    }
+
+    private fun Project.runHuggingFaceChat(model: String) =
+        createHuggingFaceChatModel(model).chat("Hello").let(::println)
+
+    private fun Project.runHuggingFaceStreamChat(model: String) = runBlocking {
+        when (val r = generateStreamingResponse(createHuggingFaceStreamingChatModel(model), "Hello")) {
+            is Right -> println(r.value.aiMessage().text())
+            is Left  -> println("Error: ${r.value}")
         }
     }
 
     // =========================================================================
-    // Gemini runners
+    // Hello task factories
     // =========================================================================
 
-    fun Project.runGeminiChat(model: String) = createGeminiChatModel(model = model)
-        .run { PromptManager.userMessageFr.run(::chat).let(::println) }
-
-    fun Project.runGeminiStreamChat(model: String) = runBlocking {
-        createGeminiStreamingChatModel(model).run {
-            when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
-                is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                is Left -> "Error during response generation:\n${answer.value}".run(::println)
-            }
-        }
-    }
-
-    // =========================================================================
-    // Mistral runners
-    // =========================================================================
-
-    fun Project.runMistralChat(model: String) = createMistralChatModel(model = model)
-        .run { PromptManager.userMessageFr.run(::chat).let(::println) }
-
-    fun Project.runMistralStreamChat(model: String) = runBlocking {
-        createMistralStreamingChatModel(model).run {
-            when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
-                is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                is Left -> "Error during response generation:\n${answer.value}".run(::println)
-            }
-        }
-    }
-
-    // =========================================================================
-    // HuggingFace runners
-    // =========================================================================
-
-    fun Project.runHuggingFaceChat(model: String) = createHuggingFaceChatModel(model = model)
-        .run { PromptManager.userMessageFr.run(::chat).let(::println) }
-
-    fun Project.runHuggingFaceStreamChat(model: String) = runBlocking {
-        createHuggingFaceStreamingChatModel(model).run {
-            when (val answer = generateStreamingResponse(this, PromptManager.userMessageFr)) {
-                is Right -> "Complete response received:\n${answer.value.aiMessage().text()}".run(::println)
-                is Left -> "Error during response generation:\n${answer.value}".run(::println)
-            }
-        }
-    }
-
-    // =========================================================================
-    // Ollama task factories
-    // =========================================================================
-
-    fun Project.createChatTask(model: String, taskName: String) {
+    private fun Project.registerHelloChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "Ollama $model chat prompt."
-            it.doFirst { project.runChat(model) }
+            it.description = "Ollama $model — smoke test."
+            it.doFirst { project.runOllamaChat(model) }
         }
     }
 
-    fun Project.createStreamingChatTask(model: String, taskName: String) {
+    private fun Project.registerHelloStreamingChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "Ollama $model streaming chat prompt."
-            it.doFirst { runStreamChat(model) }
+            it.description = "Ollama $model — streaming smoke test."
+            it.doFirst { runOllamaStreamChat(model) }
         }
     }
 
-    // =========================================================================
-    // Gemini task factories
-    // =========================================================================
-
-    fun Project.createGeminiChatTask(model: String, taskName: String) {
+    private fun Project.registerHelloGeminiChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "Gemini $model chat prompt."
+            it.description = "Gemini $model — smoke test."
             it.doFirst { project.runGeminiChat(model) }
         }
     }
 
-    fun Project.createGeminiStreamingChatTask(model: String, taskName: String) {
+    private fun Project.registerHelloGeminiStreamingChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "Gemini $model streaming chat prompt."
+            it.description = "Gemini $model — streaming smoke test."
             it.doFirst { runGeminiStreamChat(model) }
         }
     }
 
-    // =========================================================================
-    // Mistral task factories
-    // =========================================================================
-
-    fun Project.createMistralChatTask(model: String, taskName: String) {
+    private fun Project.registerHelloMistralChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "Mistral $model chat prompt."
+            it.description = "Mistral $model — smoke test."
             it.doFirst { project.runMistralChat(model) }
         }
     }
 
-    fun Project.createMistralStreamingChatTask(model: String, taskName: String) {
+    private fun Project.registerHelloMistralStreamingChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "Mistral $model streaming chat prompt."
+            it.description = "Mistral $model — streaming smoke test."
             it.doFirst { runMistralStreamChat(model) }
         }
     }
 
-    // =========================================================================
-    // HuggingFace task factories
-    // =========================================================================
-
-    fun Project.createHuggingFaceChatTask(model: String, taskName: String) {
+    private fun Project.registerHelloHuggingFaceChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "HuggingFace $model chat prompt."
+            it.description = "HuggingFace $model — smoke test."
             it.doFirst { project.runHuggingFaceChat(model) }
         }
     }
 
-    fun Project.createHuggingFaceStreamingChatTask(model: String, taskName: String) {
+    private fun Project.registerHelloHuggingFaceStreamingChatTask(model: String, taskName: String) {
         tasks.register(taskName) {
             it.group = "slider-ai"
-            it.description = "HuggingFace $model streaming chat prompt."
+            it.description = "HuggingFace $model — streaming smoke test."
             it.doFirst { runHuggingFaceStreamChat(model) }
         }
     }
@@ -486,46 +444,81 @@ object AssistantManager {
 
     object PromptManager {
 
-        @JvmStatic
-        fun main(args: Array<String>) = userMessageFr.run(::println)
+        // ---------------------------------------------------------------------
+        // Step 1 — DeckContext proposal
+        // ---------------------------------------------------------------------
 
-        const val ASSISTANT_NAME = "E-3PO"
-        val userName: String = System.getProperty("user.name")!!
+        val contextSystemPrompt = """
+You are E-3PO, an expert instructional designer for adult technical training.
 
-        val userMessageFr = """config```--lang=fr;```.
-            | Salut je suis $userName,
-            | toi tu es $ASSISTANT_NAME, tu es mon assistant.
-            | Le cœur de métier de ${System.getProperty("user.name")} est le développement logiciel dans l'EdTech
-            | et la formation professionnelle pour adulte.
-            | La spécialisation de ${System.getProperty("user.name")} est dans l'ingénierie de la pédagogie pour adulte,
-            | et le software craftmanship avec les méthodes agiles.
-            | $ASSISTANT_NAME ta mission est d'aider ${System.getProperty("user.name")} dans l'activité d'écriture de formation et génération de code.
-            | Réponds moi à ce premier échange uniquement en maximum 120 mots""".trimMargin()
+Your task is to propose a structured DeckContext for a slide deck.
 
-        val userMessageEn = """config```--lang=en;```.
-        | You are E-3PO, an AI assistant specialized in EdTech and professional training.
-        | Your primary user is cheroliv, a software craftsman and adult education expert
-        | who focuses on EdTech development and agile methodologies.
-        | Your base responsibilities:
-        | 1. Assist with creating educational content for adult learners
-        | 2. Help with code generation and software development tasks
-        | 3. Support application of agile and software craftsmanship principles
-        | 4. Provide guidance on instructional design for adult education
-        | Please communicate clearly and concisely, focusing on practical solutions.
-        | Keep initial responses under 120 words.""".trimMargin()
+## OUTPUT CONTRACT
+Return ONLY a valid JSON object matching this exact structure — no markdown fences,
+no explanation, no preamble:
+
+{
+  "subject": "string",
+  "audience": "string",
+  "duration": <integer minutes>,
+  "language": "string",
+  "outputFile": "string (kebab-case, ends with -deck.adoc)",
+  "author": { "name": "string", "email": "string" },
+  "revealjs": {
+    "theme": "string",
+    "slideNumber": "c/t",
+    "width": 1408,
+    "height": 792,
+    "controls": true,
+    "controlsLayout": "edges",
+    "history": true,
+    "fragmentInURL": true
+  },
+  "notes": {
+    "speakerNotes": true,
+    "pageNotes": true,
+    "pageNotesStyle": "DETAILED"
+  },
+  "slides": [
+    { "title": "string", "speakerHint": "string", "pageNotesHint": "string" }
+  ]
+}
+
+## SLIDE PLANNING RULES
+- First slide after title: always an Agenda slide
+- Last slide: always a Summary/Conclusion slide
+- Duration guideline: ~2 minutes per content slide
+- Adapt depth and number of slides to the audience level
+- speakerHint: what the presenter should say/demonstrate on that slide
+- pageNotesHint: references, exercises or deeper content for learners
+""".trimIndent()
+
+        fun contextUserMessage(subject: String, ragContext: String): String = buildString {
+            appendLine("Propose a complete DeckContext JSON for the following subject:")
+            appendLine()
+            appendLine("Subject: $subject")
+            appendLine()
+            if (ragContext.isNotEmpty()) {
+                appendLine("## Relevant examples from the project (use as structural reference)")
+                appendLine()
+                appendLine(ragContext)
+                appendLine()
+            }
+            appendLine("Return ONLY the JSON object. No explanation, no markdown fences.")
+        }
 
         // ---------------------------------------------------------------------
-        // Deck generation prompts
+        // Step 2 — Deck generation
         // ---------------------------------------------------------------------
 
         val deckSystemPrompt = """
 You are E-3PO, an expert at generating AsciiDoc/Reveal.js slide decks.
 
-## OUTPUT FORMAT — strict AsciiDoc + Reveal.js syntax
+## OUTPUT CONTRACT
+Output raw AsciiDoc ONLY — no markdown, no explanations, no code fences around the deck.
 
-Every deck must start with this exact header block (fill values from context):
-```
-= <title>
+## REQUIRED HEADER
+= <subject>
 <author name> <<author email>>
 :revealjs_theme: <theme>
 :revealjs_slideNumber: <slideNumber>
@@ -536,69 +529,33 @@ Every deck must start with this exact header block (fill values from context):
 :revealjs_history: true
 :revealjs_fragmentInURL: true
 :source-highlighter: rouge
-```
 
-Each slide uses `==` as heading level:
-```
-== Slide Title
+## SLIDE STRUCTURE
+Each slide: == Slide Title
+Speaker notes (if speakerNotes=true): [NOTE.speaker] -- … --
+Page notes   (if pageNotes=true):     [.notes] -- … --
 
-Content here
+pageNotesStyle controls [.notes] depth:
+  MINIMAL        → one reference line
+  DETAILED       → deep content + references + exercises
+  EXERCISES_ONLY → practical exercises only
 
-[NOTE.speaker]
---
-Speaker notes here (if speakerNotes=true)
---
-
-[.notes]
---
-Page notes here (if pageNotes=true)
---
-```
-
-## INCREMENTAL BULLETS — [%step]
-Use `[%step]` on a list to reveal items one by one:
-```
-[%step]
-* First point
-* Second point
-```
-
-## CODE BLOCKS
-```
-[source,kotlin]
-----
-fun hello() = println("Hello")
-----
-```
-
-## SLIDE CONTENT SIZE CONSTRAINTS
-* With `[%step]`   : maximum 5 bullet points per slide
-* Without `[%step]`: maximum 7 bullet points per slide
-* Code block       : maximum 10 lines per [source,...] block
-* Prose paragraph  : maximum 3 sentences per slide
-* NEVER mix a bullet list and a code block on the same slide
-
-## NOTES GENERATION RULES
-* speakerNotes=true   → generate a [NOTE.speaker] block on every slide
-* pageNotes=true      → generate a [.notes] block on every slide
-* pageNotesStyle controls the depth of [.notes]:
-  - MINIMAL        → one reference line only
-  - DETAILED       → deep content + references + exercises
-  - EXERCISES_ONLY → practical exercises only
-* SlideHint.speakerHint  guides [NOTE.speaker] content — do not copy it verbatim
-* SlideHint.pageNotesHint guides [.notes] content      — do not copy it verbatim
+## SIZE CONSTRAINTS
+- With [%step]    : max 5 bullet points per slide
+- Without [%step] : max 7 bullet points per slide
+- Code block      : max 10 lines per [source,...] block
+- Prose           : max 3 sentences per slide
+- NEVER mix a bullet list and a code block on the same slide
 
 ## ABSOLUTE RULES
-1. Output raw AsciiDoc ONLY — no markdown, no explanations, no code fences around the deck
-2. Every slide must have a == heading
-3. The first slide after the title must be an Agenda/Plan slide
-4. The last slide must be a Summary/Conclusion slide
-5. If slide hints are provided, follow their order and titles exactly
-6. If no hints are provided, create a pedagogically sound structure for the subject
-7. Language of content must match the `language` field in the context
+1. Every slide must have a == heading
+2. First slide after title: Agenda/Plan
+3. Last slide: Summary/Conclusion
+4. Follow slide hints order and titles exactly when provided
+5. Content language must match the `language` field
 """.trimIndent()
 
-        fun deckUserMessage(ctx: DeckContext): String = buildString {
+        fun deckUserMessage(ctx: DeckContext, ragContext: String): String = buildString {
             appendLine("Generate a complete Reveal.js slide deck with the following context:")
             appendLine()
             appendLine("Subject   : ${ctx.subject}")
@@ -628,9 +585,15 @@ fun hello() = println("Hello")
                 appendLine("Slide hints (follow this order and these titles exactly):")
                 ctx.slides.forEach { hint ->
                     appendLine("  - title: ${hint.title}")
-                    hint.speakerHint?.let { appendLine("    speakerHint: $it") }
+                    hint.speakerHint?.let  { appendLine("    speakerHint: $it") }
                     hint.pageNotesHint?.let { appendLine("    pageNotesHint: $it") }
                 }
+            }
+            if (ragContext.isNotEmpty()) {
+                appendLine()
+                appendLine("## AsciiDoc syntax reference examples (from project — use as style guide)")
+                appendLine()
+                appendLine(ragContext)
             }
         }
     }
