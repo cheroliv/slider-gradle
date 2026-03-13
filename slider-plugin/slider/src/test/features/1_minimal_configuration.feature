@@ -1,6 +1,6 @@
 #noinspection CucumberUndefinedStep
-@cucumber @bakery
-Feature: Minimal bakery configuration
+@cucumber @slider
+Feature: Minimal slider configuration
 
 #  Scenario: Canary
 #    Given a new Bakery project
