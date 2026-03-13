@@ -268,25 +268,7 @@ Deploys the generated slides to the remote repository configured in `slides-cont
 
 ==== Deployment Pipeline
 
-[plantuml]
-....
-@startuml
-actor Developer
-
-participant Gradle
-participant publishSlides
-participant "Local build"
-participant Git
-
-Developer -> Gradle : ./gradlew publishSlides
-Gradle -> publishSlides
-publishSlides -> "Local build" : collect compiled slides
-publishSlides -> Git : clone remote repository
-publishSlides -> Git : copy slides
-publishSlides -> Git : commit
-publishSlides -> Git : push (force)
-@enduml
-....
+image::readme_images/diag-plantuml-md5-e6cd66fe2240b2e9c7bab6647ecaf61f.png[]
 
 == AI-Assisted Deck Generation (slider-ai)
 
