@@ -409,34 +409,30 @@ object SliderManager {
          */
         internal fun Project.configureRepositories() {
             // Gradle plugin artifacts
-            repositories.maven { repo ->
-                repo.url = uri("https://plugins.gradle.org/m2/")
-            }
+            repositories.maven { it.url = uri("https://plugins.gradle.org/m2/") }
             // grolifant — transitive dep of jruby-gradle-core, only available here
-            repositories.maven { repo ->
-                repo.url = uri("https://repo.gradle.org/gradle/libs-releases/")
-                repo.content { c -> c.excludeGroup("rubygems") }
+            repositories.maven {
+                it.url = uri("https://repo.gradle.org/gradle/libs-releases/")
+                it.content { c -> c.excludeGroup("rubygems") }
             }
             // rubygems fallback mirror
-            repositories.maven { repo ->
-                repo.url = uri("https://repo.gradle.org/ui/native/jcenter-backup/")
-                repo.content { c -> c.includeGroup("rubygems") }
+            repositories.maven {
+                it.url = uri("https://repo.gradle.org/ui/native/jcenter-backup/")
+                it.content { c -> c.includeGroup("rubygems") }
             }
             // rubygems primary mirror
-            repositories.maven { repo ->
-                repo.url = uri("https://maven.xillio.com/artifactory/libs-release/")
-                repo.content { c -> c.includeGroup("rubygems") }
+            repositories.maven {
+                it.url = uri("https://maven.xillio.com/artifactory/libs-release/")
+                it.content { c -> c.includeGroup("rubygems") }
             }
             // standard JVM artifacts — rubygems excluded to avoid interception
-            repositories.mavenCentral { repo ->
-                repo.content { c -> c.excludeGroup("rubygems") }
-            }
+            repositories.mavenCentral { it.content { c -> c.excludeGroup("rubygems") } }
             // actual .gem file resolution via Ivy artifact layout
-            repositories.ivy { repo ->
-                repo.url = uri("https://rubygems.org/gems/")
-                repo.patternLayout { layout -> layout.artifact("[module]-[revision].gem") }
-                repo.metadataSources { s -> s.artifact() }
-                repo.content { c -> c.includeGroup("rubygems") }
+            repositories.ivy {
+                it.url = uri("https://rubygems.org/gems/")
+                it.patternLayout { layout -> layout.artifact("[module]-[revision].gem") }
+                it.metadataSources { s -> s.artifact() }
+                it.content { c -> c.includeGroup("rubygems") }
             }
         }
     }
