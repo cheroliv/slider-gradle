@@ -23,6 +23,7 @@ arrow = "1.2.4"
 arrow-jackson = "0.14.1"
 langchain4j = "1.12.1"
 langchain4j-beta = "1.12.2-beta22"
+docker-java = "3.7.0"
 
 [libraries]
 asciidoctor-gradle-jvm-slides = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm-slides", version.ref = "asciidoctor-gradle" }
@@ -64,6 +65,9 @@ langchain4j-gemini = { module = "dev.langchain4j:langchain4j-google-ai-gemini", 
 langchain4j-mistral = { module = "dev.langchain4j:langchain4j-mistral-ai", version.ref = "langchain4j" }
 langchain4j-pgvector = { module = "dev.langchain4j:langchain4j-pgvector", version.ref = "langchain4j-beta" }
 langchain4j-minilm = { module = "dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2", version.ref = "langchain4j-beta" }
+docker-java = { module = "com.github.docker-java:docker-java-core", version.ref = "docker-java" }
+docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker-java" }
+
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -85,7 +89,9 @@ slider = [
     "langchain4j-gemini",
     "langchain4j-mistral",
     "langchain4j-pgvector",
-    "langchain4j-minilm"
+    "langchain4j-minilm",
+    "docker-java",
+    "docker-java-transport-httpclient5"
 ]
 jgit = [
     "jgit-core",
