@@ -1,0 +1,499 @@
+= Coroutines Kotlin
+E-3PO <e3po@example.com>
+:revealjs_theme: simple
+:revealjs_slideNumber: c/t
+:revealjs_width: 1408
+:revealjs_height: 792
+:revealjs_controls: true
+:revealjs_controlsLayout: edges
+:revealjs_history: true
+:revealjs_fragmentInURL: true
+:source-highlighter: rouge
+
+== Agenda
+
+[NOTE.speaker]
+--
+Bonjour à toutes et à tous ! Aujourd'hui, nous allons plonger dans le monde fascinant des Coroutines Kotlin. Cet agenda vous donnera un aperçu de ce que nous allons couvrir pour bien gérer vos attentes et vous fournir une feuille de route pour cette session.
+--
+
+[.notes]
+--
+*   **Objectifs d'apprentissage clés :**
+    *   Comprendre ce que sont les coroutines et pourquoi elles sont utiles pour la programmation asynchrone.
+    *   Explorer les concepts fondamentaux comme les fonctions de suspension et les constructeurs de coroutines (`launch`, `async`).
+    *   Saisir l'importance de la concurrence structurée et de la gestion du cycle de vie des coroutines.
+    *   Apprendre à utiliser les `Dispatchers` pour contrôler le fil d'exécution.
+    *   Maîtriser les stratégies de gestion des erreurs.
+    *   Découvrir comment tester efficacement le code des coroutines.
+*   **Contenu détaillé de la session :**
+    *   Introduction aux Coroutines Kotlin
+    *   Concepts clés : fonctions de suspension
+    *   Constructeurs : `launch` et `async`
+    *   Portée et contexte des coroutines
+    *   Les `Dispatchers` et leur rôle
+    *   La concurrence structurée
+    *   Gestion des erreurs
+    *   Tests avec `runTest`
+    *   Résumé et prochaines étapes
+*   **Exercices suggérés :**
+    *   Créer une simple fonction de suspension et l'appeler.
+    *   Utiliser `launch` pour une tâche en arrière-plan et `async` pour récupérer un résultat.
+    *   Expérimenter différents `Dispatchers`.
+--
+
+* [%step] Que sont les Coroutines Kotlin ?
+* [%step] Concepts Clés : Fonctions de Suspension
+* [%step] Constructeurs : `launch` vs `async`
+* [%step] Portée et Contexte des Coroutines
+* [%step] Dispatchers : Où s'exécutent les Coroutines
+* [%step] Concurrence Structurée : La Sécurité Avant Tout
+* [%step] Gestion des Erreurs dans les Coroutines
+* [%step] Tester les Coroutines avec `runTest`
+* [%step] Résumé et Prochaines Étapes
+
+== Que sont les Coroutines Kotlin ?
+
+[NOTE.speaker]
+--
+Pour commencer, définissons ce que sont les Coroutines Kotlin. Elles sont une solution légère et non bloquante pour la programmation asynchrone. Contrairement aux threads traditionnels, qui sont coûteux en ressources et bloquent l'exécution, les coroutines permettent de simplifier le code asynchrone complexe sans bloquer les fils d'exécution sous-jacents, rendant votre code plus lisible et maintenable.
+--
+
+[.notes]
+--
+*   **Différence "bloquant vs suspendant" :**
+    *   Un fil d'exécution (thread) est une unité de travail du système d'exploitation. Un thread bloquant arrête toute exécution jusqu'à ce que son opération soit terminée.
+    *   Une coroutine est une unité de concurrence légère qui peut suspendre son exécution et la reprendre plus tard sans bloquer le thread sous-jacent. Le thread est libre d'effectuer d'autres tâches.
+*   **Les coroutines ne sont pas des threads :**
+    *   Elles ne sont pas des équivalents 1:1 des threads. Plusieurs coroutines peuvent s'exécuter sur un seul thread.
+    *   Elles sont une abstraction au-dessus des threads, gérée par la bibliothèque `kotlinx.coroutines`.
+*   **Avantages principaux :**
+    *   **Légèreté :** Moins gourmandes en mémoire et en CPU que les threads.
+    *   **Lisibilité :** Permettent d'écrire du code asynchrone qui ressemble à du code synchrone et séquentiel.
+    *   **Non-bloquant :** Améliore la réactivité des applications, en particulier pour les interfaces utilisateur.
+*   **Références :**
+    *   Pour une vue d'ensemble officielle, consultez link:https://kotlinlang.org/docs/coroutines-overview.html[kotlinlang.org/docs/coroutines-overview.html]
+*   **Exercice suggéré :**
+    *   Pensez à un scénario où vous avez déjà utilisé des callbacks imbriqués (callback hell). Imaginez comment une coroutine pourrait simplifier ce code.
+--
+
+Les Coroutines Kotlin sont des instances de concurrence légères, permettant une programmation asynchrone non-bloquante.
+
+* [%step] Une approche plus simple pour la concurrence.
+* [%step] Non-bloquantes : peuvent suspendre et reprendre leur exécution.
+* [%step] Très légères : des milliers peuvent s'exécuter sur un seul thread.
+* [%step] Simplifient le code asynchrone complexe et les callbacks.
+
+== Concepts Clés : Fonctions de Suspension
+
+[NOTE.speaker]
+--
+Le cœur des coroutines réside dans les fonctions de suspension. Le mot-clé `suspend` est crucial. Il indique qu'une fonction peut potentiellement mettre en pause son exécution sans bloquer le thread sous-jacent. Ce thread est alors libre de faire autre chose. Lorsque l'opération suspendue est terminée, la fonction reprend son exécution là où elle s'était arrêtée.
+--
+
+[.notes]
+--
+*   **Le mot-clé `suspend` :**
+    *   Une fonction marquée `suspend` ne peut être appelée que depuis une autre fonction `suspend` ou depuis une coroutine.
+    *   Elle signale au compilateur que la fonction peut potentiellement prendre du temps et mettre en pause le flux d'exécution sans bloquer le thread.
+*   **Comment ça marche (simplifié) :**
+    *   Lorsque le compilateur voit une fonction `suspend`, il la transforme en une machine à états.
+    *   À chaque point de suspension, l'état de la coroutine est sauvegardé (context, variables locales).
+    *   Lorsque l'opération asynchrone est terminée, la coroutine est redémarrée à partir de son dernier point de suspension avec l'état sauvegardé.
+    *   C'est le concept de "continuations".
+*   **Exemple de code :**
+    *   Une fonction `fetchData` qui simule une opération réseau avec `delay`.
+*   **Exercice suggéré :**
+    *   Créez une fonction `suspend` qui simule plusieurs étapes asynchrones et observez l'ordre d'exécution.
+--
+
+Les fonctions de suspension peuvent mettre en pause leur exécution sans bloquer le thread.
+
+[source,kotlin]
+----
+import kotlinx.coroutines.*
+
+suspend fun fetchData(): String {
+    delay(1000) // Simule une opération réseau
+    return "Données récupérées !"
+}
+
+fun main() = runBlocking {
+    println("Début de l'opération")
+    val result = fetchData() // Appel d'une fonction suspendue
+    println("Résultat : $result")
+    println("Fin de l'opération")
+}
+----
+
+== Constructeurs de Coroutines : `launch` vs `async`
+
+[NOTE.speaker]
+--
+Maintenant que nous comprenons les fonctions de suspension, voyons comment démarrer des coroutines avec les constructeurs principaux : `launch` et `async`. `launch` est utilisé pour les opérations de type "fire-and-forget", où vous ne vous attendez pas à un résultat immédiat, et il retourne un `Job`. `async`, en revanche, est utilisé lorsque vous avez besoin de récupérer un résultat et retourne un `Deferred<T>`, qui est en fait un `Job` mais avec une valeur future que vous pouvez obtenir via `await()`.
+--
+
+[.notes]
+--
+*   **`launch` :**
+    *   Utilisé pour démarrer une nouvelle coroutine qui ne retourne aucun résultat explicite.
+    *   Retourne un `Job`, que vous pouvez utiliser pour annuler ou attendre la fin de la coroutine.
+    *   Idéal pour les tâches en arrière-plan, les mises à jour d'UI non bloquantes, etc.
+*   **`async` :**
+    *   Utilisé pour démarrer une coroutine qui calculera un résultat.
+    *   Retourne un `Deferred<T>`, qui est un `Job` spécialisé avec une méthode `await()` pour obtenir le résultat une fois disponible.
+    *   Parfait pour des calculs parallèles où vous avez besoin des résultats à la fin.
+*   **Exemples de code :**
+    *   `launch` pour imprimer après un délai.
+    *   `async` pour calculer deux valeurs en parallèle et les additionner.
+*   **Propagation d'erreurs :** Les exceptions lancées dans `launch` sont propagées immédiatement. Celles lancées dans `async` sont propagées uniquement lors de l'appel à `await()`.
+*   **Exercice suggéré :**
+    *   Écrivez une fonction qui récupère des données de deux sources différentes en parallèle en utilisant `async`, puis combine les résultats.
+--
+
+* `launch` : "Fire-and-forget", retourne un `Job`.
+* `async` : Calcule un résultat, retourne un `Deferred<T>` (avec `await()`).
+
+[source,kotlin]
+----
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    val job = launch { // Démarre une coroutine sans résultat
+        delay(1000)
+        println("Tâche 'launch' terminée.")
+    }
+
+    val deferredResult = async { // Démarre une coroutine avec un résultat
+        delay(1500)
+        "Résultat de 'async'"
+    }
+
+    println("En attente des tâches...")
+    job.join() // Attend la fin de la tâche 'launch'
+    val result = deferredResult.await() // Attend et obtient le résultat de 'async'
+    println("Obtenu : $result")
+}
+----
+
+== Portée et Contexte des Coroutines
+
+[NOTE.speaker]
+--
+Le `CoroutineScope` est un concept crucial pour la concurrence structurée et la gestion du cycle de vie des coroutines. Il définit une portée dans laquelle les coroutines sont lancées et assure que toutes les coroutines lancées dans cette portée sont traquées et gérées. Le `CoroutineContext` est un ensemble d'éléments qui définissent le comportement de la coroutine, incluant le `Job`, le `Dispatcher` et le `CoroutineExceptionHandler`.
+--
+
+[.notes]
+--
+*   **`CoroutineScope` :**
+    *   Un `CoroutineScope` combine un `Job` et un `CoroutineContext`.
+    *   Toutes les coroutines lancées dans un `CoroutineScope` héritent de son `Job` et de son `Context`.
+    *   L'annulation de la portée annule automatiquement toutes les coroutines enfants. C'est le principe de la concurrence structurée.
+*   **`CoroutineContext` :**
+    *   Une collection d'éléments, par exemple :
+        *   `Job` : Gère le cycle de vie de la coroutine (annulation, complétion).
+        *   `CoroutineDispatcher` : Détermine le fil d'exécution.
+        *   `CoroutineExceptionHandler` : Gère les exceptions non interceptées.
+        *   `CoroutineName` : Nomme la coroutine pour le débogage.
+*   **`GlobalScope` vs `custom Scope` :**
+    *   `GlobalScope` lance des coroutines de haut niveau qui ne sont liées à aucune portée. Ses coroutines s'exécutent aussi longtemps que l'application est en vie et ne sont pas annulées automatiquement. À éviter, car cela peut entraîner des fuites de coroutines.
+    *   Des portées personnalisées (ex: `viewModelScope`, `lifecycleScope` en Android) sont préférables, car elles lient les coroutines au cycle de vie d'un composant.
+*   **Hiérarchie des `Job`s :**
+    *   Les `Job`s forment une relation parent-enfant. L'annulation d'un parent annule tous ses enfants.
+*   **Exercice suggéré :**
+    *   Créez une `CoroutineScope` personnalisée, lancez-y plusieurs coroutines, puis annulez la portée et vérifiez que toutes les coroutines enfants sont annulées.
+--
+
+*   `CoroutineScope` gère le cycle de vie des coroutines.
+*   `CoroutineContext` est un ensemble d'éléments (Job, Dispatcher, Handler) qui définissent la coroutine.
+*   `GlobalScope` est à éviter pour la plupart des cas.
+*   L'annulation d'une portée annule toutes ses coroutines enfants.
+
+[source,kotlin]
+----
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    val scope = CoroutineScope(Dispatchers.Default + Job()) // Portée personnalisée
+    val job = scope.launch {
+        println("Coroutine dans la portée : ${this.coroutineContext[Job]}")
+        delay(1000)
+        println("Tâche de portée terminée.")
+    }
+
+    delay(100)
+    // scope.cancel() // Annuler la portée annulerait le job enfant
+    job.join()
+    println("Fin du main")
+}
+----
+
+== Dispatchers : Où s'exécutent les Coroutines
+
+[NOTE.speaker]
+--
+Les `CoroutineDispatcher`s sont essentiels car ils déterminent le fil d'exécution ou le pool de threads où une coroutine va s'exécuter. Choisir le bon dispatcher est crucial pour l'efficacité et la performance de votre application. Nous allons passer en revue les dispatchers les plus courants : `Main`, `IO`, `Default`, et `Unconfined`.
+--
+
+[.notes]
+--
+*   **Rôle des `Dispatchers` :**
+    *   Définissent le contexte d'exécution d'une coroutine.
+    *   Permettent de basculer entre différents threads sans bloquer l'interface utilisateur.
+*   **Types de `Dispatchers` :**
+    *   `Dispatchers.Main` : Pour les tâches liées à l'UI sur le thread principal (Android, Swing, JavaFX). Nécessite l'intégration d'une plateforme spécifique.
+    *   `Dispatchers.IO` : Pour les opérations d'entrée/sortie bloquantes (réseau, base de données, fichiers). Utilise un pool de threads à la demande.
+    *   `Dispatchers.Default` : Pour les tâches gourmandes en CPU (calculs intensifs). Utilise un pool de threads partagé dont la taille est égale au nombre de cœurs CPU.
+    *   `Dispatchers.Unconfined` : La coroutine commence sur le thread appelant, mais se suspend et reprend sur n'importe quel thread. À utiliser avec prudence, principalement pour des tests ou des cas très spécifiques.
+*   **Changer de `Dispatcher` avec `withContext` :**
+    *   La fonction `withContext` est utilisée pour changer de dispatcher pour un bloc de code spécifique sans affecter le reste de la coroutine.
+*   **Exercice suggéré :**
+    *   Créez une coroutine qui effectue une opération IO, puis bascule sur le dispatcher `Default` pour un calcul, et enfin revient sur le dispatcher `Main` pour afficher le résultat (si vous avez un environnement UI).
+--
+
+Les `Dispatchers` déterminent le thread sur lequel une coroutine s'exécute.
+
+* [%step] `Dispatchers.Main`: Pour les mises à jour d'UI.
+* [%step] `Dispatchers.IO`: Pour les opérations réseau ou disque.
+* [%step] `Dispatchers.Default`: Pour les tâches gourmandes en CPU.
+* [%step] `Dispatchers.Unconfined`: Ne contraint pas la coroutine à un thread spécifique.
+
+[source,kotlin]
+----
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    println("Début sur ${Thread.currentThread().name}")
+
+    withContext(Dispatchers.IO) {
+        println("Fait une opération IO sur ${Thread.currentThread().name}")
+        delay(500)
+    }
+
+    withContext(Dispatchers.Default) {
+        println("Fait un calcul sur ${Thread.currentThread().name}")
+        delay(500)
+    }
+
+    println("Fin sur ${Thread.currentThread().name}")
+}
+----
+
+== Concurrence Structurée : La Sécurité Avant Tout
+
+[NOTE.speaker]
+--
+La concurrence structurée est l'un des principes les plus importants des Coroutines Kotlin. Elle garantit que toutes les coroutines lancées dans une portée spécifique sont automatiquement gérées : si la portée est annulée, toutes ses coroutines enfants le sont aussi. Cela prévient les fuites de coroutines et simplifie la gestion des erreurs. Nous allons distinguer `coroutineScope` et `supervisorScope`.
+--
+
+[.notes]
+--
+*   **Bénéfices de la Concurrence Structurée :**
+    *   **Propagation automatique de l'annulation :** L'annulation d'une coroutine parente annule tous ses enfants.
+    *   **Gestion simplifiée des erreurs :** Les erreurs sont propagées vers le parent et peuvent être gérées de manière prévisible.
+    *   **Prévention des fuites de coroutines :** Les coroutines sont liées à un cycle de vie et ne s'exécutent pas indéfiniment sans surveillance.
+*   **`coroutineScope` :**
+    *   Crée une nouvelle portée enfant qui est "stricte".
+    *   Si l'une de ses coroutines enfants échoue, tous les autres enfants sont annulés, et l'exception est propagée au parent. C'est un comportement "tout ou rien".
+    *   La fonction `coroutineScope` ne se termine qu'une fois que tous ses enfants sont terminés.
+*   **`supervisorScope` :**
+    *   Crée une nouvelle portée enfant où les échecs des enfants sont isolés.
+    *   Si un enfant échoue, il est annulé, mais les autres coroutines enfants continuent de s'exécuter. L'exception n'est *pas* propagée au parent.
+    *   Utile quand vous voulez que des tâches indépendantes continuent même si l'une d'elles échoue.
+*   **Exemples :**
+    *   `coroutineScope` pour une opération atomique nécessitant la réussite de toutes les sous-tâches.
+    *   `supervisorScope` pour un ensemble de widgets d'interface utilisateur qui devraient continuer à se charger même si l'un d'eux rencontre une erreur.
+*   **Exercice suggéré :**
+    *   Implémentez un scénario où vous utilisez `coroutineScope` et un autre où vous utilisez `supervisorScope` pour voir la différence de propagation des erreurs/annulations.
+--
+
+*   Concurrence structurée : gère automatiquement les coroutines enfant.
+*   Prévient les fuites et simplifie l'annulation/gestion d'erreurs.
+*   `coroutineScope`: Échec d'un enfant annule tous les enfants et le parent.
+*   `supervisorScope`: Échec d'un enfant n'affecte pas les autres enfants.
+
+[source,kotlin]
+----
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    try {
+        coroutineScope { // 'all or nothing'
+            launch { delay(500); throw Exception("Erreur enfant 1") }
+            launch { delay(1000); println("Enfant 2 terminé") }
+        }
+    } catch (e: Exception) {
+        println("coroutineScope : Exception capturée : ${e.message}")
+    }
+
+    println("---")
+
+    supervisorScope { // échecs isolés
+        val child1 = launch { delay(500); throw Exception("Erreur enfant A") }
+        val child2 = launch { delay(1000); println("Enfant B terminé") }
+        child1.join() // On attend pour observer l'exception du 1er enfant
+        child2.join()
+    }
+    println("supervisorScope : Terminé malgré l'erreur d'un enfant.")
+}
+----
+
+== Gestion des Erreurs dans les Coroutines
+
+[NOTE.speaker]
+--
+La gestion des erreurs est un aspect crucial de toute application robuste. Dans les coroutines, il existe plusieurs stratégies pour gérer les exceptions : les blocs `try-catch` standards pour les appels de suspension, le `CoroutineExceptionHandler` pour les exceptions non interceptées dans les coroutines racine, et la compréhension de la manière dont les exceptions se propagent dans la hiérarchie des `Job`s.
+--
+
+[.notes]
+--
+*   **`try-catch` pour les fonctions `suspend` :**
+    *   C'est la méthode la plus simple pour gérer les exceptions directement dans le code.
+    *   Fonctionne pour les appels de fonctions `suspend` et `async { ... }.await()`.
+*   **Propagation d'erreurs `launch` vs `async` :**
+    *   `launch` : Les exceptions non interceptées sont immédiatement propagées au parent `Job` et déclenchent le `CoroutineExceptionHandler` si elles atteignent une coroutine racine.
+    *   `async` : Les exceptions sont retenues par l'objet `Deferred` et ne sont relancées que lorsque `await()` est appelé. C'est à ce moment-là que vous devez utiliser `try-catch` autour de `await()`.
+*   **`CoroutineExceptionHandler` :**
+    *   Un élément du `CoroutineContext` qui peut être attaché aux coroutines racine (lancées directement dans un `CoroutineScope` sans parent explicitement configuré) ou aux `supervisorScope`.
+    *   Il est appelé lorsqu'une exception non interceptée atteint une coroutine racine.
+    *   Non applicable aux coroutines enfants ou aux exceptions interceptées localement.
+*   **Exemple de code :**
+    *   `try-catch` avec `async` et `await()`.
+    *   `CoroutineExceptionHandler` avec `launch`.
+*   **Exercice suggéré :**
+    *   Créez une coroutine qui simule un appel réseau échoué, utilisez `try-catch` pour le gérer. Ensuite, lancez une coroutine sans `try-catch` pour voir comment `CoroutineExceptionHandler` gère l'exception.
+--
+
+*   Utilisez `try-catch` pour les appels `suspend` et `async {}.await()`.
+*   Les exceptions dans `launch` sont propagées au parent.
+*   Les exceptions dans `async` sont propagées lors de l'appel à `await()`.
+*   `CoroutineExceptionHandler` gère les exceptions non interceptées dans les coroutines racine.
+
+[source,kotlin]
+----
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    val handler = CoroutineExceptionHandler { _, exception ->
+        println("Caught exception: $exception")
+    }
+
+    val job = GlobalScope.launch(handler) { // Handler sur une coroutine racine
+        throw IndexOutOfBoundsException("Erreur dans launch!")
+    }
+
+    val deferred = async {
+        throw ArithmeticException("Erreur dans async!")
+    }
+
+    try {
+        deferred.await() // L'exception est lancée ici
+    } catch (e: ArithmeticException) {
+        println("Caught async exception: $e")
+    }
+
+    job.join()
+}
+----
+
+== Tester les Coroutines avec `runTest`
+
+[NOTE.speaker]
+--
+Tester du code asynchrone peut être délicat, mais la bibliothèque `kotlinx-coroutines-test` offre des outils puissants pour simplifier cela. La fonction `runTest` est la pierre angulaire pour écrire des tests unitaires pour les fonctions de suspension et le code de coroutine. Elle offre des avantages clés, notamment le contrôle du temps virtuel, ce qui rend vos tests plus rapides et déterministes.
+--
+
+[.notes]
+--
+*   **`kotlinx-coroutines-test` :**
+    *   Une bibliothèque dédiée aux tests des coroutines.
+    *   Fournit des utilitaires pour contrôler le temps, les dispatchers et les scopes.
+*   **`runTest` :**
+    *   Une fonction de portée de test qui démarre une coroutine pour tester votre code.
+    *   Exécute la coroutine sur un `TestDispatcher` qui offre un contrôle précis du temps.
+    *   Assure que toutes les coroutines lancées dans son bloc sont terminées avant la fin du test.
+*   **Contrôle du temps virtuel :**
+    *   `runTest` utilise un temps virtuel, ce qui signifie que vous pouvez faire avancer le temps rapidement sans attendre de vrais délais.
+    *   `advanceUntilIdle()` : Fait avancer le temps jusqu'à ce que toutes les coroutines en attente soient terminées.
+    *   `delay(time)` : Simule un délai sans attendre le temps réel.
+*   **Exemple de test :**
+    *   Test d'une fonction `suspend` avec un délai en utilisant `runTest` et `advanceUntilIdle()`.
+*   **Références :**
+    *   Pour plus de détails, consultez la documentation du module `kotlinx-coroutines-test`.
+*   **Exercice suggéré :**
+    *   Écrivez un test pour une fonction qui effectue plusieurs opérations `delay` et vérifiez son comportement en utilisant `runTest` et `advanceUntilIdle()`.
+--
+
+*   `runTest` est la fonction standard pour tester les coroutines.
+*   Elle fournit un contrôle du temps virtuel.
+*   Accélère les tests asynchrones et les rend déterministes.
+
+[source,kotlin]
+----
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class MyCoroutinesTest {
+    suspend fun performDelayedAction(): String {
+        delay(1000)
+        return "Action terminée"
+    }
+
+    @Test
+    fun `test performDelayedAction`() = runTest {
+        val result = performDelayedAction()
+        assertEquals("Action terminée", result)
+        // Le temps virtuel est automatiquement avancé par runTest
+        // pour que `delay(1000)` ne bloque pas le test.
+    }
+
+    @Test
+    fun `test multiple delays`() = runTest {
+        var count = 0
+        launch { delay(100); count++ }
+        launch { delay(200); count++ }
+        advanceUntilIdle() // Avance le temps jusqu'à ce que tout soit terminé
+        assertEquals(2, count)
+    }
+}
+----
+
+== Résumé et Prochaines Étapes
+
+[NOTE.speaker]
+--
+Nous sommes arrivés à la fin de notre tour d'horizon des Coroutines Kotlin. Nous avons couvert les concepts fondamentaux : ce que sont les coroutines, l'importance de la concurrence structurée, les différents constructeurs, les dispatchers pour contrôler l'exécution, et la gestion des erreurs. Nous avons également vu comment tester efficacement votre code de coroutines. Les avantages en termes de code plus propre et plus maintenable sont clairs.
+--
+
+[.notes]
+--
+*   **Récapitulatif des points clés :**
+    *   Les coroutines offrent une alternative légère et non bloquante aux threads pour la programmation asynchrone.
+    *   Les fonctions de suspension (`suspend`) permettent de mettre en pause et de reprendre l'exécution.
+    *   `launch` pour les opérations "fire-and-forget", `async` pour les opérations avec un résultat (`Deferred`).
+    *   La concurrence structurée via `CoroutineScope` assure la gestion du cycle de vie et prévient les fuites.
+    *   Les `Dispatchers` contrôlent le pool de threads (`Main`, `IO`, `Default`).
+    *   La gestion des erreurs est cruciale, avec `try-catch` et `CoroutineExceptionHandler`.
+    *   `runTest` facilite les tests unitaires avec le temps virtuel.
+*   **Encourager l'exploration :**
+    *   **Kotlin Flows :** Pour gérer des flux de données asynchrones (remplaçant RxJava/RxKotlin).
+    *   **Channels :** Pour la communication entre coroutines.
+    *   **StateFlow/SharedFlow :** Des Flows spéciaux pour la gestion d'état dans les architectures réactives.
+*   **Ressources pour l'apprentissage continu :**
+    *   Documentation officielle Kotlin Coroutines : link:https://kotlinlang.org/docs/coroutines-overview.html[kotlinlang.org/docs/coroutines-overview.html]
+    *   GitHub `kotlinx.coroutines` : link:https://github.com/Kotlin/kotlinx.coroutines[github.com/Kotlin/kotlinx.coroutines]
+    *   KotlinConf talks sur les coroutines.
+*   **Exercice suggéré :**
+    *   Mettez en pratique ce que vous avez appris en convertissant une partie de votre code asynchrone existant (callbacks, futures) en coroutines.
+--
+
+*   Les Coroutines simplifient l'asynchrone avec un code non-bloquant et léger.
+*   `suspend`, `launch`, `async` sont les fondations.
+*   La Concurrence Structurée et les `Dispatchers` garantissent robustesse et performance.
+*   Une bonne gestion des erreurs et des tests fiables sont essentiels.
+
+*Prochaines Étapes :*
+*   Explorez les Kotlin Flows, Channels, StateFlow/SharedFlow.
+*   Pratiquez avec vos propres projets !

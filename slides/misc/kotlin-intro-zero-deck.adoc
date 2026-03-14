@@ -1,0 +1,311 @@
+= Introduction à Kotlin
+:author: cheroliv <cheroliv@mail.com>
+:date: 2024-07-20
+:icons: font
+:revealjs_theme: sky
+:revealjs_history: true
+:revealjs_slideNumber: c/t
+:revealjs_controls: true
+:revealjs_controlsLayout: edges
+:revealjs_fragmentInURL: true
+:revealjs_width: 1408
+:revealjs_height: 792
+:imagesdir: images
+:source-highlighter: highlightjs
+:example-caption!:
+
+== Agenda
+
+[%step]
+* Pourquoi Kotlin ?
+* Null Safety
+* Data Classes
+* Extension Functions
+* Lambdas et Fonctions d'Ordre Supérieur
+* Coroutines (Aperçu)
+
+[NOTE.speaker]
+--
+Bienvenue à tous ! Aujourd'hui, nous allons découvrir Kotlin et ses principales caractéristiques. Avant de plonger, j'aimerais savoir : qu'est-ce que vous connaissez déjà de Kotlin ? Avez-vous des attentes particulières pour cette session ?
+--
+
+[.notes]
+--
+* Référence: Documentation officielle Kotlin (kotlinlang.org)
+* Exercice: Poser des questions ouvertes à l'auditoire sur leur familiarité avec Kotlin ou d'autres JVM languages.
+* Deep dive: Présenter les motivations initiales de JetBrains derrière la création de Kotlin.
+--
+
+== Pourquoi Kotlin ?
+
+[%step]
+* **Concis** : Moins de code pour exprimer la même logique.
+* **Sûr** : Élimine les erreurs courantes comme les `NullPointerException`.
+* **Interopérable** : S'intègre parfaitement avec le code Java existant.
+* **Outils** : Excellent support IDE avec IntelliJ IDEA.
+
+[NOTE.speaker]
+--
+En tant que développeurs Java seniors, nous connaissons tous la verbosité de Java, le boilerplate répétitif et ces fameuses `NullPointerException` qui surviennent en production. Kotlin a été conçu précisément pour adresser ces points, en offrant plus de sécurité et de concision.
+--
+
+[.notes]
+--
+* Deep dive: Statistiques d'adoption Kotlin selon le rapport JetBrains Developer Survey 2023, montrant une croissance constante et une forte satisfaction.
+* Référence: JetBrains Developer Survey 2023 - kotlinlang.org/lp/jvm-ecosystem-report-2023/
+* Context: Kotlin est un langage de programmation moderne, statiquement typé, ciblant la JVM, Android, le navigateur et le natif. Son interopérabilité avec Java est l'une de ses plus grandes forces, permettant une migration progressive.
+--
+
+== Null Safety
+
+[%step]
+* Types non-nullables par défaut pour la sûreté.
+* L'opérateur `?` pour déclarer un type nullable.
+* L'opérateur Elvis `?:` pour fournir une valeur par défaut.
+* Le compilateur détecte les `NullPointerException` à la compilation.
+
+[NOTE.speaker]
+--
+Nous avons tous été confrontés au `NullPointerException` en Java. Kotlin transforme cette erreur d'exécution en erreur de compilation. Je vais vous montrer un NPE classique en Java, puis comment Kotlin gère la même logique, avec le compilateur comme notre filet de sécurité.
+--
+
+[.notes]
+--
+* Exemple:
+[source,java]
+----
+// Java
+public String getLengthJava(String s) {
+    return (s != null) ? String.valueOf(s.length()) : "N/A";
+}
+----
+[source,kotlin]
+----
+// Kotlin
+fun getLengthKotlin(s: String?): String {
+    return s?.length?.toString() ?: "N/A"
+}
+----
+* Deep dive: Expliquer la différence entre les types non-nullables (`String`) et nullables (`String?`). Détailler le fonctionnement du safe call (`?.`) et de l'opérateur Elvis (`?:`). Mentionner l'opérateur `!!` et ses dangers.
+* Exercice: Migrer un POJO Java qui contient des champs nullables (par exemple, un `User` avec un champ `address` optionnel) vers une `data class` Kotlin en utilisant les types nullables.
+--
+
+== Data Classes
+
+[%step]
+* Réduit drastiquement le boilerplate pour les classes de données.
+* `equals()`, `hashCode()`, `toString()` sont générés automatiquement.
+* La fonction `copy()` permet de créer des instances modifiées.
+* Idéales pour les POJO (Plain Old Java Objects).
+
+[NOTE.speaker]
+--
+Combien de fois avez-vous écrit ou généré un POJO Java avec `equals`, `hashCode`, `toString` et des getters/setters ? Kotlin offre une solution incroyablement concise avec les `data classes`. Nous allons comparer le ratio de lignes de code entre un POJO Java et sa version Kotlin équivalente.
+--
+
+[.notes]
+--
+* Exemple:
+[source,java]
+----
+// Java POJO (ex. après génération IDE)
+public class User {
+    private final String name;
+    private final int age;
+
+    public User(String name, int age) { /* ... */ }
+    public String getName() { /* ... */ }
+    public int getAge() { /* ... */ }
+    @Override public boolean equals(Object o) { /* ... */ }
+    @Override public int hashCode() { /* ... */ }
+    @Override public String toString() { /* ... */ }
+}
+----
+[source,kotlin]
+----
+// Kotlin Data Class
+data class User(val name: String, val age: Int)
+----
+* Deep dive: Expliquer comment `data class` simplifie la manipulation des objets immuables. Montrer l'utilisation de la fonction `copy()` avec des arguments nommés pour une clarté accrue.
+* Exercice: Prenez un POJO simple de votre projet Java. Réécrivez-le en `data class` Kotlin. Vérifiez ensuite le comportement de `equals()` et `copy()` avec cette nouvelle classe.
+--
+
+== Extension Functions
+
+[%step]
+* Permet d'ajouter de nouvelles fonctions à une classe existante.
+* Sans modifier son code source ni utiliser d'héritage.
+* Utile pour améliorer la lisibilité et la réutilisabilité du code.
+
+[NOTE.speaker]
+--
+Les fonctions d'extension sont une fonctionnalité puissante de Kotlin. Imaginez pouvoir ajouter une méthode à une classe `String` sans en hériter ni la modifier ! C'est ce que permettent les fonctions d'extension. Elles peuvent remplacer avantageusement les classes utilitaires statiques que l'on trouve souvent en Java, comme `StringUtils` ou `CollectionUtils`.
+--
+
+[.notes]
+--
+* Exemple:
+[source,java]
+----
+// Java: méthode statique utilitaire
+public class StringUtils {
+    public static String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.substring(0, 1).toUpperCase() + s.substring(1);
+    }
+}
+// Utilisation: StringUtils.capitalize("hello")
+----
+[source,kotlin]
+----
+// Kotlin: extension function sur String
+fun String.capitalize(): String {
+    if (this.isEmpty()) return this
+    return this.substring(0, 1).uppercase() + this.substring(1)
+}
+// Utilisation: "hello".capitalize()
+----
+* Deep dive: Expliquer que les fonctions d'extension sont résolues statiquement et ne modifient pas la classe originale. Elles sont comme des fonctions statiques qui prennent un objet en premier argument, mais avec une syntaxe plus objet.
+* Exercice: Identifiez une classe `*Utils` statique dans votre projet Java qui contient des méthodes pour manipuler des types standards (String, List, etc.). Réécrivez une ou deux de ces méthodes en tant qu'extension functions Kotlin.
+--
+
+=== Extension Functions — Scope et Limites
+
+[%step]
+* **Résolution Statique** : Les extensions ne sont pas polymorphiques.
+* **Pas d'Accès Privé** : Ne peuvent pas accéder aux membres `private` ou `protected`.
+* Éviter les abus pour maintenir la clarté du code.
+
+[NOTE.speaker]
+--
+Il est important de clarifier ce que les fonctions d'extension ne sont PAS. Elles ne sont pas du "monkey patching" comme on le voit dans certains langages dynamiques. Elles n'accèdent pas aux membres privés et leur résolution est statique, pas dynamique. Le compilateur décide quelle extension appeler au moment de la compilation, pas à l'exécution.
+--
+
+[.notes]
+--
+* Exemple:
+[source,kotlin]
+----
+class MyClass {
+    private val secret = "private data"
+    fun printSecret() = println(secret)
+}
+
+fun MyClass.getSecretInfo(): String {
+    // return this.secret // ERREUR: Cannot access 'secret': it is private
+    return "Extension cannot access private members."
+}
+
+fun main() {
+    val myObject = MyClass()
+    // myObject.secret // ERREUR
+    println(myObject.getSecretInfo())
+}
+----
+* Deep dive: Insister sur le fait que la fonction d'extension est une fonction membre d'un *receiver type* (le type étendu), mais elle n'est pas un membre *réel* de la classe. Elle n'est qu'un sucre syntaxique. Comparer avec les méthodes d'instance réelles.
+* Référence: Documentation officielle Kotlin sur les fonctions d'extension - kotlinlang.org/docs/extensions.html
+--
+
+== Lambdas et Fonctions d'Ordre Supérieur
+
+[%step]
+* Les fonctions peuvent être traitées comme des valeurs (passées en argument, retournées).
+* **Lambdas** : fonctions anonymes concises.
+* **Fonctions d'ordre supérieur** : prennent des fonctions en argument ou en retournent.
+* Simplifient le code fonctionnel (filtrage, mapping).
+
+[NOTE.speaker]
+--
+Pour les développeurs Java, les lambdas ne sont pas inconnues depuis Java 8 et l'arrivée des Streams. Kotlin pousse ce concept plus loin avec une syntaxe encore plus concise et la capacité de définir facilement nos propres fonctions d'ordre supérieur. Nous verrons notamment la syntaxe de la "trailing lambda" qui rend le code très agréable à lire.
+--
+
+[.notes]
+--
+* Exemple:
+[source,java]
+----
+// Java Stream
+List<String> names = Arrays.asList("Alice", "Bob");
+List<String> filtered = names.stream()
+                             .filter(name -> name.startsWith("A"))
+                             .collect(Collectors.toList());
+----
+[source,kotlin]
+----
+// Kotlin equivalent
+val names = listOf("Alice", "Bob")
+val filtered = names.filter { it.startsWith("A") }
+// Fonction d'ordre supérieur simple
+fun <T, R> transformList(list: List<T>, transformer: (T) -> R): List<R> {
+    val result = mutableListOf<R>()
+    for (item in list) {
+        result.add(transformer(item))
+    }
+    return result
+}
+val transformed = transformList(names) { it.uppercase() }
+----
+* Deep dive: Expliquer la syntaxe des lambdas en Kotlin, y compris `it` pour l'unique paramètre, et la trailing lambda. Montrer des exemples de fonctions d'ordre supérieur intégrées (ex: `forEach`, `map`, `filter`, `fold`).
+* Exercice: Prenez une boucle `for` Java qui itère sur une collection, applique une condition et transforme les éléments (par exemple, filtrer les nombres pairs et les multiplier par 2). Réécrivez-la en utilisant une chaîne de fonctions `filter`/`map` Kotlin.
+--
+
+== Coroutines — Aperçu
+
+[%step]
+* Simplifient la programmation asynchrone et concurrente.
+* Plus légères que les threads, non bloquantes par nature.
+* Concept de "suspension" pour gérer les opérations longues.
+* Intégrées au langage pour une meilleure ergonomie.
+
+[NOTE.speaker]
+--
+Les coroutines sont un sujet vaste et puissant. Nous n'allons faire qu'un survol ici pour planter la graine et vous donner envie d'explorer davantage. Si vous avez déjà travaillé avec des `CompletableFuture` en Java pour l'asynchronisme, les coroutines offrent une approche encore plus linéaire et intuitive pour gérer ce type de tâches.
+--
+
+[.notes]
+--
+* Exemple (conceptuel):
+[source,java]
+----
+// Java: asynchrone avec CompletableFuture
+CompletableFuture.supplyAsync(() -> fetchUserData())
+                 .thenApply(data -> processData(data))
+                 .thenAccept(result -> displayResult(result));
+----
+[source,kotlin]
+----
+// Kotlin: asynchrone avec Coroutines (pseudo-code)
+suspend fun fetchDataAndProcess() {
+    val data = fetchUserData() // suspend
+    val result = processData(data) // suspend
+    displayResult(result)
+}
+// Utilisation: launch { fetchDataAndProcess() }
+----
+* Deep dive: Expliquer la différence fondamentale entre les threads (qui bloquent) et les coroutines (qui suspendent l'exécution). Mentionner les scopes de coroutines (`GlobalScope`, `viewModelScope`, etc.) et les builders (`launch`, `async`).
+* Référence: Documentation officielle Kotlin sur les coroutines - kotlinlang.org/docs/coroutines-overview.html
+--
+
+== Synthèse et Prochaines Étapes
+
+[%step]
+* Kotlin offre concision, sûreté et interopérabilité.
+* Les `data classes` et les `extension functions` réduisent le boilerplate.
+* La `Null Safety` élimine une source majeure de bugs.
+* Les coroutines transforment la programmation asynchrone.
+
+[NOTE.speaker]
+--
+Nous avons fait un tour d'horizon rapide de Kotlin. Qu'est-ce qui vous a le plus surpris ? Qu'est-ce qui vous donne le plus envie d'essayer Kotlin dans vos projets ? N'hésitez pas à poser vos questions.
+--
+
+[.notes]
+--
+* Formative assessment: Proposer un court quiz de 5 questions (par exemple, sur la `Null Safety`, la syntaxe des `data classes` ou l'utilité des `extension functions`) pour vérifier la compréhension des concepts clés.
+* Ressources:
+** Livre: "Kotlin in Action" par Dmitry Jemerov et Svetlana Isakova.
+** Plateforme d'apprentissage: play.kotlinlang.org
+** Guide des idiomes Kotlin: kotlinlang.org/docs/idioms.html
+** Kotlin Bootcamp for Programmers (Google Developers)
+* Projet fil rouge: Pour une mise en pratique concrète, les participants pourraient commencer la migration d'un petit module Java existant vers Kotlin dans leur projet actuel.
+--

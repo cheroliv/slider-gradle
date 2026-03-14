@@ -1,0 +1,488 @@
+= Kotlin inline functions et reification
+cheroliv <cheroliv@mail.net>
+:revealjs_theme: white
+:revealjs_slideNumber: c/t
+:revealjs_width: 1408
+:revealjs_height: 792
+:revealjs_controls: true
+:revealjs_controlsLayout: edges
+:revealjs_history: true
+:revealjs_fragmentInURL: true
+:source-highlighter: rouge
+
+== Agenda
+[%step]
+* Rappel : Fonctions d'ordre supérieur et lambdas
+* Le coût des lambdas et l'optimisation `inline`
+* Modificateurs `noinline` et `crossinline`
+* L'effacement de type en JVM et `reified`
+* Quand et comment utiliser `reified`
+* Résumé et questions
+
+[NOTE.speaker]
+--
+Bonjour à toutes et à tous ! Aujourd'hui, nous allons plonger dans deux concepts puissants de Kotlin : les fonctions `inline` et les types `reified`. Ces fonctionnalités sont souvent mal comprises mais peuvent grandement améliorer la performance et la flexibilité de votre code Kotlin.
+
+Nous commencerons par un rappel rapide des fonctions d'ordre supérieur et des lambdas, puis nous explorerons pourquoi et comment `inline` peut optimiser leur utilisation. Ensuite, nous aborderons le problème de l'effacement de type en JVM et comment `reified` offre une solution élégante.
+--
+[.notes]
+--
+Bienvenue à cette présentation sur les fonctions `inline` et la reification en Kotlin.
+
+Je vous encourage à poser vos questions tout au long de la session.
+Pour commencer, qui a déjà rencontré des problèmes de performance liés à l'utilisation intensive des lambdas, ou des limitations avec les génériques en Kotlin ?
+--
+
+== Fonctions d'Ordre Supérieur et Lambdas : Rappel
+*   **Fonctions d'ordre supérieur (Higher-Order Functions)**
+    *   Prennent des fonctions en paramètres.
+    *   Retournent une fonction.
+    *   Ex: `map`, `filter`, `forEach`.
+*   **Lambdas (Expressions Lambda)**
+    *   Fonctions anonymes, sans nom.
+    *   Syntaxe concise pour définir des blocs de code.
+    *   Souvent utilisées comme arguments pour les HOF.
+
+.Exemple de lambda
+[source,kotlin]
+----
+val nombres = listOf(1, 2, 3, 4)
+val carrés = nombres.map { it * it } // Lambda { it * it }
+println(carrés) // [1, 4, 9, 16]
+
+fun opérerSurInt(a: Int, op: (Int) -> Int): Int {
+    return op(a)
+}
+val resultat = opérerSurInt(5) { x -> x * 2 } // Lambda { x -> x * 2 }
+println(resultat) // 10
+----
+
+[NOTE.speaker]
+--
+Commençons par un rapide rappel. Les fonctions d'ordre supérieur sont des fonctions qui acceptent d'autres fonctions comme arguments ou qui en retournent une. Elles sont fondamentales pour la programmation fonctionnelle.
+
+Les lambdas, quant à elles, sont des expressions de fonctions anonymes. Elles nous permettent d'écrire du code concis et expressif, souvent utilisées pour implémenter les fonctions passées aux HOF. L'exemple montre `map` avec une lambda et une fonction personnalisée `opérerSurInt`.
+--
+[.notes]
+--
+*   **Fonctions d'Ordre Supérieur (Higher-Order Functions)** :
+    *   Définition : Une fonction qui accepte une ou plusieurs fonctions comme arguments et/ou retourne une fonction.
+    *   Utilité : Favorisent la réutilisabilité du code et la création de DSL (Domain Specific Languages) internes.
+    *   Exemples courants : `map`, `filter`, `forEach` sur les collections Kotlin.
+*   **Lambdas (Expressions Lambda)** :
+    *   Définition : Une fonction littérale, c'est-à-dire une fonction qui n'est pas déclarée, mais passée immédiatement comme expression.
+    *   Syntaxe : `{ param1, param2 -> corps_de_la_fonction }`. Si un seul paramètre et inféré, `it` est implicite.
+    *   Type fonctionnel : Une lambda a un type fonctionnel comme `(Int) -> String` pour une fonction qui prend un `Int` et retourne un `String`.
+*   **Exemple Détaillé** :
+    *   `nombres.map { it * it }` : Ici, `{ it * it }` est une lambda. Elle prend un `Int` (représenté par `it`) et retourne un `Int`. `map` est une HOF qui applique cette lambda à chaque élément de la liste.
+    *   `opérerSurInt(5) { x -> x * 2 }` : `opérerSurInt` est une HOF. Elle attend un `Int` et une fonction `(Int) -> Int`. La lambda `{ x -> x * 2 }` correspond à ce type fonctionnel.
+*   **Pourquoi sont-elles utiles ?** :
+    *   Code plus concis et expressif.
+    *   Permettent des abstractions puissantes.
+    *   Facilitent la programmation asynchrone et les opérations sur les collections.
+--
+
+== Le Coût des Lambdas
+*   Chaque expression lambda est compilée en une *classe anonyme*.
+*   Chaque appel crée une *nouvelle instance* de cette classe.
+*   Cela entraîne :
+    *   Des **allocations mémoire** fréquentes.
+    *   Un surcoût pour le **Garbage Collector (GC)**.
+    *   Des **appels de méthode virtuels** supplémentaires.
+*   Ces coûts peuvent devenir significatifs dans des boucles serrées ou des appels très fréquents.
+
+.Exemple : Impact potentiel sur la performance
+[source,kotlin]
+----
+// Une fonction d'ordre supérieur "simple"
+fun mesurerTemps(action: () -> Unit) {
+    val début = System.nanoTime()
+    action()
+    val fin = System.nanoTime()
+    println("Durée : ${(fin - début) / 1_000_000.0} ms")
+}
+
+fun main() {
+    mesurerTemps {
+        var somme = 0L
+        for (i in 1..1_000_000) {
+            somme += i
+        }
+    }
+}
+----
+
+[NOTE.speaker]
+--
+Malgré tous leurs avantages, les lambdas ne sont pas sans inconvénients en termes de performance. Par défaut, le compilateur Kotlin transforme chaque lambda en une classe anonyme. À chaque fois que vous exécutez une lambda, une nouvelle instance de cette classe est créée.
+
+Cette création répétée d'objets a plusieurs conséquences. Elle conduit à des allocations mémoire constantes, ce qui peut stresser le Garbage Collector et ralentir l'application. De plus, l'appel de la lambda se fait via une méthode virtuelle, ce qui est légèrement moins performant qu'un appel direct. Pour des opérations isolées, c'est négligeable, mais dans des boucles très fréquentes ou des systèmes à faible latence, cela peut devenir un goulot d'étranglement.
+--
+[.notes]
+--
+*   **Fonctionnement interne des lambdas** :
+    *   En JVM, une lambda est traduite en une classe anonyme implémentant une interface fonctionnelle (par exemple, `kotlin.jvm.functions.Function1<T, R>`).
+    *   Chaque fois qu'une lambda est appelée, une nouvelle instance de cette classe anonyme est potentiellement créée.
+*   **Coût de performance** :
+    *   **Allocations mémoire** : La création répétée d'objets `FunctionN` pour chaque lambda est coûteuse en mémoire, surtout dans les boucles intenses.
+    *   **Garbage Collection (GC)** : Plus d'objets à collecter signifie plus de travail pour le GC, ce qui peut entraîner des pauses ("stop-the-world") et affecter la fluidité de l'application.
+    *   **Appels de méthode virtuels** : L'appel d'une lambda via son instance est un appel de méthode virtuelle, qui est moins optimisable par le compilateur JIT (Just-In-Time) de la JVM qu'un appel direct à une fonction statique ou non-virtuelle.
+*   **Scénarios d'impact** :
+    *   Boucles `for` avec un grand nombre d'itérations.
+    *   Utilisation dans des contextes de haute performance (jeux, trading, calcul intensif).
+    *   Dans des APIs qui sont appelées très fréquemment.
+*   **Exemple** : La fonction `mesurerTemps` elle-même est une fonction d'ordre supérieur qui prend une lambda. Si elle était appelée des millions de fois, la création répétée de l'objet lambda pourrait devenir un problème.
+*   **Solution** : C'est précisément là que le mot-clé `inline` intervient pour atténuer ces problèmes.
+--
+
+== Fonctions `inline` : Le Principe
+*   Le mot-clé `inline` demande au compilateur de *substituer le corps* de la fonction et de ses lambdas aux points d'appel.
+*   Cela supprime l'overhead des lambdas :
+    *   **Pas de classe anonyme** pour la lambda.
+    *   **Pas d'allocation mémoire** pour la lambda.
+    *   **Pas d'appel de méthode virtuel**, le code est directement intégré.
+*   Permet aux optimisations du JIT de la JVM de s'appliquer plus efficacement.
+
+.Exemple simple : avant et après `inline`
+[source,kotlin]
+----
+// Version sans inline
+fun nonInlineFoo(action: () -> Unit) {
+    action()
+}
+
+// Version avec inline
+inline fun inlineFoo(action: () -> Unit) {
+    action()
+}
+
+fun main() {
+    nonInlineFoo { println("Hello non-inline") } // Crée un objet lambda
+    inlineFoo { println("Hello inline") }      // N'en crée pas
+}
+----
+
+[NOTE.speaker]
+--
+Pour résoudre le problème des allocations de lambdas, Kotlin introduit le mot-clé `inline`. Lorsqu'une fonction d'ordre supérieur est déclarée `inline`, le compilateur ne génère pas de classe anonyme pour les lambdas passées à cette fonction. Au lieu de cela, il prend le corps de la fonction `inline` et le corps de la lambda et les insère directement là où la fonction est appelée.
+
+C'est comme un copier-coller du code par le compilateur. L'avantage direct est l'élimination de l'objet lambda, donc pas d'allocations, pas de GC, et un appel direct au lieu d'un appel virtuel. Cela ouvre aussi la porte à de meilleures optimisations par le compilateur JIT de la JVM. L'exemple illustre la différence conceptuelle.
+--
+[.notes]
+--
+*   **Définition de `inline`** : Le mot-clé `inline` est une directive au compilateur Kotlin. Il ne s'agit pas d'une garantie absolue que l'inlining aura lieu (le compilateur peut décider de ne pas le faire pour diverses raisons), mais c'est une forte suggestion.
+*   **Mécanisme de l'inlining** :
+    *   Quand une fonction `inline` est appelée, le compilateur Kotlin remplace l'appel de fonction par le corps de la fonction `inline` elle-même et par le corps des lambdas qui lui sont passées.
+    *   Cela se produit au moment de la compilation du bytecode, avant l'exécution par la JVM.
+*   **Avantages détaillés** :
+    *   **Élimination de l'overhead de la lambda** : Pas de classe générée, pas d'instance, pas d'appel de méthode virtuelle. Cela est particulièrement bénéfique pour les petites lambdas appelées fréquemment.
+    *   **Optimisations du compilateur JIT** : En ayant le code de la lambda directement au point d'appel, le compilateur JIT de la JVM peut effectuer des optimisations plus poussées, comme l'élimination de code mort, des fusions de boucles, ou des réordonnancements d'instructions.
+*   **Comment le vérifier** :
+    *   L'outil "Kotlin Bytecode" intégré à IntelliJ IDEA (Tools -> Kotlin -> Show Kotlin Bytecode) permet de visualiser le bytecode Java généré.
+    *   En décompilant le bytecode, on verrait que pour `inlineFoo`, le `println` est directement présent dans la méthode `main`, alors que pour `nonInlineFoo`, il y aurait un appel à une méthode d'une classe anonyme.
+*   **Exemple** : Dans `inlineFoo { println("Hello inline") }`, la ligne `println("Hello inline")` est directement insérée dans `main` par le compilateur, comme si vous l'aviez écrite manuellement.
+--
+
+== Impact et Bonnes Pratiques de `inline`
+*   **Avantages** :
+    *   **Performance accrue** : Réduction des allocations et du GC.
+    *   **Meilleures optimisations JIT** : Pour le code intégré.
+    *   **Retours non-locaux** : Permet de faire `return` directement depuis une lambda vers la fonction appelante (sauf `crossinline`).
+*   **Inconvénients** :
+    *   **Augmentation de la taille du bytecode** : Si la fonction `inline` ou la lambda est grande et appelée souvent, le code est dupliqué, menant au "code bloat".
+    *   **Lisibilité parfois réduite** : Le débugging peut être plus complexe car le point d'exécution diffère de l'appel de fonction.
+    *   **Risque d'abus** : Ne pas `inline` tout et n'importe quoi.
+
+.Quand utiliser `inline` ?
+*   Petites fonctions d'ordre supérieur.
+*   Fonctions avec des lambdas qui sont *toujours appelées*.
+*   Quand l'overhead des lambdas est prouvé comme un problème.
+
+.Quand éviter `inline` ?
+*   Fonctions très volumineuses.
+*   Fonctions avec des lambdas qui ne sont *pas appelées* ou qui sont stockées.
+*   Quand la taille du bytecode et le temps de compilation sont critiques.
+
+[NOTE.speaker]
+--
+Le mot-clé `inline` n'est pas une solution miracle à appliquer partout. Il offre de réels avantages en termes de performance en éliminant l'overhead des lambdas et en permettant des optimisations JIT plus efficaces. Un autre avantage clé est la possibilité de retours non-locaux depuis les lambdas, ce qui simplifie certains motifs de code.
+
+Cependant, il y a aussi des inconvénients. L'inlining peut augmenter considérablement la taille du bytecode si le code dupliqué est important. Cela peut impacter les temps de chargement et de compilation. La règle générale est d'utiliser `inline` avec discernement, principalement pour les petites fonctions d'ordre supérieur où l'overhead de la lambda est une préoccupation réelle.
+--
+[.notes]
+--
+*   **Avantages de `inline` expliqués** :
+    *   **Performance accrue** : L'élimination des objets lambdas et des appels virtuels peut réduire significativement le travail du Garbage Collector et accélérer l'exécution.
+    *   **Meilleures optimisations JIT** : Le compilateur Just-In-Time de la JVM peut optimiser le code inline de manière plus agressive, par exemple en effectuant des "constant propagation" ou des "dead code elimination" sur le code de la lambda.
+    *   **Retours non-locaux** : Une fonctionnalité unique de l'inlining est de permettre à une lambda de `return` non seulement de la lambda elle-même, mais aussi de la fonction *englobante*. C'est très utile dans les boucles comme `forEach`. Exemple :
+        ```kotlin
+        inline fun forEach(action: (T) -> Unit) { /* ... */ if (condition) return } // Ce return sort de la fonction appelante
+        ```
+*   **Inconvénients de `inline` expliqués** :
+    *   **Augmentation de la taille du bytecode (Code Bloat)** : Si une fonction `inline` est grande et/ou appelée de nombreux endroits, son code est dupliqué à chaque point d'appel, augmentant la taille totale du bytecode de l'application. Cela peut aussi allonger le temps de compilation.
+    *   **Lisibilité et débogage** : Le code généré ne correspond pas toujours directement au code source, ce qui peut compliquer le débogage et la lecture du bytecode.
+*   **Bonnes pratiques** :
+    *   `inline` est idéal pour les fonctions d'extension avec une lambda qui effectuent une petite opération sur l'objet récepteur (ex: `apply`, `run`, `with`).
+    *   Ne pas utiliser `inline` si la lambda n'est pas appelée dans le corps de la fonction `inline`, ou si elle est stockée dans une propriété ou passée à une autre fonction non `inline`. Dans ces cas, le compilateur affichera un avertissement.
+    *   *Mesurez toujours avant d'optimiser*. N'appliquez `inline` que si vous avez identifié un problème de performance réel.
+--
+
+== `noinline` et `crossinline` : Les Modificateurs
+*   **`noinline`** :
+    *   Indique qu'un paramètre lambda *ne doit pas* être inliné.
+    *   Utile quand la lambda est stockée, passée à une autre fonction, ou utilisée d'une manière qui empêche l'inlining.
+    *   Le compilateur générera un objet lambda pour ce paramètre spécifique.
+
+.Exemple `noinline`
+[source,kotlin]
+----
+inline fun effectuerOpérations(
+    inlineAction: () -> Unit,
+    noinline storeAction: () -> Unit
+) {
+    inlineAction() // Sera inliné
+    println("Stockage de l'action...")
+    // On ne peut pas appeler storeAction() ici si on la stockait
+    // ou la passait à une fonction non-inline.
+    // Pour cet exemple, on peut l'appeler :
+    storeAction() // Ne sera pas inliné, crée un objet
+}
+----
+
+*   **`crossinline`** :
+    *   Permet à une lambda passée à une fonction `inline` de ne *pas autoriser les retours non-locaux*.
+    *   Nécessaire lorsque la lambda pourrait être appelée dans un contexte qui ne permet pas un `return` direct (ex: dans un objet anonyme, un thread différent).
+
+.Exemple `crossinline`
+[source,kotlin]
+----
+inline fun exécuterEnregistrement(crossinline action: () -> Unit) {
+    // Un objet anonyme qui appelle la lambda
+    val runnable = object : Runnable {
+        override fun run() = action() // OK avec crossinline
+    }
+    Thread(runnable).start()
+    // Si action était juste "action()", return serait OK.
+    // Ici, le return non-local est interdit.
+}
+----
+
+[NOTE.speaker]
+--
+Parfois, on veut qu'une fonction soit `inline` mais pas tous ses paramètres lambdas. C'est là que `noinline` et `crossinline` entrent en jeu.
+
+`noinline` est utilisé pour un paramètre lambda que vous ne voulez pas inliner. Cela arrive si la lambda doit être stockée dans une variable, passée à une autre fonction non-inline, ou utilisée d'une manière qui ne permet pas l'inlining. Le compilateur traitera cette lambda comme une lambda "normale", créant une classe anonyme.
+
+`crossinline` est un peu plus subtil. Une lambda passée à une fonction `inline` peut normalement effectuer un retour non-local. Mais si cette lambda est appelée dans un contexte où un retour non-local n'a pas de sens ou est dangereux, comme à l'intérieur d'un objet anonyme ou un thread séparé, `crossinline` empêche ce comportement, vous forçant à gérer les retours localement.
+--
+[.notes]
+--
+*   **`noinline`** :
+    *   **Raison d'être** : Par défaut, tous les paramètres de fonction avec des types fonctionnels dans une fonction `inline` sont inlinés. Cependant, si vous avez besoin de traiter une lambda comme un objet régulier (par exemple, pour la stocker, la passer à une fonction non-inline, ou la manipuler d'une manière qui ne peut être inlinée), vous devez la marquer avec `noinline`.
+    *   **Conséquence** : La lambda marquée `noinline` se comporte comme une lambda non-inlinée : elle crée un objet `FunctionN` et subit les mêmes coûts de performance.
+    *   **Exemple** : Dans `effectuerOpérations`, `inlineAction` sera inlinée, mais `storeAction` ne le sera pas. Si on voulait vraiment stocker `storeAction` dans une liste pour l'exécuter plus tard, `noinline` serait nécessaire.
+*   **`crossinline`** :
+    *   **Raison d'être** : Une lambda passée à une fonction `inline` peut normalement effectuer un `return` non-local, c'est-à-dire sortir non seulement de la lambda mais aussi de la fonction qui l'appelle. Cependant, ce comportement est dangereux si la lambda est appelée de manière asynchrone ou dans un contexte où le `return` n'aurait pas de sens (ex: un autre thread, un objet anonyme). `crossinline` est une garantie que la lambda ne fera pas de retour non-local.
+    *   **Conséquence** : Si une lambda `crossinline` contient un `return`, ce doit être un `return` *local* (sortant uniquement de la lambda elle-même).
+    *   **Pourquoi est-ce nécessaire ?** : Le compilateur a besoin de cette garantie pour générer du code sûr. Si `action` dans `exécuterEnregistrement` pouvait faire un `return` non-local, cela tenterait de sortir de la fonction `exécuterEnregistrement` *après* qu'un nouveau thread a été lancé, ce qui est logiquement impossible et dangereux.
+*   **Synthèse** : `noinline` gère *quand* une lambda est inlinée, `crossinline` gère *comment* une lambda peut se comporter (`return` non-local) si elle est inlinée.
+--
+
+== Reification : L'Effacement de Type en JVM
+*   **Effacement de type (Type Erasure)** :
+    *   Une caractéristique de la JVM et de Java.
+    *   Les informations sur les types génériques (`List<String>`, `Map<Int, User>`) sont **effacées au runtime**.
+    *   Au runtime, `List<String>` et `List<Int>` sont juste `List`.
+*   **Conséquences** :
+    *   Impossible de faire `is T` ou `T::class.java` directement pour un paramètre de type générique `T`.
+    *   On ne peut pas créer des instances de `T` directement.
+
+.Exemple : Limitation de l'effacement de type
+[source,kotlin]
+----
+fun <T> vérifierType(item: Any) {
+    // Erreur de compilation : "Cannot check for instance of erased type: T"
+    // if (item is T) {
+    //    println("L'item est du type T")
+    // }
+
+    // Erreur de compilation : "Cannot use 'T' as reified type parameter"
+    // val kClass: KClass<T> = T::class
+    // println(kClass.simpleName)
+}
+----
+
+[NOTE.speaker]
+--
+Avant de parler de `reified`, il est crucial de comprendre l'effacement de type en JVM. C'est un concept fondamental. Lorsque votre code Kotlin est compilé en bytecode Java, les informations détaillées sur les types génériques – comme `String` dans `List<String>` – sont simplement effacées. Au runtime, la JVM ne "voit" qu'une `List` brute.
+
+Cela a des implications majeures pour nous, les développeurs Kotlin. On ne peut pas, par exemple, vérifier si un objet est d'un certain type générique `T` en utilisant `is T` directement. On ne peut pas non plus obtenir la classe (`KClass` ou `Class`) d'un type générique `T` au runtime.
+--
+[.notes]
+--
+*   **Effacement de type (Type Erasure)** :
+    *   **Origine** : C'est un compromis de conception lors de l'introduction des génériques en Java 5 pour assurer la rétrocompatibilité avec les versions antérieures de la JVM.
+    *   **Mécanisme** : Le compilateur remplace tous les paramètres de type générique par leur limite supérieure (généralement `Object` ou `Any?` en Kotlin) avant la compilation en bytecode.
+    *   **Exemple** : `List<String>` et `List<Int>` deviennent tous deux `List` (ou `java.util.List` plus précisément) dans le bytecode.
+*   **Conséquences directes** :
+    *   **Vérification de type** : Impossible de savoir si un objet est une instance d'un type générique `T` (`item is T`). Le compilateur ne sait pas quel est le type `T` au runtime.
+    *   **Accès à `Class<T>` ou `KClass<T>`** : Vous ne pouvez pas obtenir l'objet `Class` ou `KClass` d'un paramètre de type générique `T` (`T::class` ou `T::class.java`).
+    *   **Création d'instances** : Vous ne pouvez pas créer une nouvelle instance de `T` directement (ex: `T()`).
+*   **Solutions traditionnelles (sans `reified`)** :
+    *   Passer la `Class` ou `KClass` du type explicitement en paramètre : `fun <T> vérifierType(item: Any, type: KClass<T>) { if (type.isInstance(item)) { ... } }`. C'est une solution robuste mais qui complexifie l'appelant.
+    *   Travailler avec `Any` et faire des casts "unsafe" (à éviter si possible).
+*   **Pourquoi c'est un problème pour les développeurs** : Cela limite la flexibilité des fonctions génériques, surtout pour des opérations courantes comme la sérialisation/désérialisation, la réflexion ou la construction d'objets spécifiques à un type.
+--
+
+== Types `reified` : Une Solution Élégante
+*   Le mot-clé `reified` combiné à `inline` permet de **contourner l'effacement de type** pour les paramètres de type générique.
+*   Lorsque `inline fun <reified T>` est utilisé :
+    *   Le compilateur remplace le paramètre de type `T` par le type réel utilisé au point d'appel.
+    *   Les informations de type sont donc "disponibles" au runtime via des mécanismes de la JVM.
+*   Cela rend possible :
+    *   `item is T`
+    *   `T::class.java`
+    *   Création d'instances via constructeurs ou services.
+
+.Exemple : Utilisation de `reified`
+[source,kotlin]
+----
+inline fun <reified T> filtrerParType(liste: List<Any>): List<T> {
+    return liste.filterIsInstance<T>()
+}
+
+inline fun <reified T> obtenirNomDeClasse(): String {
+    return T::class.simpleName ?: "Inconnu"
+}
+
+fun main() {
+    val elements = listOf(1, "hello", 2.5, "world", 3)
+    val strings = filtrerParType<String>(elements)
+    println("Strings : $strings") // Strings : [hello, world]
+
+    val nom = obtenirNomDeClasse<Int>()
+    println("Nom de classe reified : $nom") // Nom de classe reified : Int
+}
+----
+
+[NOTE.speaker]
+--
+Heureusement, Kotlin offre une solution élégante à l'effacement de type grâce au mot-clé `reified`. `reified` ne peut être utilisé qu'avec une fonction `inline`. Le secret, c'est que puisque le code de la fonction `inline` est copié au point d'appel, le compilateur connaît le type réel qui est passé pour `T` à ce moment précis. Il peut donc insérer l'information de type manquante directement dans le bytecode.
+
+Cela nous permet de faire des choses qui seraient impossibles autrement : utiliser `is T` pour des vérifications de type génériques, obtenir l'objet `Class` d'un type générique (`T::class.java`), et même instancier des types génériques si un constructeur est accessible.
+--
+[.notes]
+--
+*   **Le mariage `inline` et `reified`** :
+    *   `reified` ne peut être utilisé qu'avec une fonction `inline`. C'est la nature de l'inlining qui permet au compilateur de "réifier" le type.
+    *   Quand une fonction `inline` avec un paramètre `reified` est appelée, le compilateur remplace les occurrences de `T` par le type concret (par exemple, `String`, `Int`) au point d'appel, y compris les références à `T::class.java`.
+*   **Avantages détaillés de `reified`** :
+    *   **`is T`** : Permet de vérifier si une instance est d'un type générique spécifique au runtime, ce qui est très puissant pour les filtres ou les validations.
+    *   **`T::class.java` / `T::class`** : Accéder à l'objet `Class` ou `KClass` du type `T` au runtime. Ceci est indispensable pour de nombreuses API Java qui requièrent un objet `Class` (ex: réflexion, désérialisation JSON avec GSON/Jackson, certaines APIs Android).
+    *   **Création d'instances** : Bien que `T()` ne soit pas directement possible sans un constructeur approprié, `T::class.java.newInstance()` ou `T::class.java.getConstructor().newInstance()` deviennent possibles.
+*   **Exemples pratiques** :
+    *   `filtrerParType<String>(elements)` : Ici, `T` est réifié en `String`. La fonction `filterIsInstance<T>()` utilise ce type réel pour filtrer les éléments de la liste.
+    *   `obtenirNomDeClasse<Int>()` : `T` est réifié en `Int`. `T::class.simpleName` donne "Int" au runtime.
+*   **Impact sur le code** : Le code devient plus concis et plus sûr, évitant les casts explicites ou le passage manuel d'objets `Class`.
+--
+
+== Quand Utiliser `reified` ?
+*   **Nécessité d'informations de type au runtime** :
+    *   Vérifications de type (`is T`).
+    *   Accès à la classe (`T::class.java`) pour les APIs Java/Android.
+    *   Sérialisation/désérialisation (ex: GSON, Jackson).
+    *   Création d'instances dynamiques.
+*   **Exemples courants de la bibliothèque standard** :
+    *   `filterIsInstance<T>()` : Filtre une collection en gardant seulement les éléments du type `T`.
+    *   `findAnnotation<T>()` : Trouver une annotation d'un type spécifique.
+
+.Exemple d'utilisation avancée avec `reified`
+[source,kotlin]
+----
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+
+class ApiResponse<T>(val data: T, val status: String)
+
+// Pas besoin de passer le TypeToken explicitement !
+inline fun <reified T> Gson.fromJsonReified(json: String): T {
+    return this.fromJson(json, object : TypeToken<T>() {}.type)
+}
+
+fun main() {
+    val gson = Gson()
+    val jsonString = """{"data": {"name": "Alice"}, "status": "ok"}"""
+    
+    data class User(val name: String)
+    val response = gson.fromJsonReified<ApiResponse<User>>(jsonString)
+    println("Nom d'utilisateur : ${response.data.name}") // Alice
+}
+----
+
+[NOTE.speaker]
+--
+Maintenant que nous avons vu ce que `reified` fait, il est important de savoir quand l'utiliser. La règle d'or est de l'utiliser uniquement lorsque vous avez *absolument besoin* des informations de type générique au runtime. Cela inclut des scénarios comme les vérifications de type (`is T`), l'accès à l'objet `Class` pour interagir avec des APIs Java, ou la sérialisation/désérialisation où le type cible doit être connu.
+
+La bibliothèque standard Kotlin elle-même utilise `reified` dans des fonctions comme `filterIsInstance`. L'exemple que je montre ici est très puissant : il simplifie l'utilisation de `Gson` pour la désérialisation de types génériques complexes, évitant le boilerplate du `TypeToken` manuel.
+--
+[.notes]
+--
+*   **Scénarios d'utilisation courants pour `reified`** :
+    *   **Réflexion et APIs Java** : Quand une API Java attend un objet `Class<?>` ou `java.lang.reflect.Type` pour un type générique.
+    *   **Filtrage et casting** : Pour des fonctions comme `filterIsInstance` ou des casts sécurisés `as T`.
+    *   **Création d'objets** : Pour instancier un objet du type `T` lorsque `T` est une classe concrète avec un constructeur accessible.
+    *   **Sérialisation / Désérialisation** : Dans les bibliothèques comme GSON ou Jackson, `reified` peut simplifier la désérialisation de types génériques complexes (par exemple, `List<MyObject>` ou `ApiResponse<User>`). L'exemple `fromJsonReified` illustre parfaitement cela.
+*   **Mises en garde et alternatives** :
+    *   **Ne pas surutiliser** : Si vous n'avez pas besoin des informations de type au runtime, n'utilisez pas `reified`. La solution `inline` seule (pour l'optimisation des lambdas) est souvent suffisante.
+    *   **Complexité potentielle** : `reified` peut parfois masquer la complexité sous-jacente ou rendre le code plus difficile à raisonner pour ceux qui ne sont pas familiers avec le concept.
+    *   **Alternatives classiques** : Si `reified` n'est pas approprié, l'alternative est de passer explicitement l'objet `KClass<T>` ou `Class<T>` en argument de la fonction générique. Cela est plus verbeux pour l'appelant mais ne requiert pas `inline`.
+*   **En résumé** : `reified` est un outil puissant pour des cas d'usage spécifiques où l'information de type générique au runtime est essentielle. Son utilisation doit être justifiée par un besoin clair.
+--
+
+== Résumé et Questions
+*   **`inline`** :
+    *   Optimise les fonctions d'ordre supérieur avec des lambdas.
+    *   Élimine l'overhead des objets lambdas et des appels virtuels.
+    *   Potentiellement augmente la taille du bytecode (code bloat).
+    *   Modificateurs : `noinline` (ne pas inliner), `crossinline` (interdit les retours non-locaux).
+*   **`reified`** :
+    *   Combiné à `inline`, contourne l'effacement de type en JVM.
+    *   Permet d'accéder aux informations de type générique au runtime (`is T`, `T::class.java`).
+    *   Utile pour les APIs Java/Android, la sérialisation, les filtres de type.
+*   Utilisez ces fonctionnalités **judicieusement** et après avoir mesuré un besoin réel.
+
+Merci de votre attention !
+
+**Des questions ?**
+
+[NOTE.speaker]
+--
+Pour résumer, nous avons vu que les lambdas, bien que pratiques, peuvent introduire un coût de performance dû à la création d'objets. `inline` est là pour optimiser cela en insérant le code directement au point d'appel, mais il faut être attentif au code bloat. Nous avons également exploré `noinline` et `crossinline` pour contrôler ce comportement.
+
+Ensuite, nous avons abordé l'effacement de type en JVM, une limitation fondamentale pour les génériques. `reified`, toujours en conjonction avec `inline`, nous permet de récupérer ces informations de type au runtime, ouvrant des possibilités pour des APIs plus élégantes et des logiques basées sur les types.
+
+La clé est d'utiliser ces outils avec discernement. Ils sont puissants mais peuvent avoir des implications sur la taille du bytecode ou la complexité du code. N'oubliez pas de toujours mesurer l'impact de vos optimisations.
+
+Je vous remercie pour votre attention. Je suis maintenant prêt à répondre à vos questions.
+--
+[.notes]
+--
+*   **Points clés de `inline`** :
+    *   **Motivation** : Réduire l'overhead des objets `FunctionN` créés par les lambdas, améliorer la performance.
+    *   **Mécanisme** : Le compilateur "copie-colle" le code de la fonction `inline` et de ses lambdas aux points d'appel.
+    *   **Avantages** : Moins d'allocations, moins de GC, appels directs, meilleures optimisations JIT, retours non-locaux.
+    *   **Inconvénients** : `code bloat` (augmentation de la taille du bytecode), impact sur la compilation.
+    *   **Modificateurs** :
+        *   `noinline` : Empêche l'inlining d'un paramètre lambda spécifique (force la création d'un objet).
+        *   `crossinline` : Interdit les retours non-locaux pour une lambda inlinée, garantissant un comportement sûr.
+*   **Points clés de `reified`** :
+    *   **Motivation** : Contourner l'effacement de type de la JVM pour les paramètres de type générique.
+    *   **Mécanisme** : Le compilateur injecte le type réel au point d'appel, rendant l'information de type disponible au runtime.
+    *   **Condition** : Ne peut être utilisé qu'avec des fonctions `inline`.
+    *   **Avantages** : Permet `is T`, `T::class.java`, et la création d'instances pour les types génériques au runtime. Simplifie le code pour des APIs réflexives ou de sérialisation.
+*   **Recommandations finales** :
+    *   **Mesurer la performance** : N'appliquez `inline` ou `reified` que si vous avez une preuve (profiling) d'un problème de performance ou d'une limitation de type.
+    *   **Comprendre l'impact** : Soyez conscient des compromis (taille du bytecode, etc.).
+    *   **Décompilateur Kotlin Bytecode** : C'est un excellent outil pour comprendre ce que le compilateur Kotlin fait réellement sous le capot. Utilisez-le pour voir l'effet de `inline` et `reified`.
+*   **Exercice** : Prenez un petit morceau de code où vous utilisez une lambda fréquemment, profiler-le, puis ajoutez `inline` à la fonction d'ordre supérieur et profilez-le à nouveau. Observez la différence. Faites de même avec un besoin d'information de type et implémentez une solution avec et sans `reified`.
+--

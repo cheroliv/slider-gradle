@@ -1,0 +1,323 @@
+= understand gradle
+cheroliv <cheroliv@mail.net>
+:revealjs_theme: dark
+:revealjs_slideNumber: c/t
+:revealjs_width: 1408
+:revealjs_height: 792
+:revealjs_controls: true
+:revealjs_controlsLayout: edges
+:revealjs_history: true
+:revealjs_fragmentInURL: true
+:source-highlighter: rouge
+
+== Agenda
+[NOTE.speaker]
+--
+Bonjour à tous et bienvenue ! Dans cette présentation, nous allons rapidement passer en revue ce que nous aborderons aujourd'hui pour vous aider à comprendre Gradle. Nous commencerons par les bases, passerons par ses concepts clés et son utilisation pratique, et enfin, nous examinerons ses avantages.
+--
+[.notes]
+--
+Décrivez brièvement le plan de la session pour définir les attentes de l'audience. Mettez l'accent sur une approche progressive : du 'quoi' au 'comment' et 'pourquoi'.
+
+*   **Objectif** : Fournir une compréhension claire de Gradle et de ses avantages.
+*   **Approche** :
+    *   Commencer par les définitions et concepts.
+    *   Aborder la structure et les outils pratiques.
+    *   Conclure par les bénéfices et les prochaines étapes.
+--
+
+*   Qu'est-ce que Gradle ?
+*   Les Concepts Clés
+*   Structure d'un Projet
+*   Le Gradle Wrapper
+*   Gérer les Dépendances
+*   Exécuter des Tâches Courantes
+*   Avantages de Gradle
+*   Conclusion et Prochaines Étapes
+
+== Qu'est-ce que Gradle ?
+[NOTE.speaker]
+--
+Gradle est un outil d'automatisation de build open-source reconnu pour sa flexibilité et ses performances. Il automatise le processus de compilation, de test, de publication et de déploiement de logiciels. Principalement utilisé pour les langages JVM, il prend en charge un large éventail de plateformes et de langages via son écosystème de plugins. Gradle aide à gérer le cycle de vie complet d'un projet logiciel.
+--
+[.notes]
+--
+Mettre l'accent sur la nature d'automatisation, l'approche 'code-first' (DSL), et son utilisation polyvalente au-delà du simple build.
+
+*   **Définition** : Outil d'automatisation de build open-source et flexible.
+*   **Fonctionnalités principales** :
+    *   Automatise la compilation, le test, la publication et le déploiement.
+    *   Prise en charge de divers langages (JVM, C++, Python, etc.) via plugins.
+    *   Gestion du cycle de vie complet d'un projet.
+*   **Approche DSL** : Utilise un langage spécifique au domaine (DSL) basé sur Groovy ou Kotlin pour des scripts de build expressifs et déclaratifs.
+--
+
+Gradle est un outil d'automatisation de build open-source. Il gère le cycle de vie complet d'un projet logiciel.
+Il est reconnu pour sa flexibilité, ses performances et son extensibilité via un riche écosystème de plugins.
+
+*   Automatise compilation, tests, publication et déploiement.
+*   Utilise un DSL (Domain Specific Language) basé sur Groovy ou Kotlin.
+*   Principalement utilisé pour les projets JVM, mais supporte d'autres langages.
+
+== Les Concepts Clés de Gradle
+[NOTE.speaker]
+--
+Pour maîtriser Gradle, il est essentiel de comprendre ses concepts fondamentaux. Chaque build est composé de projets, qui sont à leur tour composés de tâches. Les plugins étendent les fonctionnalités de Gradle et sont configurés via un DSL, Domain Specific Language, généralement en Groovy ou Kotlin.
+--
+[.notes]
+--
+Expliquer les concepts fondamentaux de Gradle.
+
+*   **Projet (Project)**:
+    *   Représente une entité à construire (e.g., une application, une bibliothèque, un fichier JAR).
+    *   Un build peut contenir un ou plusieurs projets (projets multi-modules).
+    *   Chaque projet possède ses propres tâches et dépendances.
+*   **Tâche (Task)**:
+    *   Une unité de travail atomique et exécutable par Gradle (e.g., `compileJava`, `test`, `copyFiles`).
+    *   Les tâches peuvent avoir des dépendances entre elles, définissant l'ordre d'exécution.
+*   **Plugin (Plugin)**:
+    *   Ajoute des fonctionnalités, des tâches et des conventions préconfigurées à un projet.
+    *   Exemples : `java` (pour compiler du code Java), `application` (pour créer des applications exécutables).
+*   **DSL (Domain Specific Language)**:
+    *   Le langage utilisé pour écrire les scripts de build.
+    *   Basé sur Groovy ou Kotlin, il permet une description concise et expressive des builds.
+--
+
+Comprendre ces concepts est fondamental pour utiliser Gradle efficacement :
+
+*   **Projet** : Une entité à construire (ex: une application, une bibliothèque). Un build peut avoir plusieurs projets.
+*   **Tâche** : Une unité de travail atomique (ex: compiler le code, exécuter les tests). Les tâches ont des dépendances.
+*   **Plugin** : Ajoute des tâches et des conventions préconfigurées (ex: `java`, `application`).
+*   **DSL (Domain Specific Language)** : Le langage pour décrire le build, généralement en Groovy ou Kotlin.
+
+== Structure d'un Projet Gradle
+[NOTE.speaker]
+--
+Un projet Gradle typique suit une structure conventionnelle qui facilite la gestion. Les fichiers clés sont `build.gradle` pour la configuration du build, `settings.gradle` pour les projets multi-modules, et le répertoire `src` pour le code source et les ressources.
+--
+[.notes]
+--
+Afficher un exemple de structure et expliquer le rôle de chaque élément clé.
+
+*   **Exemple de structure de répertoire** :
+    ```
+    mon-projet/
+    ├── build.gradle              // Fichier de configuration du build pour ce projet
+    ├── settings.gradle           // Définit les sous-projets dans un build multi-projets
+    ├── gradlew                   // Script wrapper pour Linux/macOS
+    ├── gradlew.bat               // Script wrapper pour Windows
+    ├── gradle/
+    │   └── wrapper/
+    │       ├── gradle-wrapper.jar
+    │       └── gradle-wrapper.properties
+    └── src/                      // Répertoire standard pour le code source et les ressources
+        ├── main/
+        │   ├── java/             // Code source Java principal
+        │   └── resources/        // Ressources principales (fichiers de config, etc.)
+        └── test/
+            ├── java/             // Code source des tests
+            └── resources/        // Ressources des tests
+    ```
+*   **`build.gradle`** : Le cœur de la configuration du projet, où sont déclarées les tâches, les dépendances et les plugins.
+*   **`settings.gradle`** : Utilisé dans les projets multi-modules pour déclarer les sous-projets inclus dans le build.
+*   **`gradlew` / `gradlew.bat`** : Les scripts du Gradle Wrapper, essentiels pour garantir la reproductibilité du build.
+*   **`src/`** : Suit les conventions Maven pour organiser le code source et les ressources (main, test).
+--
+
+Un projet Gradle suit une structure standardisée :
+
+*   `build.gradle` : Fichier principal de configuration du build.
+*   `settings.gradle` : Définit les sous-projets dans un build multi-modules.
+*   `gradlew` / `gradlew.bat` : Les scripts du Gradle Wrapper.
+*   `src/` : Contient le code source et les ressources.
+    *   `src/main/java` : Code source principal.
+    *   `src/test/java` : Code source des tests.
+
+== Le Gradle Wrapper
+[NOTE.speaker]
+--
+Le Gradle Wrapper est un script essentiel qui permet à quiconque d'exécuter un build Gradle avec la version spécifiée de Gradle, sans avoir à l'installer manuellement. Cela garantit la cohérence des builds entre différents environnements de développement et de CI/CD.
+--
+[.notes]
+--
+Souligner l'importance du Wrapper pour la reproductibilité et la simplicité.
+
+*   **Objectif** : Garantir la reproductibilité des builds.
+*   **Fonctionnement** :
+    *   Le Wrapper est un script ( shell pour Unix/macOS, batch pour Windows) inclus dans le projet.
+    *   Il télécharge et utilise la version de Gradle spécifiée dans `gradle/wrapper/gradle-wrapper.properties` si elle n'est pas déjà présente.
+    *   Les développeurs et les systèmes de CI/CD utilisent toujours la même version de Gradle.
+*   **Avantages** :
+    *   **Consistance** : Tous les utilisateurs utilisent la même version de Gradle.
+    *   **Simplicité** : Pas besoin d'installer Gradle manuellement.
+    *   **Isolation** : Évite les conflits de version de Gradle sur une machine.
+    *   **Facilité d'intégration** : Simplifie l'intégration pour les nouveaux contributeurs.
+--
+
+Le Gradle Wrapper (`gradlew`) est un script essentiel pour la cohérence des builds :
+
+*   Permet d'exécuter un build Gradle sans installation manuelle.
+*   Garantit que tous les utilisateurs utilisent la même version de Gradle.
+*   Assure la reproductibilité des builds sur différents environnements.
+*   Télécharge automatiquement la version de Gradle requise si nécessaire.
+
+== Gérer les Dépendances
+[NOTE.speaker]
+--
+La gestion des dépendances est une pierre angulaire de tout projet logiciel. Gradle excelle dans ce domaine, permettant de déclarer facilement les bibliothèques et frameworks nécessaires, qui sont ensuite résolus et téléchargés depuis des dépôts comme Maven Central. On distingue différentes configurations comme `implementation`, `testImplementation`, etc.
+--
+[.notes]
+--
+Exemple de déclaration de dépendance dans `build.gradle` et explication des types.
+
+*   **Déclaration dans `build.gradle`** :
+    ```groovy
+    dependencies {
+        // Dépendances de compilation/runtime pour le code principal
+        implementation 'org.springframework.boot:spring-boot-starter-web:2.7.5'
+        // Dépendances spécifiques aux tests
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+        // Dépendances d'annotation-processing (ex: Lombok)
+        annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    }
+
+    repositories {
+        mavenCentral() // Déclare le dépôt Maven Central pour résoudre les dépendances
+    }
+    ```
+*   **Configurations de dépendances courantes** :
+    *   `implementation` : Dépendances nécessaires à la compilation et au runtime du code principal. Ne sont pas exposées aux projets consommateurs.
+    *   `api` : Similaire à `implementation`, mais expose les dépendances aux projets consommateurs (pour les bibliothèques).
+    *   `testImplementation` : Dépendances nécessaires à la compilation et au runtime des tests.
+    *   `runtimeOnly` : Dépendances nécessaires uniquement au runtime, pas à la compilation.
+    *   `annotationProcessor` : Pour les processeurs d'annotations (ex: Lombok, MapStruct).
+*   **Dépôts (Repositories)** : Endroits où Gradle cherche les dépendances (ex: `mavenCentral()`, `google()`, `maven { url '...' }`).
+--
+
+Gradle simplifie la gestion des dépendances d'un projet.
+
+*   Déclarez facilement les bibliothèques et frameworks nécessaires.
+*   Les dépendances sont résolues et téléchargées depuis des dépôts (ex: Maven Central).
+*   Différentes configurations (`implementation`, `testImplementation`) gèrent le scope des dépendances.
+
+.Exemple dans `build.gradle` (Groovy DSL)
+[source,groovy]
+----
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web:2.7.5'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+}
+
+repositories {
+    mavenCentral()
+}
+----
+
+== Exécuter des Tâches Courantes
+[NOTE.speaker]
+--
+Gradle simplifie l'exécution des tâches courantes grâce à des commandes claires. Par exemple, `gradlew build` compile et teste votre projet, `gradlew clean` supprime les fichiers générés, et `gradlew run` exécute votre application si le plugin approprié est configuré.
+--
+[.notes]
+--
+Démontrer ou lister des commandes fréquentes pour interagir avec un projet Gradle.
+
+*   **`./gradlew tasks`** :
+    *   Affiche la liste de toutes les tâches disponibles pour le projet actuel.
+    *   Utile pour découvrir les capacités du build.
+*   **`./gradlew build`** :
+    *   Exécute un build complet du projet.
+    *   Inclut généralement la compilation, l'exécution des tests, et le packaging (ex: création d'un JAR/WAR).
+*   **`./gradlew clean`** :
+    *   Supprime le répertoire de build (`build/`) et tous les fichiers générés par le build.
+    *   Utile pour s'assurer d'un build propre.
+*   **`./gradlew run`** :
+    *   Si le plugin `application` est appliqué, cette tâche exécute l'application principale.
+*   **`./gradlew test`** :
+    *   Exécute uniquement les tests unitaires et d'intégration définis dans le projet.
+*   **`./gradlew <taskName>`** :
+    *   Vous pouvez exécuter n'importe quelle tâche spécifique par son nom.
+*   **`./gradlew --stop`** :
+    *   Arrête le démon Gradle en cours d'exécution.
+--
+
+Gradle offre des commandes simples pour les tâches les plus fréquentes :
+
+*   `./gradlew tasks` : Liste toutes les tâches disponibles.
+*   `./gradlew build` : Compile, teste et package le projet.
+*   `./gradlew clean` : Supprime les fichiers générés par le build.
+*   `./gradlew run` : Exécute l'application (si configuré).
+*   `./gradlew test` : Exécute uniquement les tests.
+
+== Pourquoi choisir Gradle ? Avantages
+[NOTE.speaker]
+--
+Pour résumer, Gradle est un outil puissant pour plusieurs raisons. Sa flexibilité, permise par son DSL basé sur Groovy ou Kotlin, est un atout majeur. Il offre des performances remarquables grâce à son cache de build et l'exécution incrémentale. Son écosystème de plugins le rend hautement extensible, et il excelle dans la gestion de projets multi-modules complexes.
+--
+[.notes]
+--
+Détailler les bénéfices de l'utilisation de Gradle.
+
+*   **Flexibilité et expressivité** :
+    *   Le DSL (Groovy ou Kotlin) permet de créer des builds complexes de manière claire et concise.
+    *   Grande liberté pour adapter le build à des besoins spécifiques.
+*   **Performances élevées** :
+    *   **Cache de build** : Réutilise les sorties de tâches précédentes, même entre différents builds ou machines.
+    *   **Exécution incrémentale** : N'exécute que les tâches dont les inputs ont changé.
+    *   **Exécution parallèle** : Permet l'exécution simultanée de tâches indépendantes.
+    *   **Démon Gradle** : Processus en arrière-plan qui réduit le temps de démarrage.
+*   **Extensibilité** :
+    *   Vaste écosystème de plugins officiels et communautaires.
+    *   Facile de créer ses propres plugins et tâches personnalisées.
+*   **Scalabilité** :
+    *   Excellent support pour les builds multi-projets/multi-modules.
+    *   Gère efficacement les projets de grande taille et complexes.
+*   **Écosystème riche** :
+    *   Intégration facile avec les IDE (IntelliJ IDEA, Eclipse, VS Code).
+    *   Bon support pour les outils de CI/CD.
+--
+
+Gradle est un choix privilégié pour ses nombreux avantages :
+
+*   **Flexibilité** : DSL puissant et expressif (Groovy/Kotlin) pour des builds personnalisés.
+*   **Performance** : Cache de build, exécution incrémentale et parallélisation des tâches.
+*   **Extensibilité** : Riche écosystème de plugins et possibilité de créer des tâches sur mesure.
+*   **Scalabilité** : Idéal pour les projets multi-modules et les builds complexes.
+*   **Communauté** : Large support et intégration avec les IDEs et outils CI/CD.
+
+== Conclusion et Prochaines Étapes
+[NOTE.speaker]
+--
+Pour conclure, nous avons parcouru les fondamentaux de Gradle : ce que c'est, ses éléments constitutifs comme le DSL, les tâches, les projets et les plugins, comment structurer vos scripts de build, utiliser le Gradle Wrapper pour des builds cohérents, exécuter les tâches courantes et gérer les dépendances. Nous avons également mis en évidence ses principaux avantages en termes de flexibilité, de performances et d'évolutivité. Je vous encourage vivement à l'expérimenter sur vos propres projets.
+--
+[.notes]
+--
+Récapituler les points clés abordés et encourager l'apprentissage continu. Suggérer des ressources supplémentaires.
+
+*   **Points clés récapitulés** :
+    *   Gradle est un outil d'automatisation de build flexible et performant.
+    *   Les concepts de projets, tâches, plugins et DSL sont centraux.
+    *   Le Gradle Wrapper assure la cohérence des builds.
+    *   La gestion des dépendances est puissante.
+    *   Avantages : flexibilité, performance, extensibilité, scalabilité.
+*   **Prochaines étapes** :
+    *   **Pratique** : Créez un petit projet Gradle ou migrez un projet Maven/Ant existant.
+    *   **Documentation officielle** : Approfondissez les concepts et explorez les plugins spécifiques à vos besoins. (https://docs.gradle.org/)
+    *   **Tutoriels et exemples** : Recherchez des exemples de builds pour des cas d'utilisation spécifiques.
+    *   **Communauté** : Participez aux forums et discussions pour obtenir de l'aide et partager votre expérience.
+--
+
+Nous avons exploré les fondements de Gradle :
+
+*   **Qu'est-ce que c'est** : Un outil d'automatisation de build flexible.
+*   **Concepts clés** : Projets, Tâches, Plugins, DSL.
+*   **Pratique** : Structure du projet, Gradle Wrapper, gestion des dépendances, tâches courantes.
+*   **Avantages** : Flexibilité, performances, extensibilité et scalabilité.
+
+*Prochaines étapes :*
+
+*   Expérimentez Gradle sur vos propres projets.
+*   Consultez la documentation officielle de Gradle.
+*   Explorez des tutoriels en ligne et des exemples de plugins.

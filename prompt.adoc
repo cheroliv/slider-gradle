@@ -1,0 +1,1556 @@
+= Plugin slider gradle
+
+https://github.com/pages-content/slides[repo github]
+
+le but est de passer la tache TASK_ASCIIDOCTOR_REVEALJS dans le buildscript build.gradle.kts à la racine vers le plugin dans le fichier "buildSrc/src/main/kotlin/slides/SlidesBuildSrcPlugin.kt".
+
+.voici les sources :
+* buildscript racine :
+[source,kotlin]
+----
+plugins { alias(libs.plugins.slider) }
+apply<slides.SlidesBuildSrcPlugin>()
+
+slider { configPath = file("slides-context.yml").absolutePath }
+
+----
+
+* toml dependencies
+[source,toml]
+----
+[versions]
+slider = "0.0.0"
+
+[libraries]
+
+[plugins]
+slider = { id = "com.cheroliv.slider", version.ref = "slider" }
+
+[bundles]
+----
+
+* settings.gradle.kts
+[source,kotlin]
+----
+pluginManagement.repositories{
+    mavenLocal()
+    gradlePluginPortal()
+}
+plugins { id("org.gradle.toolchains.foojay-resolver-convention") version ("0.8.0") }
+@Suppress("UnstableApiUsage")
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+}
+rootProject.name = "slider-gradle"
+----
+
+* gradle.properties
+[source,properties]
+----
+gradle.version=9.3.1
+org.gradle.daemon.performance.disable-logging=true
+
+toolchains.version=1.0.0
+workspace_config_path=~/workspace/office/settings/config.yml
+workspace_path=~/workspace/office/settings/workspace.yml
+artifact.group=workspace-engine
+artifact.version=0.0.1
+kotlin.version=2.1.21
+kotlin.code.style=official
+kotlin.mpp.enableGranularSourceSetsMetadata=true
+kotlin.native.enableDependencyPropagation=false
+kotlin.js.generate.executable.default=false
+android.useAndroidX=true
+kotlin.js.yarn=false
+kotlin.js.browser.karma.browsers=firefox,chromium
+node-gradle.version=7.1.0
+jbake-gradle.version=5.5.0
+jib_from_image=eclipse-temurin@sha256:fabe27bd9db502d484a11d3f571c2f4ef7bba4a172527084d939935358fb06c4
+langchain4j.version=1.0.0-beta1
+langchain4j-extension.version=1.0.0-beta1
+asciidoctor-gradle.version=5.0.0-alpha.1
+jackson.version=2.17.2
+arrow-kt.version=1.2.4
+jgit.version=6.10.0.202406032230-r
+managed_config_path=slides-context.yml
+----
+
+* buildSrc/build.gradle.kts
+[source,kotlin]
+----
+import java.io.File.separator
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+plugins { `kotlin-dsl` }
+
+kotlin { jvmToolchain(17) }
+
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+
+repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+    listOf(
+        "https://repo.gradle.org/gradle/libs-releases/",
+        "https://plugins.gradle.org/m2/",
+        "https://maven.xillio.com/artifactory/libs-release/",
+        "https://mvnrepository.com/repos/springio-plugins-release",
+        "https://archiva-repository.apache.org/archiva/repository/public/"
+    ).forEach(::maven)
+}
+
+
+val asciidoctorGradleVersionKey = "asciidoctor-gradle.version"
+val jacksonVersionKey = "jackson.version"
+val arrowKtVersionKey = "arrow-kt.version"
+val jgitVersionKey = "jgit.version"
+val langchain4jVersionKey = "langchain4j.version"
+val langchain4jExtensionVersionKey = "langchain4j-extension.version"
+
+val Project.versions: Map<String, String>
+    get() = mapOf(
+        asciidoctorGradleVersionKey to project.properties[asciidoctorGradleVersionKey].toString(),
+        jacksonVersionKey to project.properties[jacksonVersionKey].toString(),
+        arrowKtVersionKey to project.properties[arrowKtVersionKey].toString(),
+        jgitVersionKey to project.properties[jgitVersionKey].toString(),
+        langchain4jVersionKey to project.properties[langchain4jVersionKey].toString(),
+        langchain4jExtensionVersionKey to project.properties[langchain4jExtensionVersionKey].toString()
+    )
+
+dependencies {
+    setOf(
+        "com.github.node-gradle:gradle-node-plugin:7.0.1",
+        "jakarta.xml.bind:jakarta.xml.bind-api:4.0.2",
+        "com.fasterxml.jackson.module:jackson-module-kotlin:${versions[jacksonVersionKey]}",
+        "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${versions[jacksonVersionKey]}",
+        "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions[jacksonVersionKey]}",
+        "com.fasterxml.jackson.module:jackson-module-jsonSchema:${versions[jacksonVersionKey]}",
+        "org.eclipse.jgit:org.eclipse.jgit:${versions[jgitVersionKey]}",
+        "org.eclipse.jgit:org.eclipse.jgit.archive:${versions[jgitVersionKey]}",
+        "org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:${versions[jgitVersionKey]}",
+        "io.arrow-kt:arrow-core:${versions[arrowKtVersionKey]}",
+        "io.arrow-kt:arrow-fx-coroutines:${versions[arrowKtVersionKey]}",
+        "io.arrow-kt:arrow-integrations-jackson-module:0.14.1",
+        "org.apache.poi:poi-ooxml:5.2.5",
+        "org.slf4j:slf4j-simple:2.0.16",
+        "org.asciidoctor:asciidoctorj-diagram:2.3.1",
+        "org.asciidoctor:asciidoctor-gradle-jvm-slides:${versions[asciidoctorGradleVersionKey]}",
+        "org.asciidoctor:asciidoctor-gradle-base:${versions[asciidoctorGradleVersionKey]}",
+        "org.asciidoctor:asciidoctor-gradle-jvm-gems:${versions[asciidoctorGradleVersionKey]}",
+        "com.burgstaller:okhttp-digest:1.10",
+        "org.ysb33r.gradle:grolifant:0.12.1",
+        "com.avast.gradle:gradle-docker-compose-plugin:0.17.6",
+        "org.gradle:gradle-tooling-api:8.6",
+        "dev.langchain4j:langchain4j:${versions[langchain4jVersionKey]}",
+        "dev.langchain4j:langchain4j-ollama:${versions[langchain4jExtensionVersionKey]}",
+        "dev.langchain4j:langchain4j-hugging-face:${versions[langchain4jExtensionVersionKey]}",
+        "dev.langchain4j:langchain4j-google-ai-gemini:${versions[langchain4jExtensionVersionKey]}",
+        "dev.langchain4j:langchain4j-mistral-ai:${versions[langchain4jExtensionVersionKey]}",
+        "dev.langchain4j:langchain4j-pgvector:${versions[langchain4jExtensionVersionKey]}",
+    ).forEach(::implementation)
+    runtimeOnly("com.sun.xml.bind:jaxb-impl:4.0.5")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+val functionalTestSourceSet: SourceSet = sourceSets.create("functionalTest")
+
+configurations["functionalTestImplementation"].extendsFrom(configurations["testImplementation"])
+configurations["functionalTestRuntimeOnly"].extendsFrom(configurations["testRuntimeOnly"])
+
+val functionalTest by tasks.registering(Test::class) {
+    testClassesDirs = functionalTestSourceSet.output.classesDirs
+    classpath = functionalTestSourceSet.runtimeClasspath
+    useJUnitPlatform()
+}
+
+tasks.named<Task>("check") { dependsOn(functionalTest) }
+
+tasks.named<Test>("test") { useJUnitPlatform() }
+
+tasks.withType<JavaExec> {
+    jvmArgs = setOf(
+        "--add-modules=jdk.incubator.vector",
+        "--enable-native-access=ALL-UNNAMED",
+        "--enable-preview"
+    ).toList()
+}
+
+tasks.register<Exec>("reportTests") {
+    group = "verification"
+    description = "Check buildSrc project classes then show report in firefox"
+    dependsOn("check")
+    commandLine(
+        "firefox",
+        "--new-tab",
+        "build${separator}reports${separator}tests${separator}test${separator}index.html"
+            .run(layout.projectDirectory.asFile.toPath()::resolve)
+            .toAbsolutePath(),
+    )
+}
+
+tasks.register<Exec>("reportFunctionalTests") {
+    group = "verification"
+    description = "Functionally check buildSrc project classes then show report in firefox"
+    dependsOn("check")
+    commandLine(
+        "firefox",
+        "--new-tab",
+        "build${separator}reports${separator}tests${separator}functionalTest${separator}index.html"
+            .run(layout.projectDirectory.asFile.toPath()::resolve)
+            .toAbsolutePath(),
+    )
+}
+
+----
+
+* buildSrc/gradle.properties
+[source,properties]
+----
+# suppress inspection "SpellCheckingInspection"
+#kotlin.daemon.jvmargs=-Xmx1024
+workspace_config_path=~/workspace/office/settings/config.yml
+workspace_path=~/workspace/office/settings/workspace.yml
+artifact.group=workspace-engine
+artifact.version=0.0.1
+kotlin.version=2.1.21
+kotlin.code.style=official
+kotlin.mpp.enableGranularSourceSetsMetadata=true
+kotlin.native.enableDependencyPropagation=false
+kotlin.js.generate.executable.default=false
+android.useAndroidX=true
+kotlin.js.yarn=false
+kotlin.js.browser.karma.browsers=firefox,chromium
+node-gradle.version=7.1.0
+jbake-gradle.version=5.5.0
+jib_from_image=eclipse-temurin@sha256:fabe27bd9db502d484a11d3f571c2f4ef7bba4a172527084d939935358fb06c4
+langchain4j.version=1.0.0-beta1
+langchain4j-extension.version=1.0.0-beta1
+asciidoctor-gradle.version=4.0.0-alpha.1
+jackson.version=2.17.2
+arrow-kt.version=1.2.4
+jgit.version=6.10.0.202406032230-r
+----
+
+* buildSrc/src/main/kotlin/slides/SlidesPlugin.kt
+[source,kotlin]
+----
+package slides
+
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+import org.asciidoctor.gradle.jvm.slides.AsciidoctorJRevealJSTask
+import org.asciidoctor.gradle.jvm.slides.RevealJSExtension
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.jvm.toolchain.JvmVendorSpec.ADOPTIUM
+import org.gradle.kotlin.dsl.getByName
+import org.gradle.kotlin.dsl.getByType
+import org.gradle.kotlin.dsl.register
+import org.gradle.kotlin.dsl.repositories
+import org.gradle.kotlin.dsl.support.serviceOf
+import slides.Slides.RevealJsSlides.BUILD_GRADLE_KEY
+import slides.Slides.RevealJsSlides.CODERAY_CSS_KEY
+import slides.Slides.RevealJsSlides.DOCINFO_KEY
+import slides.Slides.RevealJsSlides.ENDPOINT_URL_KEY
+import slides.Slides.RevealJsSlides.GROUP_TASK_SLIDER
+import slides.Slides.RevealJsSlides.ICONS_KEY
+import slides.Slides.RevealJsSlides.IDPREFIX_KEY
+import slides.Slides.RevealJsSlides.IDSEPARATOR_KEY
+import slides.Slides.RevealJsSlides.IMAGEDIR_KEY
+import slides.Slides.RevealJsSlides.REVEALJS_HISTORY_KEY
+import slides.Slides.RevealJsSlides.REVEALJS_SLIDENUMBER_KEY
+import slides.Slides.RevealJsSlides.REVEALJS_THEME_KEY
+import slides.Slides.RevealJsSlides.REVEALJS_TRANSITION_KEY
+import slides.Slides.RevealJsSlides.SETANCHORS_KEY
+import slides.Slides.RevealJsSlides.SOURCE_HIGHLIGHTER_KEY
+import slides.Slides.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
+import slides.Slides.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
+import slides.Slides.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
+import slides.Slides.RevealJsSlides.TOC_KEY
+import slides.Slides.Slide.DEFAULT_SLIDES_FOLDER
+import slides.Slides.Slide.IMAGES
+import slides.Slides.Slide.SLIDES_FOLDER
+import java.io.File.separator
+
+object Slides {
+    object RevealJsSlides {
+        const val GROUP_TASK_SLIDER = "slider"
+        const val TASK_ASCIIDOCTOR_REVEALJS = "asciidoctorRevealJs"
+        const val TASK_CLEAN_SLIDES_BUILD = "cleanSlidesBuild"
+        const val TASK_DASHBOARD_SLIDES_BUILD = "dashSlidesBuild"
+        const val TASK_PUBLISH_SLIDES = "publishSlides"
+        const val BUILD_GRADLE_KEY = "build-gradle"
+        const val ENDPOINT_URL_KEY = "endpoint-url"
+        const val SOURCE_HIGHLIGHTER_KEY = "source-highlighter"
+        const val CODERAY_CSS_KEY = "coderay-css"
+        const val IMAGEDIR_KEY = "imagesdir"
+        const val TOC_KEY = "toc"
+        const val ICONS_KEY = "icons"
+        const val SETANCHORS_KEY = "setanchors"
+        const val IDPREFIX_KEY = "idprefix"
+        const val IDSEPARATOR_KEY = "idseparator"
+        const val DOCINFO_KEY = "docinfo"
+        const val REVEALJS_THEME_KEY = "revealjs_theme"
+        const val REVEALJS_TRANSITION_KEY = "revealjs_transition"
+        const val REVEALJS_HISTORY_KEY = "revealjs_history"
+        const val REVEALJS_SLIDENUMBER_KEY = "revealjs_slideNumber"
+        const val TASK_SERVE_SLIDES = "serveSlides"
+    }
+
+    object Serve {
+        const val PACKAGE_NAME = "serve"
+        const val VERSION = "14.2.4"
+        const val SERVE_DEP = "$PACKAGE_NAME@$VERSION"
+    }
+
+    object Slide {
+        const val SLIDES_FOLDER = "slides"
+        const val IMAGES = "images"
+        const val DEFAULT_SLIDES_FOLDER = "misc"
+        //TODO: construct path from config file in yaml format
+    }
+}
+
+class SlidesBuildSrcPlugin : Plugin<Project> {
+    override fun apply(project: Project) {
+
+        project.plugins.apply("com.github.node-gradle.node")
+        project.plugins.apply("org.asciidoctor.jvm.gems")
+        project.plugins.apply("org.asciidoctor.jvm.revealjs")
+
+        project.repositories {
+            gradlePluginPortal { content { excludeGroup("rubygems") } }
+            mavenCentral { content { excludeGroup("rubygems") } }
+            ivy {
+                url = project.uri("https://rubygems.org/gems/")
+                patternLayout { artifact("[module]-[revision].[ext]") }
+                metadataSources { artifact() }
+                content { includeGroup("rubygems") }
+            }
+        }
+
+        project.dependencies.add(
+            "asciidoctorGems",
+            "rubygems:asciidoctor-revealjs:3.1.0"
+        )
+
+
+        project.tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
+            group = GROUP_TASK_SLIDER
+            description = "Slider settings and generation"
+            project.repositories.mavenCentral {
+                content { excludeGroup("rubygems") }
+            }
+            project.repositories.ivy {
+                url = project.uri("https://rubygems.org/gems/")
+                patternLayout { artifact("[module]-[revision].gem") }
+                metadataSources { artifact() }
+                content { includeGroup("rubygems") }
+            }
+            setInProcess("JAVA_EXEC")
+
+            forkOptions {
+                executable(
+                    project.serviceOf<JavaToolchainService>()
+                        .launcherFor {
+                            languageVersion.set(JavaLanguageVersion.of(17))
+                            vendor.set(ADOPTIUM)
+                        }.get()
+                        .executablePath
+                        .asFile
+                        .absolutePath
+                )
+            }
+            dependsOn(TASK_CLEAN_SLIDES_BUILD)
+            finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
+            project.extensions.getByType<RevealJSExtension>().apply {
+                version = "3.1.0"
+                templateGitHub {
+                    setOrganisation("hakimel")
+                    setRepository("reveal.js")
+                    setTag("3.9.1")
+                }
+            }
+            revealjsOptions {
+                project.layout.projectDirectory.asFile
+                    .resolve(SLIDES_FOLDER)
+                    .resolve(DEFAULT_SLIDES_FOLDER)
+                    .apply { println("Slide source absolute path: $absolutePath") }
+                    .let(::setSourceDir)
+                baseDirFollowsSourceFile()
+                resources {
+                    from(sourceDir.resolve(IMAGES)) {
+                        include("**")
+                        into(IMAGES)
+                    }
+                }
+                mapOf(
+                    BUILD_GRADLE_KEY to project.layout.projectDirectory.asFile.resolve("build.gradle.kts"),
+                    ENDPOINT_URL_KEY to "https://github.com/pages-content/slides/",
+                    SOURCE_HIGHLIGHTER_KEY to "coderay",
+                    CODERAY_CSS_KEY to "style",
+                    IMAGEDIR_KEY to ".${separator}images",
+                    TOC_KEY to "left",
+                    ICONS_KEY to "font",
+                    SETANCHORS_KEY to "",
+                    IDPREFIX_KEY to "slide-",
+                    IDSEPARATOR_KEY to "-",
+                    DOCINFO_KEY to "shared",
+                    REVEALJS_THEME_KEY to "black",
+                    REVEALJS_TRANSITION_KEY to "linear",
+                    REVEALJS_HISTORY_KEY to "true",
+                    REVEALJS_SLIDENUMBER_KEY to "true"
+                ).let(::attributes)
+            }
+        }
+
+        project.tasks.register<AsciidoctorTask>("asciidoctor") {
+            group = GROUP_TASK_SLIDER
+            dependsOn(project.tasks.findByPath("asciidoctorRevealJs"))
+        }
+    }
+}
+----
+
+* slider-plugin/settings.gradle.kts
+[source,kotlin]
+----
+@file:Suppress("UnstableApiUsage")
+pluginManagement {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        google()
+    }
+}
+
+plugins { id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0" }
+
+rootProject.name = "slider-plugin"
+include("slider")
+----
+
+* slider-plugin/gradle/libs.versions.toml
+[source,toml]
+----
+[versions]
+asciidoctor-gradle = "4.0.0-alpha.1"
+node-gradle = "7.1.0"
+slider = "0.0.0"
+commons-io = "2.13.0"
+jgit = "6.10.0.202406032230-r"
+slf4j = "2.0.17"
+xz = "1.10"
+asciidoctorj-diagram = "3.0.1"
+asciidoctorj-diagram-plantuml = "1.2025.3"
+kotlin = "2.2.20"
+junit-platform-launcher = "1.10.2"
+mockito-kotlin = "5.3.1"
+mockito-jupiter = "5.12.0"
+gradle = "9.3.1"
+assertj = "3.27.6"
+plugin-publish = "1.3.1"
+cucumber = "7.33.0"
+junit_platform = "1.14.2"
+jackson = "2.21.0"
+coroutines = "1.10.2"
+
+[libraries]
+asciidoctor-gradle-jvm-slides = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm-slides", version.ref = "asciidoctor-gradle" }
+asciidoctor-gradle-jvm-gems = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm-gems", version.ref = "asciidoctor-gradle" }
+asciidoctor-gradle-jvm = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm", version.ref = "asciidoctor-gradle" }
+node-gradle = { group = "com.github.node-gradle", name = "gradle-node-plugin", version.ref = "node-gradle" }
+kotlin-stdlib-jdk8 = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8" }
+kotlin-test-junit5 = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit5", version.ref = "kotlin" }
+assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
+mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockito-kotlin" }
+mockito-junit-jupiter = { group = "org.mockito", name = "mockito-junit-jupiter", version.ref = "mockito-jupiter" }
+asciidoctorj-diagram = { group = "org.asciidoctor", name = "asciidoctorj-diagram", version.ref = "asciidoctorj-diagram" }
+asciidoctorj-diagram-plantuml = { group = "org.asciidoctor", name = "asciidoctorj-diagram-plantuml", version.ref = "asciidoctorj-diagram-plantuml" }
+commons-io = { group = "commons-io", name = "commons-io", version.ref = "commons-io" }
+jgit-core = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
+jgit-ssh = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.ssh.jsch", version.ref = "jgit" }
+jgit-archive = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.archive", version.ref = "jgit" }
+xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
+gradle-tooling-api = { group = "org.gradle", name = "gradle-tooling-api", version.ref = "gradle" }
+cucumber-java = { module = "io.cucumber:cucumber-java", version.ref = "cucumber" }
+cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
+cucumber-picocontainer = { module = "io.cucumber:cucumber-picocontainer", version.ref = "cucumber" }
+junit-platform-suite = { module = "org.junit.platform:junit-platform-suite", version.ref = "junit_platform" }
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-jdk8 = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+slider = { id = "com.cheroliv.slider", version.ref = "slider" }
+publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }
+
+[bundles]
+slider = [
+    "asciidoctorj-diagram",
+    "asciidoctorj-diagram-plantuml",
+    "jackson-module-kotlin",
+    "jackson-dataformat-yaml"
+]
+jgit = [
+    "jgit-core",
+    "jgit-ssh",
+    "jgit-archive",
+    "xz"
+]
+cucumber = [
+    "cucumber-java",
+    "cucumber-junit-platform-engine",
+    "cucumber-picocontainer",
+    "junit-platform-suite"
+]
+coroutines = [
+    "kotlinx-coroutines-core",
+    "kotlinx-coroutines-jdk8",
+    "kotlinx-coroutines-test",
+]
+asciidoctor = [
+    "asciidoctor-gradle-jvm-slides",
+    "asciidoctor-gradle-jvm-gems",
+    "asciidoctor-gradle-jvm"
+]
+----
+
+* slider-plugin/slider/build.gradle.kts
+[source,kotlin]
+----
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+
+plugins {
+    `java-library`
+    signing
+    `maven-publish`
+    `java-gradle-plugin`
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.publish)
+}
+
+group = "com.cheroliv"
+version = libs.plugins.slider.get().version
+kotlin.jvmToolchain(JavaVersion.VERSION_17.ordinal)
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+    listOf(
+        "https://repo.gradle.org/gradle/libs-releases/",
+        "https://plugins.gradle.org/m2/",
+        "https://maven.xillio.com/artifactory/libs-release/",
+        "https://mvnrepository.com/repos/springio-plugins-release",
+        "https://archiva-repository.apache.org/archiva/repository/public/"
+    ).forEach(::maven)
+}
+dependencies {
+    implementation(kotlin("stdlib-jdk8"))
+
+//    implementation(gradleApi())
+//    implementation(gradleKotlinDsl())
+//    implementation(libs.bundles.asciidoctor)
+    implementation(libs.node.gradle)
+
+    api(libs.bundles.slider)
+    api(libs.bundles.jgit)
+    api(libs.commons.io)
+
+    // Coroutines - IMPORTANT pour les tests asynchrones
+    testImplementation(libs.bundles.coroutines)
+
+    testImplementation(kotlin("test-junit5"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.slf4j:slf4j-api:2.0.17")
+    testRuntimeOnly("ch.qos.logback:logback-classic:1.5.26")
+
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.mockito.junit.jupiter)
+
+    // Cucumber dependencies
+    testImplementation(libs.bundles.cucumber)
+    implementation("io.arrow-kt:arrow-core:1.2.4")
+    implementation("io.arrow-kt:arrow-fx-coroutines:1.2.4")
+    implementation("io.arrow-kt:arrow-integrations-jackson-module:0.14.1")
+}
+
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+    }
+}
+
+tasks.named<Test>("test") {
+    filter {
+        // Exclure les classes dans le package 'com.cheroliv.slider.scenarios' (tests Cucumber)
+        excludeTestsMatching("com.cheroliv.slider.scenarios.**")
+        // Exclure également les classes de functionalTest
+        excludeTestsMatching("com.cheroliv.slider.SliderPluginFunctionalTests")
+    }
+}
+
+
+// 1. Créer le SourceSet functionalTest
+val functionalTest: SourceSet by sourceSets.creating {
+    java.srcDirs("src/functionalTest/kotlin")
+    resources.srcDirs("src/functionalTest/resources")
+}
+
+// 2. Ajouter GradleTestKit à functionalTest (SANS hériter de testImplementation)
+dependencies {
+    add(functionalTest.implementationConfigurationName, gradleTestKit())
+    add(functionalTest.implementationConfigurationName, kotlin("stdlib-jdk8"))
+    add(functionalTest.implementationConfigurationName, kotlin("test-junit5"))
+
+    // Ajouter les dépendances nécessaires explicitement
+    add(functionalTest.implementationConfigurationName, "org.slf4j:slf4j-api:2.0.17")
+    add(functionalTest.runtimeOnlyConfigurationName, "ch.qos.logback:logback-classic:1.5.26")
+    add(functionalTest.runtimeOnlyConfigurationName, "org.junit.platform:junit-platform-launcher")
+
+    // CORRECTION: Ajouter AssertJ pour les assertions
+    add(functionalTest.implementationConfigurationName, libs.assertj.core)
+
+    // Ajouter Mockito si nécessaire
+    add(functionalTest.implementationConfigurationName, libs.mockito.kotlin)
+    add(functionalTest.implementationConfigurationName, libs.mockito.junit.jupiter)
+
+    libs.bundles.coroutines.get().forEach { dep ->
+        add(functionalTest.implementationConfigurationName, dep)
+    }
+}
+
+// 3. Tâche pour les tests fonctionnels
+val functionalTestTask = tasks.register<Test>("functionalTest") {
+    description = "Runs functional tests."
+    group = "verification"
+    testClassesDirs = functionalTest.output.classesDirs
+    classpath = configurations[functionalTest.runtimeClasspathConfigurationName] + functionalTest.output
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+    }
+}
+
+// CORRECTION: Gérer les duplications de ressources pour functionalTest
+tasks.named<ProcessResources>(functionalTest.processResourcesTaskName) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// 4. Configurer les sources sets pour Cucumber (test standard)
+sourceSets {
+    test {
+        resources.srcDir("src/test/features")
+        java.srcDir("src/test/scenarios")  // Steps dans scenarios/
+    }
+}
+
+// 5. Faire hériter testImplementation de functionalTest (pas l'inverse !)
+configurations.named("testImplementation").configure {
+    extendsFrom(configurations.named(functionalTest.implementationConfigurationName).get())
+}
+
+configurations.named("testRuntimeOnly").configure {
+    extendsFrom(configurations.named(functionalTest.runtimeOnlyConfigurationName).get())
+}
+
+// 6. Ajouter les classes compilées de functionalTest au classpath de test
+dependencies {
+    testImplementation(functionalTest.output)
+}
+
+configurations {
+    // Exclure logback-classic du classpath de test
+    named("testRuntimeClasspath") {
+        exclude(group = "ch.qos.logback", module = "logback-classic")
+    }
+    named("testImplementation") {
+        exclude(group = "ch.qos.logback", module = "logback-classic")
+    }
+    // Exclure logback-classic du classpath de functionalTest
+    named(functionalTest.runtimeClasspathConfigurationName) {
+        exclude(group = "ch.qos.logback", module = "logback-classic")
+    }
+}
+
+// 7. Tâche dédiée aux tests Cucumber
+val cucumberTest = tasks.register<Test>("cucumberTest") {
+    description = "Runs Cucumber BDD tests"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = configurations.testRuntimeClasspath.get() +
+            sourceSets.test.get().output +
+            functionalTest.output +
+            sourceSets.main.get().output
+    useJUnitPlatform {
+        // CORRECTION: Ne pas filtrer par tag ici, ça filtre les engines JUnit
+        // Le filtrage des scénarios Cucumber se fait dans le runner via FILTER_TAGS_PROPERTY_NAME
+        excludeEngines("junit-jupiter")
+    }
+    systemProperty("cucumber.junit-platform.naming-strategy", "long")
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = FULL
+    }
+    outputs.upToDateWhen { false }
+    // S'assurer que functionalTest et main sont compilés avant
+    dependsOn(functionalTest.classesTaskName)
+    dependsOn(tasks.classes)
+}
+
+tasks.withType<Test>().configureEach {
+    // Permet de masquer l'avertissement relatif au chargement dynamique d'agents
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
+}
+
+tasks.check {
+    dependsOn(functionalTestTask)
+    dependsOn(cucumberTest)
+}
+
+gradlePlugin {
+    plugins {
+        create("slider") {
+            id = libs.plugins.slider.get().pluginId
+            implementationClass = "${libs.plugins.slider.get().pluginId}.SliderPlugin"
+            displayName = "Slider Plugin"
+            description = "Gradle plugin for slider generation."
+            tags.set(listOf("revealjs", "slide-generator", "slide", "jgit", "asciidoc"))
+        }
+    }
+    website = "https://cheroliv.com"
+    vcsUrl = "https://github.com/cheroliv/slider-gradle.git"
+    testSourceSets(functionalTest)
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        withType<MavenPublication> {
+            if (name == "pluginMaven") {
+                pom {
+                    name.set(gradlePlugin.plugins.getByName("slider").displayName)
+                    description.set(gradlePlugin.plugins.getByName("slider").description)
+                    url.set(gradlePlugin.website.get())
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+                    developers {
+                        developer {
+                            id.set("cheroliv")
+                            name.set("cheroliv")
+                            email.set("cheroliv.developer@gmail.com")
+                        }
+                    }
+                    scm {
+                        connection.set(gradlePlugin.vcsUrl.get())
+                        developerConnection.set(gradlePlugin.vcsUrl.get())
+                        url.set(gradlePlugin.vcsUrl.get())
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "sonatype"
+            url = if (version.toString().endsWith("-SNAPSHOT")) {
+                uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+            } else {
+                uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            }
+            credentials {
+                username = project.findProperty("ossrhUsername") as? String
+                password = project.findProperty("ossrhPassword") as? String
+            }
+        }
+        mavenCentral()
+    }
+}
+
+signing {
+    val isReleaseVersion = !version.toString().endsWith("-SNAPSHOT")
+    if (isReleaseVersion) {
+        sign(publishing.publications)
+    }
+    useGpgCmd()
+}
+----
+
+* slider-plugin/slider/src/main/kotlin/com/cheroliv/slider/SliderPlugin.kt
+[source,kotlin]
+----
+package com.cheroliv.slider
+
+import arrow.integrations.jackson.module.registerArrowModule
+import com.cheroliv.slider.FileOperationResult.Success
+import com.cheroliv.slider.SliderManager.CONFIG_PATH_KEY
+import com.cheroliv.slider.SliderManager.deckFile
+import com.cheroliv.slider.SliderManager.pushSlides
+import com.cheroliv.slider.Slides.RevealJsSlides.GROUP_TASK_SLIDER
+import com.cheroliv.slider.Slides.RevealJsSlides.TASK_ASCIIDOCTOR_REVEALJS
+import com.cheroliv.slider.Slides.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
+import com.cheroliv.slider.Slides.RevealJsSlides.TASK_PUBLISH_SLIDES
+import com.cheroliv.slider.Slides.RevealJsSlides.TASK_SERVE_SLIDES
+import com.cheroliv.slider.Slides.Serve.SERVE_DEP
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import com.github.gradle.node.npm.task.NpxTask
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.transport.PushResult
+import org.eclipse.jgit.transport.URIish
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.tasks.Exec
+import java.io.File
+import java.io.IOException
+import java.nio.file.FileSystems
+import java.util.*
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import javax.inject.Inject
+
+/**
+ * DSL extension for the slider plugin.
+ *
+ * Usage in build.gradle.kts:
+ * ```
+ * slider {
+ *     configPath = file("slides-context.yml").absolutePath
+ *
+ *     // Optional — defaults to "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
+ *     // Only used when jdk17 is not installed locally but Docker is available.
+ *     java17TemurinDockerImage = "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
+ *
+ *     // Optional — force Docker even if jdk17 is installed locally. Default: false
+ *     forceDocker = true
+ * }
+ * ```
+ */
+open class SliderExtension @Inject constructor(objects: ObjectFactory) {
+    val configPath: Property<String> = objects.property(String::class.java)
+
+    /**
+     * Docker image to use for jdk17 when jdk17 is not installed on the host.
+     * Ignored if jdk17 is available locally AND [forceDocker] is false.
+     * Defaults to [DEFAULT_JDK17_IMAGE].
+     */
+    val java17TemurinDockerImage: Property<String> = objects
+        .property(String::class.java)
+        .convention(DEFAULT_JDK17_IMAGE)
+
+    /**
+     * When true, skips the local jdk17 probe and goes straight to Docker,
+     * even if `jdk17` is available on the system PATH.
+     * Defaults to false.
+     */
+    val forceDocker: Property<Boolean> = objects
+        .property(Boolean::class.java)
+        .convention(false)
+
+    companion object {
+        const val DEFAULT_JDK17_IMAGE = "eclipse-temurin:17.0.18_8-jdk-ubi10-minimal"
+    }
+}
+
+object SlidesManager {
+    const val CVS_ORIGIN: String = "origin"
+    const val CVS_REMOTE: String = "remote"
+    const val CONFIG_PATH_KEY = "managed_config_path"
+    val sep: String get() = FileSystems.getDefault().separator
+
+    val Project.yamlMapper: ObjectMapper
+        get() = YAMLFactory()
+            .let(::ObjectMapper)
+            .disable(WRITE_DATES_AS_TIMESTAMPS)
+            .registerKotlinModule()
+            .registerArrowModule()
+
+    fun Project.readSlidesConfigurationFile(
+        configPath: () -> String
+    ): SlidesConfiguration = try {
+        configPath()
+            .run(::File)
+            .run(yamlMapper::readValue)
+    } catch (e: Exception) {
+        // Handle exception or log error
+        SlidesConfiguration(
+            "",
+            GitPushConfiguration(
+                "",
+                "",
+                RepositoryConfiguration(
+                    "",
+                    "",
+                    RepositoryCredentials(
+                        "",
+                        ""
+                    )
+                ),
+                "",
+                ""
+            )
+        )
+    }
+
+
+    val Project.localConf: SlidesConfiguration
+        get() = readSlidesConfigurationFile { "$rootDir$sep${properties[CONFIG_PATH_KEY]}" }
+
+    val Project.slideSrcPath: String get() = "${layout.buildDirectory.get().asFile.absolutePath}/${localConf.srcPath}/"
+    val Project.slideDestDirPath: String get() = localConf.pushSlides?.to!!
+
+
+    fun Project.deckFile(key: String): String = buildString {
+        append("build/docs/asciidocRevealJs/")
+        append(Properties().apply {
+            // TODO changer par une reference au path de office a integrer dans le model de données
+            buildString {
+                append(System.getProperty("user.home"))
+                append(sep)
+                append("workspace")
+                append(sep)
+                append("office")
+                append(sep)
+                append("slides")
+                append(sep)
+                append("misc")
+                append(sep)
+                append("deck.properties")
+            }.let(::File)
+                .inputStream()
+                .use(::load)
+        }[key].toString())
+    }
+
+    fun Project.pushSlides(
+        slidesDirPath: () -> String,
+        pathTo: () -> String
+    ) = pathTo()
+        .run(::createRepoDir)
+        .let { it: File ->
+            copySlideFilesToRepo(slidesDirPath(), it)
+                .takeIf { it is FileOperationResult.Success }
+                ?.run {
+                    initAddCommitToSlides(it, localConf)
+                    pushSlide(
+                        it,
+                        "${project.rootDir}${sep}${project.properties[CONFIG_PATH_KEY]}"
+                            .run(::File)
+                            .readText()
+                            .trimIndent()
+                            .run(YAMLMapper()::readValue)
+                    )
+                    it.deleteRecursively()
+                    slidesDirPath()
+                        .let(::File)
+                        .deleteRecursively()
+                }
+        }
+
+    @Throws(IOException::class)
+    fun Project.pushSlide(
+        repoDir: File,
+        conf: SlidesConfiguration,
+    ): MutableIterable<PushResult>? = FileRepositoryBuilder()
+        .setInitialBranch("main")
+        .setGitDir("${repoDir.absolutePath}$sep.git".let(::File))
+        .readEnvironment()
+        .findGitDir()
+        .setMustExist(true)
+        .build()
+        .apply {
+            config.apply {
+                getString(
+                    CVS_REMOTE,
+                    CVS_ORIGIN,
+                    conf.pushSlides?.repo?.repository
+                )
+            }.save()
+            if (isBare) throw IOException("Repo dir should not be bare")
+        }.let(::Git)
+        .run {
+            // push to remote:
+            return push().setCredentialsProvider(
+                UsernamePasswordCredentialsProvider(
+                    conf.pushSlides?.repo?.credentials?.username,
+                    conf.pushSlides?.repo?.credentials?.password
+                )
+            ).apply {
+                //you can add more settings here if needed
+                remote = CVS_ORIGIN
+                isForce = true
+
+            }.call()
+        }
+
+    fun Project.initAddCommitToSlides(
+        repoDir: File,
+        conf: SlidesConfiguration,
+    ): RevCommit {
+        //3) initialiser un repo dans le dossier cvs
+        Git.init().setInitialBranch(conf.pushSlides?.branch)
+            .setDirectory(repoDir).call().run {
+                assert(!repository.isBare)
+                assert(repository.directory.isDirectory)
+                // add remote repo:
+                remoteAdd().apply {
+                    setName(CVS_ORIGIN)
+                    setUri(URIish(conf.pushSlides?.repo?.repository))
+                    // you can add more settings here if needed
+
+                }.call()
+                //4) ajouter les fichiers du dossier cvs à l'index
+                add().addFilepattern(".").call()
+
+                //5) commit
+                return commit().setMessage(conf.pushSlides?.message).call()
+            }
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun copySlideFilesToRepo(
+        slidesDirPath: String,
+        repoDir: File
+    ): FileOperationResult = try {
+        slidesDirPath
+            .let(::File)
+            .apply {
+                when {
+                    !copyRecursively(
+                        repoDir,
+                        true
+                    ) -> throw Exception("Unable to copy slides directory to build directory")
+                }
+            }.deleteRecursively()
+        FileOperationResult.Success
+    } catch (e: Exception) {
+        FileOperationResult.Failure(e.message ?: "An error occurred during file copy.")
+    }
+
+    fun createRepoDir(path: String): File = path
+        .let(::File)
+        .apply {
+            when {
+                exists() && !isDirectory -> when {
+                    !delete() -> throw Exception("Cant delete file named like repo dir")
+                }
+            }
+            when {
+                exists() -> when {
+                    !deleteRecursively() -> throw Exception("Cant delete current repo dir")
+                }
+            }
+            when {
+                exists() -> throw Exception("Repo dir should not already exists")
+                !exists() -> when {
+                    !mkdir() -> throw Exception("Cant create repo dir")
+                }
+            }
+        }
+
+}
+
+data class SlidesConfiguration(
+    val srcPath: String? = null,
+    val pushSlides: GitPushConfiguration? = null,
+)
+
+object RepositoryInfo {
+    const val ORIGIN = "origin"
+    const val CNAME = "CNAME"
+    const val REMOTE = "remote"
+}
+
+@JvmRecord
+data class RepositoryConfiguration(
+    val name: String,
+    val repository: String,
+    val credentials: RepositoryCredentials,
+)
+
+@JvmRecord
+data class RepositoryCredentials(
+    val username: String,
+    val password: String
+)
+
+@JvmRecord
+data class GitPushConfiguration(
+    val from: String,
+    val to: String,
+    val repo: RepositoryConfiguration,
+    val branch: String,
+    val message: String,
+)
+
+sealed class GitOperationResult {
+    data class Success(
+        val commit: RevCommit,
+        val pushResults: MutableIterable<PushResult>?
+    ) : GitOperationResult()
+
+    data class Failure(val error: String) : GitOperationResult()
+}
+
+sealed class FileOperationResult {
+    object Success : FileOperationResult()
+    data class Failure(val error: String) : FileOperationResult()
+}
+
+sealed class WorkspaceError {
+    object FileNotFound : WorkspaceError()
+    data class ParsingError(val message: String) : WorkspaceError()
+}
+
+object SliderManager {
+    fun Project.deckFile(key: String): String = buildString {
+        append("build/docs/asciidocRevealJs/")
+        append(Properties().apply {
+            // TODO changer par une reference au path de sliderConfig a integrer dans le model de données
+            layout.projectDirectory.asFile
+                .resolve("slides")
+                .resolve("misc")
+                .resolve("deck.properties")
+                .inputStream()
+                .use(::load)
+        }[key].toString())
+    }
+
+    const val CVS_ORIGIN: String = "origin"
+    const val CVS_REMOTE: String = "remote"
+    const val CONFIG_PATH_KEY = "managed_config_path"
+    val sep: String get() = FileSystems.getDefault().separator
+
+    val Project.yamlMapper: ObjectMapper
+        get() = YAMLFactory()
+            .let(::ObjectMapper)
+            .disable(WRITE_DATES_AS_TIMESTAMPS)
+            .registerKotlinModule()
+            .registerArrowModule()
+
+    fun Project.readSlidesConfigurationFile(
+        configPath: () -> String
+    ): SlidesConfiguration = try {
+        configPath()
+            .run(::File)
+            .run(yamlMapper::readValue)
+    } catch (e: Exception) {
+        // Handle exception or log error
+        SlidesConfiguration(
+            "",
+            GitPushConfiguration(
+                "",
+                "",
+                RepositoryConfiguration(
+                    "",
+                    "",
+                    RepositoryCredentials(
+                        "",
+                        ""
+                    )
+                ),
+                "",
+                ""
+            )
+        )
+    }
+
+
+    val Project.localConf: SlidesConfiguration
+        get() = readSlidesConfigurationFile { "$rootDir$sep${properties[CONFIG_PATH_KEY]}" }
+
+    val Project.slideSrcPath: String get() = "${layout.buildDirectory.get().asFile.absolutePath}/${localConf.srcPath}/"
+    val Project.slideDestDirPath: String get() = localConf.pushSlides?.to!!
+
+    fun Project.pushSlides(
+        slidesDirPath: () -> String,
+        pathTo: () -> String
+    ) = pathTo()
+        .run(::createRepoDir)
+        .let { it: File ->
+            copySlideFilesToRepo(slidesDirPath(), it)
+                .takeIf { it is Success }
+                ?.run {
+                    initAddCommitToSlides(it, localConf)
+                    pushSlide(
+                        it,
+                        "${project.rootDir}${sep}${project.properties[CONFIG_PATH_KEY]}"
+                            .run(::File)
+                            .readText()
+                            .trimIndent()
+                            .run(YAMLMapper()::readValue)
+                    )
+                    it.deleteRecursively()
+                    slidesDirPath()
+                        .let(::File)
+                        .deleteRecursively()
+                }
+        }
+
+    @Throws(IOException::class)
+    fun Project.pushSlide(
+        repoDir: File,
+        conf: SlidesConfiguration,
+    ): MutableIterable<PushResult>? = FileRepositoryBuilder()
+        .setInitialBranch("main")
+        .setGitDir("${repoDir.absolutePath}$sep.git".let(::File))
+        .readEnvironment()
+        .findGitDir()
+        .setMustExist(true)
+        .build()
+        .apply {
+            config.apply {
+                getString(
+                    CVS_REMOTE,
+                    CVS_ORIGIN,
+                    conf.pushSlides?.repo?.repository
+                )
+            }.save()
+            if (isBare) throw IOException("Repo dir should not be bare")
+        }.let(::Git)
+        .run {
+            // push to remote:
+            return push().setCredentialsProvider(
+                UsernamePasswordCredentialsProvider(
+                    conf.pushSlides?.repo?.credentials?.username,
+                    conf.pushSlides?.repo?.credentials?.password
+                )
+            ).apply {
+                //you can add more settings here if needed
+                remote = CVS_ORIGIN
+                isForce = true
+
+            }.call()
+        }
+
+    fun Project.initAddCommitToSlides(
+        repoDir: File,
+        conf: SlidesConfiguration,
+    ): RevCommit {
+        //3) initialiser un repo dans le dossier cvs
+        Git.init().setInitialBranch(conf.pushSlides?.branch)
+            .setDirectory(repoDir).call().run {
+                assert(!repository.isBare)
+                assert(repository.directory.isDirectory)
+                // add remote repo:
+                remoteAdd().apply {
+                    setName(CVS_ORIGIN)
+                    setUri(URIish(conf.pushSlides?.repo?.repository))
+                    // you can add more settings here if needed
+
+                }.call()
+                //4) ajouter les fichiers du dossier cvs à l'index
+                add().addFilepattern(".").call()
+
+                //5) commit
+                return commit().setMessage(conf.pushSlides?.message).call()
+            }
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun copySlideFilesToRepo(
+        slidesDirPath: String,
+        repoDir: File
+    ): FileOperationResult = try {
+        slidesDirPath
+            .let(::File)
+            .apply {
+                when {
+                    !copyRecursively(
+                        repoDir,
+                        true
+                    ) -> throw Exception("Unable to copy slides directory to build directory")
+                }
+            }.deleteRecursively()
+        Success
+    } catch (e: Exception) {
+        FileOperationResult.Failure(e.message ?: "An error occurred during file copy.")
+    }
+
+    fun createRepoDir(path: String): File = path
+        .let(::File)
+        .apply {
+            when {
+                exists() && !isDirectory -> when {
+                    !delete() -> throw Exception("Cant delete file named like repo dir")
+                }
+            }
+            when {
+                exists() -> when {
+                    !deleteRecursively() -> throw Exception("Cant delete current repo dir")
+                }
+            }
+            when {
+                exists() -> throw Exception("Repo dir should not already exists")
+                !exists() -> when {
+                    !mkdir() -> throw Exception("Cant create repo dir")
+                }
+            }
+        }
+
+}
+
+object Slides {
+    object RevealJsSlides {
+        const val GROUP_TASK_SLIDER = "slider"
+        const val TASK_ASCIIDOCTOR_REVEALJS = "asciidoctorRevealJs"
+        const val TASK_CLEAN_SLIDES_BUILD = "cleanSlidesBuild"
+        const val TASK_DASHBOARD_SLIDES_BUILD = "dashSlidesBuild"
+        const val TASK_PUBLISH_SLIDES = "publishSlides"
+        const val BUILD_GRADLE_KEY = "build-gradle"
+        const val ENDPOINT_URL_KEY = "endpoint-url"
+        const val SOURCE_HIGHLIGHTER_KEY = "source-highlighter"
+        const val CODERAY_CSS_KEY = "coderay-css"
+        const val IMAGEDIR_KEY = "imagesdir"
+        const val TOC_KEY = "toc"
+        const val ICONS_KEY = "icons"
+        const val SETANCHORS_KEY = "setanchors"
+        const val IDPREFIX_KEY = "idprefix"
+        const val IDSEPARATOR_KEY = "idseparator"
+        const val DOCINFO_KEY = "docinfo"
+        const val REVEALJS_THEME_KEY = "revealjs_theme"
+        const val REVEALJS_TRANSITION_KEY = "revealjs_transition"
+        const val REVEALJS_HISTORY_KEY = "revealjs_history"
+        const val REVEALJS_SLIDENUMBER_KEY = "revealjs_slideNumber"
+        const val TASK_SERVE_SLIDES = "serveSlides"
+    }
+
+    object Serve {
+        const val PACKAGE_NAME = "serve"
+        const val VERSION = "14.2.4"
+        const val SERVE_DEP = "$PACKAGE_NAME@$VERSION"
+    }
+
+    object Slide {
+        const val SLIDES_FOLDER = "slides"
+        const val IMAGES = "images"
+        const val DEFAULT_SLIDES_FOLDER = "misc"
+        //TODO: construct path from config file in yaml format
+    }
+}
+
+class SliderPlugin : Plugin<Project> {
+    override fun apply(project: Project) {
+        project.plugins.apply("com.github.node-gradle.node")
+        val sliderExtension = project.extensions.create(
+            GROUP_TASK_SLIDER,
+            SliderExtension::class.java
+        )
+        project.tasks.register(
+            TASK_SERVE_SLIDES,
+            NpxTask::class.java
+        ) {
+            it.group = GROUP_TASK_SLIDER
+            it.description = "Serve slides using the serve package executed via npx"
+            it.dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
+            it.command.set(SERVE_DEP)
+            project.layout.buildDirectory.get().asFile
+                .resolve("docs")
+                .resolve("asciidocRevealJs")
+                .absolutePath
+                .run(::listOf)
+                .run(it.args::set)
+            it.workingDir.set(project.layout.projectDirectory.asFile)
+            it.doFirst { println("Serve slides using the serve package executed via npx") }
+        }
+        project.tasks.register("asciidocCapsule", Exec::class.java) {
+            it.group = "capsule"
+            it.dependsOn("asciidoctor")
+            it.commandLine("chromium", project.deckFile("asciidoc.capsule.deck.file"))
+            it.workingDir = project.layout.projectDirectory.asFile
+        }
+
+        project.tasks.register("reportTests", Exec::class.java) {
+            it.group = "verification"
+            it.description = "Check slider project then show report in firefox"
+            it.dependsOn("check")
+            it.commandLine(
+                "firefox",
+                "--new-tab",
+                project.layout.buildDirectory.asFile.get()
+                    .resolve("reports")
+                    .resolve("tests")
+                    .resolve("test")
+                    .resolve("index.html")
+                    .absolutePath,
+            )
+        }
+
+        project.tasks.register("reportFunctionalTests", Exec::class.java) {
+            it.group = "verification"
+            it.description = "Check slider project then show report in firefox"
+            it.dependsOn("check")
+            it.commandLine(
+                "firefox",
+                "--new-tab",
+                project.layout.buildDirectory.get().asFile
+                    .resolve("reports")
+                    .resolve("tests")
+                    .resolve("functionalTest")
+                    .resolve("index.html")
+                    .absolutePath,
+            )
+        }
+
+        project.tasks.register("cleanSlidesBuild") {
+            it.group = GROUP_TASK_SLIDER
+            it.description = "Delete generated presentation in build directory."
+            it.doFirst {
+                project.layout.buildDirectory.get().asFile
+                    .resolve("docs")
+                    .resolve("asciidocRevealJs")
+                    .run {
+                        resolve("slides.json").run { if (exists()) delete() }
+                        resolve("images").deleteRecursively()
+                        listFiles()
+                            ?.filter { it.isFile && it.name.endsWith(".html") }
+                            ?.forEach { it.delete() }
+                    }
+            }
+        }
+
+        project.tasks.register("openFirefox", Exec::class.java) {
+            it.group = GROUP_TASK_SLIDER
+            it.description = "Open the presentation dashboard in firefox"
+            it.dependsOn("asciidoctor")
+            it.commandLine("firefox", project.deckFile("default.deck.file"))
+            it.workingDir = project.layout.projectDirectory.asFile
+        }
+
+        project.tasks.register("openChromium", Exec::class.java) {
+            it.group = GROUP_TASK_SLIDER
+            it.description = "Open the default.deck.file presentation in chromium"
+            it.dependsOn("asciidoctor")
+            it.commandLine("chromium", project.deckFile("default.deck.file"))
+            it.workingDir = project.layout.projectDirectory.asFile
+        }
+
+        project.tasks.register(TASK_DASHBOARD_SLIDES_BUILD) {
+            it.group = "documentation"
+            it.description = "Génère un index.html listant toutes les présentations Reveal.js"
+
+            it.doLast {
+                //TODO: passer cette adresse a la configuration du slide pour indiquer sa source
+                val slidesDir = project.layout.projectDirectory.asFile
+                    .resolve("slides")
+                    .resolve("misc")
+                    .apply {
+                        listFiles().find { it.name == "index.html" }!!
+                            .readText().trimIndent()
+                            .run { "index.html:\n$this" }
+                            .run(project.logger::info)
+                    }
+
+                val outputDir = project.layout.buildDirectory.get().asFile
+                    .resolve("docs")
+                    .resolve("asciidocRevealJs")
+                    .also { "output dir path: $it".run(project.logger::info) }
+
+                val indexFile: File = slidesDir.resolve("index.html").apply {
+                    readText().trimIndent()
+                        .run { "index.html:\n$this" }
+                        .run(project.logger::info)
+                }
+
+                val slidesJsonFile = outputDir.resolve("slides.json")
+
+                // Créer le dossier de sortie s'il n'existe pas
+                outputDir.mkdirs()
+
+                // Scanner les fichiers .adoc dans le dossier slides
+                val adocFiles = slidesDir.listFiles { file ->
+                    file.isFile && file.extension == "adoc"
+                }?.map { file ->
+                    mapOf(
+                        "name" to file.nameWithoutExtension,
+                        "filename" to "${file.nameWithoutExtension}.html"
+                    )
+                }.apply { println(this) } ?: emptyList()
+
+                // Générer le fichier slides.json
+                buildString {
+                    appendLine("[")
+                    adocFiles.forEachIndexed { index, slide ->
+                        append("  {")
+                        append("\"name\": \"${slide["name"]}\", ")
+                        append("\"filename\": \"${slide["filename"]}\"")
+                        append("}")
+                        if (index < adocFiles.size - 1) append(",")
+                        appendLine()
+                    }
+                    appendLine("]")
+                }.run(slidesJsonFile::writeText)
+
+                // Générer le fichier index.html
+                slidesDir.listFiles()
+                    .find { it.name == "index.html" }!!
+                    .copyTo(outputDir.resolve("index.html"), true)
+
+                println("✅ Dashboard généré avec succès !")
+                println("📁 Fichiers générés :")
+                println("   - ${indexFile.absolutePath}")
+                println("   - ${slidesJsonFile.absolutePath}")
+                println("📊 ${adocFiles.size} présentation(s) trouvée(s)")
+            }
+        }
+
+        project.tasks.register(TASK_PUBLISH_SLIDES) {
+            it.group = GROUP_TASK_SLIDER
+            it.description = "Deploy sliders to remote repository"
+            it.dependsOn("asciidoctor")
+            it.doFirst { "Task description :\n\t${it.description}".run(project.logger::info) }
+            it.doLast {
+                val localConf: SlidesConfiguration = project.properties[CONFIG_PATH_KEY].toString()
+                    .run(project.layout.projectDirectory.asFile::resolve)
+                    .readText().trimIndent()
+                    .run(YAMLMapper()::readValue)
+
+                val repoDir = project.layout.buildDirectory.get().asFile.resolve(localConf.pushSlides!!.to)
+
+                project.pushSlides({
+                    project.layout.buildDirectory.get().asFile
+                        .resolve(localConf.srcPath!!)
+                        .absolutePath
+                }, { repoDir.absolutePath })
+            }
+        }
+
+    }
+}
+----
