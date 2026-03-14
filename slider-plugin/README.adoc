@@ -594,7 +594,7 @@ The consumer configuration is minimal — the plugin handles all repository and 
 [source,kotlin]
 ----
 pluginManagement.repositories {
-    mavenLocal()
+    mavenLocal() // dev mode only
     gradlePluginPortal()
 }
 rootProject.name = "your-project-name"

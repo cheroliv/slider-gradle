@@ -594,7 +594,7 @@ La configuration consommateur est minimale — le plugin gère en interne toute 
 [source,kotlin]
 ----
 pluginManagement.repositories {
-    mavenLocal()
+    mavenLocal() // dev mode uniquement
     gradlePluginPortal()
 }
 rootProject.name = "votre-projet"
