@@ -462,8 +462,8 @@ no explanation, no preamble:
   "audience": "string",
   "duration": <integer minutes>,
   "language": "string",
-  "outputFile": "string (kebab-case, ends with -deck_<lang>.adoc where <lang> is the ISO 639-1 language code, e.g. kotlin-coroutines-deck_fr.adoc)",
-  "author": { "name": "string", "email": "string" },
+  "outputFile": "string following the pattern <subject-slug>_<lang>-deck.adoc where <lang> is the ISO 639-1 code (e.g. kotlin-coroutines_fr-deck.adoc)",
+  "author": { "name": "<use the provided author name>", "email": "<use the provided author email>" },
   "revealjs": {
     "theme": "string",
     "slideNumber": "c/t",
@@ -491,13 +491,17 @@ no explanation, no preamble:
 - Adapt depth and number of slides to the audience level
 - speakerHint: what the presenter should say/demonstrate on that slide
 - pageNotesHint: references, exercises or deeper content for learners
-- outputFile: must follow the pattern <subject-slug>-deck_<lang>.adoc (e.g. kotlin-coroutines-deck_fr.adoc, spring-boot-intro-deck_en.adoc)
+- outputFile: MUST follow the pattern <subject-slug>_<lang>-deck.adoc (e.g. kotlin-coroutines_fr-deck.adoc, spring-boot-intro_en-deck.adoc)
 """.trimIndent()
 
-        fun contextUserMessage(subject: String, ragContext: String): String = buildString {
+        fun contextUserMessage(subject: String, language: String, authorName: String, authorEmail: String, ragContext: String): String = buildString {
             appendLine("Propose a complete DeckContext JSON for the following subject:")
             appendLine()
-            appendLine("Subject: $subject")
+            appendLine("Subject : $subject")
+            appendLine("Language: $language")
+            appendLine("The outputFile MUST follow the pattern: <subject-slug>_${language}-deck.adoc")
+            appendLine("Author name : $authorName")
+            appendLine("Author email: $authorEmail")
             appendLine()
             if (ragContext.isNotEmpty()) {
                 appendLine("## Relevant examples from the project (use as structural reference)")
