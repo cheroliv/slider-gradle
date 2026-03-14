@@ -1,0 +1,92 @@
+---
+subject: "Kotlin inline functions and reification"
+audience: "Développeurs Kotlin intermédiaires à expérimentés"
+duration: 25
+language: "fr"
+outputFile: "kotlin-inline-reification_fr-deck.adoc"
+author:
+  name: "cheroliv"
+  email: "cheroliv@mail.net"
+revealjs:
+  theme: "white"
+  slideNumber: "c/t"
+  width: 1408
+  height: 792
+  controls: true
+  controlsLayout: "edges"
+  history: true
+  fragmentInURL: true
+notes:
+  speakerNotes: true
+  pageNotes: true
+  pageNotesStyle: "DETAILED"
+slides:
+- title: "Agenda"
+  speakerHint: "Décrire le plan de la présentation, des bases des fonctions d'ordre\
+    \ supérieur aux concepts avancés de `inline` et `reified`."
+  pageNotesHint: "Inviter l'audience à poser des questions tout au long de la session.\
+    \ Demander si certains ont déjà rencontré des problèmes de performance avec les\
+    \ lambdas ou des limitations avec les génériques."
+- title: "Fonctions d'Ordre Supérieur et Lambdas : Rappel"
+  speakerHint: "Rappeler ce que sont les fonctions d'ordre supérieur et les lambdas\
+    \ en Kotlin, et pourquoi elles sont utiles pour la programmation fonctionnelle\
+    \ et la concision du code."
+  pageNotesHint: "Exemples simples de `map`, `filter`, `forEach` sur des collections.\
+    \ Expliquer la syntaxe d'une lambda et son type fonctionnel (`(Int) -> String`)."
+- title: "Le Coût des Lambdas"
+  speakerHint: "Expliquer que chaque expression lambda crée un objet anonyme. Dans\
+    \ des boucles serrées ou des appels très fréquents, cela peut entraîner un coû\
+    t de performance dû aux allocations mémoire et aux appels de méthode virtuels."
+  pageNotesHint: "Discuter du 'overhead' des lambdas en termes de garbage collection\
+    \ et de performance. Montrer un exemple de code qui pourrait être impacté."
+- title: "Fonctions `inline` : Le Principe"
+  speakerHint: "Introduire le mot-clé `inline`. Expliquer que le compilateur substitue\
+    \ le corps de la fonction `inline` et de la lambda passée directement au point\
+    \ d'appel, évitant ainsi la création d'objets et les appels de fonction supplé\
+    mentaires."
+  pageNotesHint: "Montrer un exemple simple avant/après `inline`. Utiliser la décompilation\
+    \ Java (Kotlin Bytecode Tool) pour illustrer concrètement la substitution du code."
+- title: "Impact et Bonnes Pratiques de `inline`"
+  speakerHint: "Discuter des avantages (réduction de l'overhead, meilleures optimisations\
+    \ du compilateur JIT) et des inconvénients potentiels (augmentation de la taille\
+    \ du bytecode si abusé, perte de lisibilité, risque de 'code bloat')."
+  pageNotesHint: "Souligner que `inline` n'est pas une panacée. Quand l'utiliser :\
+    \ petites fonctions d'ordre supérieur. Quand éviter : très grandes fonctions,\
+    \ lambdas qui ne sont pas appelées directement."
+- title: "`noinline` et `crossinline` : Les Modificateurs"
+  speakerHint: "Expliquer les scénarios où l'on veut rendre un paramètre lambda non-inlineable\
+    \ (`noinline`) et les garanties de retour non-local (`crossinline`) nécessaires\
+    \ quand une lambda passée à une fonction `inline` ne peut pas avoir un retour\
+    \ non-local."
+  pageNotesHint: "Donner des exemples concrets pour chaque modificateur. Pour `crossinline`,\
+    \ expliquer la restriction sur les `return` et pourquoi elle est nécessaire pour\
+    \ la sécurité."
+- title: "Reification : L'Effacement de Type en JVM"
+  speakerHint: "Introduire le concept d'effacement de type (type erasure) en JVM et\
+    \ comment cela empêche d'accéder aux informations de type générique au runtime\
+    \ (par exemple, `T::class` n'est pas directement possible)."
+  pageNotesHint: "Expliquer pourquoi `List<String>::class` n'est pas possible sans\
+    \ `reified`. Discuter des solutions traditionnelles comme passer `KClass<T>` explicitement."
+- title: "Types `reified` : Une Solution Élégante"
+  speakerHint: "Montrer comment le mot-clé `reified` combiné à `inline` permet de\
+    \ conserver l'information de type pour un paramètre générique au runtime, rendant\
+    \ possible des opérations comme `T::class.java` ou des vérifications de type (`is\
+    \ T`)."
+  pageNotesHint: "Exemples pratiques pour filtrer des collections par type, créer\
+    \ des instances de types génériques ou utiliser des API Java/Android qui nécessitent\
+    \ des objets `Class`."
+- title: "Quand Utiliser `reified` ?"
+  speakerHint: "Proposer des directives pour l'utilisation appropriée de `reified`\
+    \ : quand vous avez absolument besoin d'informations de type générique au runtime.\
+    \ Mettre en garde contre la surutilisation et les cas où une solution sans `reified`\
+    \ est préférable."
+  pageNotesHint: "Discuter des cas d'usage courants dans la bibliothèque standard\
+    \ Kotlin (ex: `filterIsInstance`). Comparer avec les approches Java classiques."
+- title: "Résumé et Questions"
+  speakerHint: "Récapituler les points clés : `inline` pour optimiser les lambdas\
+    \ et éviter l'overhead des objets anonymes, `reified` pour contourner l'effacement\
+    \ de type générique en JVM. Souligner l'importance d'utiliser ces fonctionnalité\
+    s judicieusement."
+  pageNotesHint: "Encourager l'expérimentation avec le décompilateur de bytecode Kotlin.\
+    \ Rappeler que la performance doit être mesurée. Ouvrir la session aux questions\
+    \ de l'audience."
