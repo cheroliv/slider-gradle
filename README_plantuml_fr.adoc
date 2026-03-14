@@ -158,7 +158,6 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 │       ├── *_<lang>-deck.adoc          # Decks générés (ex: kotlin-intro_fr-deck.adoc)
 │       ├── *-deck-context.yml          # Contextes de génération IA (sans code langue)
 │       ├── index.html                  # Dashboard des présentations
-│       ├── deck.properties             # Chemins des decks à ouvrir
 │       └── images/                     # Ressources images
 ├── slides-context.yml        # Configuration Git push + clés API IA
 ├── slider-plugin/            # Plugin Gradle (source du plugin)
@@ -263,7 +262,7 @@ start
 :Exécution d'une tâche Gradle;
 
 if (slides/ existe ?) then (oui)
-  if (deck.properties OK ?) then (oui)
+  if (*-deck.adoc présent ?) then (oui)
     :continuer;
   else (non)
     :extraire template slides;
@@ -291,27 +290,14 @@ stop
 
 Un dossier `slides/` est considéré **complet** s'il contient dans `slides/misc/` :
 
-* `deck.properties` — fichier de configuration des decks (clés `*.deck.file`)
 * `index.html` — dashboard des présentations
-* au moins un fichier `*-deck.adoc` référencé par une clé `*.deck.file` dans `deck.properties`
+* au moins un fichier `*-deck.adoc`
 
 Si l'une de ces conditions n'est pas remplie, le plugin extrait automatiquement un dossier `slides/`
 par défaut depuis le zip embarqué dans son classpath.
 
-=== Convention deck.properties
-
-[source,properties]
-----
-# Chaque clé suit le pattern *.deck.file
-# La valeur est le nom du fichier HTML généré (*-deck.html)
-# Le fichier source AsciiDoc correspondant est *-deck.adoc
-
-example.deck.file=example-deck.html
-default.deck.file=default-deck.html
-asciidoc.capsule.deck.file=asciidoc.capsule-deck.html
-----
-
-Le fichier source `example-deck.adoc` doit exister dans `slides/misc/` pour que la configuration soit considérée valide.
+NOTE: `deck.properties` a été supprimé — les decks sont découverts par scan direct des fichiers
+`*-deck.adoc` dans `slides/misc/`, en accord avec la convention `<slug>_<lang>-deck.adoc`.
 
 === Initialisation de slides-context.yml
 
@@ -423,13 +409,15 @@ Idéal pour une prévisualisation locale rapide.
 ./gradlew serveSlides
 ----
 
-=== Ouvrir
+=== Capsule
 
-`openChromium`::
-Ouvre le fichier de présentation par défaut dans **Chromium**.
+`asciidocCapsule`::
+_(TODO)_ — Génération de capsules vidéo à partir des slides. Affiche actuellement un message de placeholder dans les logs.
 
-`openFirefox`::
-Ouvre le tableau de bord de la présentation dans **Firefox**.
+[source,bash]
+----
+./gradlew asciidocCapsule
+----
 
 === Déployer
 
