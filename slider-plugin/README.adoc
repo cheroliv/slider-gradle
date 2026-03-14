@@ -24,14 +24,15 @@ image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License]
 
 `com.cheroliv.slider` is a Gradle plugin that encapsulates the full lifecycle of *AsciidoctorJ Reveal.js* slide generation.
 It exposes a minimal DSL to the consumer and handles all repository, dependency, and task configuration internally.
-It also integrates an AI assistant (E-3PO) for automated AsciiDoc deck generation via multiple LLM providers.
+It integrates a RAG (Retrieval-Augmented Generation) two-step pipeline for automated AsciiDoc/Reveal.js deck generation via multiple LLM providers.
 
-== Current version : {plugin-version}
+== Current version: {plugin-version}
 
 == Prerequisites
 
-* JDK 25 (tested with Eclipse Temurin 25.0.2)
+* JDK 25 (tested with Eclipse Temurin 25.0.2), 23+ supported
 * Gradle 9.4.0+
+* Docker (for the pgvector container used by the RAG pipeline)
 * Node.js / npx (for the `serveSlides` task)
 
 == Project Structure
@@ -44,14 +45,15 @@ slider-plugin/
 │   │   ├── main/kotlin/com/cheroliv/slider/
 │   │   │   ├── SliderPlugin.kt         # Plugin entry point — thin orchestrator
 │   │   │   ├── SliderManager.kt        # All plugin logic — nested objects
-│   │   │   ├── SlidesConfiguration.kt  # YAML data model (Git + AI config)
-│   │   │   ├── DeckContext.kt          # Deck generation data model
-│   │   │   └── git.kt                  # Git data classes
+│   │   │   └── models.kt               # Data models (DeckContext, SlidesConfiguration, Git…)
 │   │   ├── main/kotlin/com/cheroliv/slider/ai/
-│   │   │   ├── AssistantPlugin.kt      # AI plugin entry point
-│   │   │   └── AssistantManager.kt     # LLM providers + prompt management
-│   │   ├── functionalTest/kotlin/      # GradleTestKit functional tests
-│   │   └── test/                       # Unit + Cucumber tests
+│   │   │   ├── AssistantManager.kt     # LLM providers + PromptManager
+│   │   │   ├── RagManager.kt           # pgvector store + incremental indexing
+│   │   │   ├── PgVectorService.kt      # Gradle BuildService — Docker lifecycle
+│   │   │   ├── RagTask.kt              # Abstract base class for RAG tasks
+│   │   │   └── RagTasks.kt             # ReindexRagTask, ProposeDeckContextTask, GenerateDeckTask
+│   │   ├── test/kotlin/                # Unit + Cucumber tests
+│   │   └── functionalTest/kotlin/      # GradleTestKit functional tests
 │   └── build.gradle.kts                # Plugin build script
 ├── gradle/
 │   ├── libs.versions.toml              # Dependency catalogue
@@ -60,6 +62,47 @@ slider-plugin/
 ├── README.adoc                          # This file
 └── README_fr.adoc                       # French version
 ----
+
+=== Internal Architecture
+
+[plantuml]
+....
+@startuml
+skinparam componentStyle rectangle
+
+package "com.cheroliv.slider" {
+  component "SliderPlugin\n(orchestrator)" as Plugin
+  component "SliderManager\n(core logic)" as Manager
+  component "models.kt\n(DeckContext, SlidesConfiguration…)" as Models
+}
+
+package "com.cheroliv.slider.ai" {
+  component "AssistantManager\n(LLM + PromptManager)" as AM
+  component "RagManager\n(pgvector + indexing)" as RM
+  component "PgVectorService\n(BuildService Docker)" as PGS
+  component "RagTask\n(@ServiceReference)" as RT
+  component "RagTasks\n(Propose / Generate / Reindex)" as RTS
+}
+
+package "Infrastructure" {
+  component "pgvector\n(Docker)" as PG
+  component "AllMiniLmL6V2\n(ONNX in-process)" as Embed
+  component "LLM Providers\n(Ollama/Gemini/Mistral/HF)" as LLM
+}
+
+Plugin --> Manager
+Plugin --> AM : afterEvaluate\ncreateChatTasks()
+Manager --> Models
+AM --> RM
+AM --> PGS
+AM --> LLM
+RTS --|> RT
+RT --> PGS : @ServiceReference
+RM --> PG
+RM --> Embed
+PGS --> PG : docker-java
+@enduml
+....
 
 == Key Technical Decisions
 
@@ -107,80 +150,75 @@ The `@gem` qualifier is mandatory:
 project.dependencies.add("asciidoctorGems", "rubygems:asciidoctor-revealjs:3.1.0@gem")
 ----
 
-=== Scaffold — First-Use Auto-Initialisation
-On the first Gradle task execution, `SliderManager.Scaffold` runs three independent checks
-and generates missing resources automatically.
+=== PgVectorService — Gradle BuildService + docker-java
 
-==== slides/ initialisation — `scaffoldSlidesIfAbsent()`
-Checks whether the consumer project has a complete `slides/` directory. If not, extracts
-the bundled `slides.zip` from the plugin classpath into the project directory.
+The pgvector container is managed by `PgVectorService`, a build-scoped Gradle `BuildService`.
+It is started explicitly via `start()` from within the task action, never during the configuration phase.
 
-A `slides/` directory is considered complete when `slides/misc/` contains:
-
-* `deck.properties` — at least one `*.deck.file` key
-* `index.html` — presentation dashboard
-* at least one `*-deck.adoc` file matching a `*.deck.file` key in `deck.properties`
-
-The bundled zip must be placed at:
-
-[source]
-----
-slider/src/main/resources/slides.zip
-----
-
-Gradle embeds it automatically in the plugin jar. The zip entries must use relative paths
-starting with `slides/` so extraction into `projectDirectory` produces the correct layout:
-
-[source]
-----
-slides/
-└── misc/
-    ├── example-deck.adoc
-    ├── index.html
-    ├── deck.properties
-    └── images/
-----
-
-The completeness check is implemented as a pure function `isSlidesConfigComplete(miscDir: File)`
-inside `SliderManager.Scaffold` — testable in pure Kotlin without GradleTestKit.
-
-==== slides-context.yml initialisation — `scaffoldSlidesContextIfAbsent()`
-If `slides-context.yml` is absent from the consumer project directory, generates one automatically
-by serialising a default `SlidesConfiguration` instance via `yamlMapper`. This guarantees the
-output is structurally valid and consistent with the data model — no hardcoded YAML strings.
+RAG tasks declare the dependency via `@ServiceReference` (Gradle 7.4+) — the only annotation
+that guarantees Gradle keeps the service alive for the full duration of the task.
 
 [source,kotlin]
 ----
-val default = SlidesConfiguration(
-    srcPath = "docs/asciidocRevealJs",
-    pushSlides = GitPushConfiguration(
-        from = "build/docs/asciidocRevealJs",
-        to = "build/slides-repo",
-        branch = "main",
-        message = "deploy slides",
-        repo = RepositoryConfiguration(
-            name = "slides",
-            repository = "https://github.com/your-org/your-slides-repo.git",
-            credentials = RepositoryCredentials(
-                username = "your-username",
-                password = "your-token"
-            )
-        )
-    ),
-    ai = AiConfiguration(
-        gemini = listOf("your-gemini-api-key"),
-        mistral = listOf("your-mistral-api-key"),
-        huggingface = listOf("your-huggingface-api-key"),
-    )
-)
-yamlMapper.writeValue(slidesContext, default)
+// RagTask.kt — @ServiceReference guarantees lifecycle
+abstract class RagTask : DefaultTask() {
+    @get:ServiceReference
+    abstract val pgVectorService: Property<PgVectorService>
+
+    protected fun service(): PgVectorService =
+        pgVectorService.get().also { it.start() }
+}
 ----
 
-==== example-deck-context.yml initialisation — `scaffoldDeckContextIfAbsent()`
-If `slides/misc/example-deck-context.yml` is absent, generates a ready-to-use template
-by serialising a default `DeckContext` instance via `yamlMapper`.
+The host port is assigned dynamically (binding `0:5432`) to avoid collision with any existing PostgreSQL.
+The service is stopped automatically by Gradle at the end of the build.
 
-All three functions are no-ops if the resource already exists — existing consumer content is never overwritten.
+=== SSL pgvector — `sslmode=disable`
+
+The PostgreSQL JDBC driver attempts SSL negotiation by default, causing an `EOFException`
+against a plain Docker container with no SSL configured. `RagManager.buildStore()` creates
+a `PGSimpleDataSource` with `setSsl(false)` / `setSslMode("disable")` (inherited from
+`BaseDataSource`) and injects it via the protected constructor of `PgVectorEmbeddingStore`.
+
+=== `--no-daemon` required for RAG tasks
+
+The Gradle daemon reuses the JVM process between builds, preventing native ONNX library
+reload (`libtokenizers.so`) and causing `UnsatisfiedLinkError` on the second build.
+All RAG tasks must be run with `--no-daemon`, or the project should declare
+`org.gradle.daemon=false` in `gradle.properties`.
+
+=== Scaffold — `deck.properties` removed
+
+`deck.properties` has been removed. The `slides/` completeness check now scans for
+`*-deck.adoc` files directly in `slides/misc/`. The `isSlidesConfigComplete` function
+is a pure Kotlin function testable without GradleTestKit.
+
+[source,kotlin]
+----
+private fun isSlidesConfigComplete(miscDir: File): Boolean {
+    if (!miscDir.resolve("index.html").exists()) return false
+    return miscDir.listFiles { f ->
+        f.isFile && f.name.endsWith("-deck.adoc")
+    }?.isNotEmpty() ?: false
+}
+----
+
+=== Deck file naming convention
+
+[cols="1,2,2"]
+|===
+| File | Pattern | Example
+
+| Generation context
+| `<slug>-deck-context.yml`
+| `kotlin-coroutines-deck-context.yml`
+
+| Generated AsciiDoc deck
+| `<slug>_<lang>-deck.adoc`
+| `kotlin-coroutines_fr-deck.adoc`
+|===
+
+The language in `outputFile` is the ISO 639-1 code from the `language` field of `DeckContext`.
 
 == SliderPlugin.apply() — Orchestration
 
@@ -197,10 +235,15 @@ override fun apply(project: Project) {
         configureDependencies()
         configureExtensions()
         registerTasks()
-        afterEvaluate { plugins.apply(AssistantPlugin::class.java) }
+        afterEvaluate { createChatTasks() }  // registers all AI tasks
     }
 }
 ----
+
+`createChatTasks()` is defined in `AssistantManager` and registers:
+- `PgVectorService` via `gradle.sharedServices.registerIfAbsent()`
+- `reindexRag`, `proposeDeckContext`, `generateDeck` (typed RAG tasks)
+- smoke-test tasks `helloOllama*`, `helloGemini*`, `helloMistral*`, `helloHuggingFace*`
 
 == Data Model
 
@@ -243,8 +286,8 @@ data class DeckContext(
     val subject: String,
     val audience: String,
     val duration: Int,
-    val language: String = "French",
-    val outputFile: String,
+    val language: String = "fr",      // ISO 639-1 code
+    val outputFile: String,            // pattern: <slug>_<lang>-deck.adoc
     val author: AuthorContext,
     val revealjs: RevealJsContext = RevealJsContext(),
     val notes: NotesConfiguration = NotesConfiguration(),
@@ -272,7 +315,7 @@ data class DeckContext(
 ./gradlew functionalTest
 
 # Cucumber BDD tests
-./gradlew cucumberTest
+./gradlew check
 ----
 
 === Publish to Gradle Plugin Portal
@@ -317,23 +360,43 @@ slider {
 
 | `serveSlides`
 | slider
-| Serves slides via npx + serve package
+| Serves slides via npx + serve package (prints link to console)
 
 | `publishSlides`
 | slider
 | Deploys slides to remote Git repository
 
-| `openFirefox`
-| slider
-| Opens presentation dashboard in Firefox
+| `asciidocCapsule`
+| capsule
+| _(TODO)_ Video capsule generation from slides
 
-| `openChromium`
-| slider
-| Opens default deck in Chromium
+| `reindexRag`
+| slider-ai
+| Drops and fully rebuilds the pgvector embedding index
+
+| `proposeDeckContext`
+| slider-ai
+| Proposes a `*-deck-context.yml` via RAG + LLM (step 1/2)
 
 | `generateDeck`
 | slider-ai
-| Generates a complete AsciiDoc/Reveal.js deck from a `*-deck-context.yml` via Gemini
+| Generates a complete AsciiDoc/Reveal.js deck from a `*-deck-context.yml` (step 2/2)
+
+| `helloOllama*`
+| slider-ai
+| Ollama smoke tests (one per model in the catalogue)
+
+| `helloGemini*`
+| slider-ai
+| Gemini smoke tests
+
+| `helloMistral*`
+| slider-ai
+| Mistral AI smoke tests
+
+| `helloHuggingFace*`
+| slider-ai
+| HuggingFace smoke tests
 
 | `reportTests`
 | verification
@@ -344,16 +407,55 @@ slider {
 | Runs checks and opens functional test report in Firefox
 |===
 
-== AI Integration — project.createChatTasks()
+== AI Integration — RAG Pipeline
 
-`project.createChatTasks()` is applied automatically inside `SliderPlugin.apply()` via `afterEvaluate`.
-It registers the `generateDeck` task and manages four LLM providers.
+`AssistantManager.createChatTasks()` is called in `afterEvaluate` and registers all AI tasks.
+The RAG pipeline relies on three components:
+
+* `PgVectorService` — Gradle `BuildService` managing the Docker lifecycle via `docker-java`
+* `RagManager` — incremental indexing by SHA-256, cosine-similarity search
+* `AssistantManager` — model resolution, prompt construction, LLM call
+
+=== RAG Pipeline Lifecycle
+
+[plantuml]
+....
+@startuml
+participant "Gradle" as G
+participant "RagTask\n(@ServiceReference)" as RT
+participant "PgVectorService\n(BuildService)" as PGS
+participant "RagManager" as RM
+participant "AssistantManager" as AM
+participant "LLM Provider" as LLM
+collections "slides/misc/" as Files
+
+G -> RT : task execution
+RT -> PGS : start() — idempotent
+activate PGS
+PGS --> RT : Docker port assigned
+
+RT -> RM : retrieve(query) or reindex()
+RM -> PGS : port / credentials
+RM --> RT : RAG chunks
+
+RT -> AM : resolveModel(provider)
+AM --> RT : ChatModel
+
+RT -> LLM : systemPrompt + userMessage + RAG chunks
+LLM --> RT : response
+
+RT -> Files : write *-deck-context.yml\nor *_<lang>-deck.adoc
+
+G -> PGS : close() — end of build
+deactivate PGS
+@enduml
+....
 
 === Supported providers
 
 [cols="1,1,1"]
 |===
-| Provider | Module | Key in slides-context.yml
+| Provider | LangChain4j module | Key in slides-context.yml
 
 | Ollama (local)
 | `langchain4j-ollama`
@@ -361,68 +463,77 @@ It registers the `generateDeck` task and manages four LLM providers.
 
 | Google Gemini
 | `langchain4j-google-ai-gemini`
-| `ai.gemini`
+| `ai.gemini[0]`
 
 | Mistral AI
 | `langchain4j-mistral-ai`
-| `ai.mistral`
+| `ai.mistral[0]`
 
 | HuggingFace (via OpenAI router)
 | `langchain4j-open-ai`
-| `ai.huggingface`
-|===
-
-=== generateDeck task
-
-The provider is selected at the command line with `-Pai.provider`. Defaults to `ollama` when absent.
-
-[source,bash]
-----
-# Default: ollama (local)
-./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml
-
-# Gemini
-./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=gemini
-
-# Mistral AI
-./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=mistral
-
-# HuggingFace
-./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=huggingface
-----
-
-[cols="1,2,2"]
-|===
-| `-Pai.provider` | Default model | API key
-
-| `ollama` _(default)_
-| `smollm:135m`
-| none — local inference
-
-| `gemini`
-| `gemini-2.5-flash`
-| `ai.gemini[0]`
-
-| `mistral`
-| `mistral-small-latest`
-| `ai.mistral[0]`
-
-| `huggingface`
-| `Llama-3.1-8B-Instruct:sambanova`
 | `ai.huggingface[0]`
 |===
 
-The property is read via `Project.aiProvider` (constant `AssistantManager.PROP_AI_PROVIDER = "ai.provider"`).
-Unknown values fall back to `ollama` with a console warning.
+=== RAG tasks — usage
 
-The task reads the `DeckContext` from the YAML file, builds a system prompt with full
-AsciiDoc/Reveal.js syntax knowledge, and sends it to the resolved `ChatModel`.
-The generated `.adoc` file is written to `slides/misc/` at the path defined by `outputFile`.
+[source,bash]
+----
+# Rebuild index (after adding/removing sources)
+./gradlew reindexRag --no-daemon
+
+# Propose a deck context (step 1/2)
+./gradlew proposeDeckContext \
+  -Psubject="Kotlin inline functions and reification" \
+  -Planguage=fr \
+  -Pai.provider=gemini \
+  --no-daemon
+
+# Generate the deck (step 2/2)
+./gradlew generateDeck \
+  -Pdeck.context=slides/misc/kotlin-inline-functions-and-reification-deck-context.yml \
+  -Pai.provider=gemini \
+  --no-daemon
+----
+
+Properties available for `proposeDeckContext`:
+
+[cols="1,1,2"]
+|===
+| Property | Default | Description
+
+| `-Psubject`
+| _(required)_
+| Presentation subject
+
+| `-Planguage`
+| `fr`
+| ISO 639-1 code — determines `<lang>` in `outputFile`
+
+| `-Pai.provider`
+| `ollama`
+| LLM provider
+
+| `-Pauthor.name`
+| `git config user.name`
+| Author name (fallback: git config)
+
+| `-Pauthor.email`
+| `git config user.email`
+| Author email (fallback: git config)
+
+| `-Poutput`
+| `slides/misc/<slug>-deck-context.yml`
+| Custom output path
+|===
 
 === Prompt strategy
 
-The system prompt (`deckSystemPrompt`) teaches the LLM AsciiDoc/Reveal.js syntax.
-This approach is effective even for small models (1B–8B). Key rules enforced:
+`PromptManager` (inner object of `AssistantManager`) manages two prompts:
+
+* `contextSystemPrompt` + `contextUserMessage` — step 1: proposes a `DeckContext` JSON
+* `deckSystemPrompt` + `deckUserMessage` — step 2: generates the full AsciiDoc deck
+
+Key rules enforced in `deckSystemPrompt`:
 
 * Maximum 5 bullet points per slide with `[%step]`, 7 without
 * Maximum 10 lines of code per `[source,...]` block
@@ -430,9 +541,66 @@ This approach is effective even for small models (1B–8B). Key rules enforced:
 * `[NOTE.speaker]` and `[.notes]` presence controlled by `NotesConfiguration`
 * `SlideHint` values guide content per slide without replacing LLM generation
 
+=== Available models by provider
+
+[cols="1,2"]
+|===
+| Provider | Models (catalogue)
+
+| Ollama
+| `smollm:135m`, `llama3.2:3b-instruct-q8_0`, `smollm:135m-instruct-v0.2-q8_0`, `gemma3:1b-it-fp16`
+
+| Gemini
+| `gemini-2.5-flash`
+
+| Mistral
+| `mistral-small-latest`, `open-mistral-nemo`
+
+| HuggingFace
+| `meta-llama/Llama-3.1-8B-Instruct:sambanova`, `Qwen/Qwen3.5-35B-A3B:novita`
+|===
+
+== Scaffold — Auto-Initialisation
+
+=== `scaffoldSlidesIfAbsent()`
+
+Checks whether the consumer project has a complete `slides/` directory. If not, extracts
+the bundled `slides.zip` from the plugin classpath.
+
+A `slides/` directory is considered complete when `slides/misc/` contains:
+
+* `index.html` — presentation dashboard
+* at least one `*-deck.adoc` source file
+
+NOTE: `deck.properties` has been removed — decks are discovered by direct scan.
+
+The bundled zip must be placed at `slider/src/main/resources/slides.zip`.
+Zip entries must use relative paths starting with `slides/`:
+
+[source]
+----
+slides/
+└── misc/
+    ├── example-deck.adoc
+    └── index.html
+----
+
+=== `scaffoldSlidesContextIfAbsent()`
+
+If `slides-context.yml` is absent, generates one automatically by serialising a default
+`SlidesConfiguration` instance via `yamlMapper` — no hardcoded YAML strings.
+
+=== `scaffoldDeckContextIfAbsent()`
+
+If `slides/misc/example-deck-context.yml` is absent, generates a ready-to-use `DeckContext`
+template via `yamlMapper`.
+
+All three functions are no-ops if the resource already exists — existing consumer content is never overwritten.
+
 == Dependencies
 
 === Key runtime dependencies
+
 [cols="1,1"]
 |===
 | Dependency | Purpose
@@ -466,6 +634,21 @@ This approach is effective even for small models (1B–8B). Key rules enforced:
 
 | `dev.langchain4j:langchain4j-ollama`
 | Local Ollama models integration
+
+| `dev.langchain4j:langchain4j-pgvector`
+| pgvector embedding store
+
+| `dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2`
+| In-process ONNX embedding model (dim=384)
+
+| `com.github.docker-java:docker-java-core`
+| Docker management for PgVectorService
+
+| `com.github.docker-java:docker-java-transport-httpclient5`
+| HTTP transport for docker-java
+
+| `org.postgresql:postgresql`
+| PostgreSQL JDBC driver
 
 | `org.jetbrains.kotlinx:kotlinx-coroutines-core`
 | Async streaming response bridge
@@ -507,27 +690,24 @@ slider = "{plugin-version}"
 slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 ----
 
-== Gradle Feature Compatibility
+=== gradle.properties (recommended)
+[source,properties]
+----
+# Required for RAG tasks — prevents UnsatisfiedLinkError on libtokenizers.so
+org.gradle.daemon=false
+----
 
-The plugin declares its compatibility with opt-in Gradle features via the
-`compatibility {}` block introduced in Plugin Publish plugin v2.1.0.
-This declaration is mandatory — the Gradle Plugin Portal emits a warning
-during `publishPlugins` if it is absent, and plans to eventually reject plugins without it.
+== Gradle Feature Compatibility
 
 [source,kotlin]
 ----
-import org.gradle.plugin.compatibility.compatibility
-
 gradlePlugin {
     plugins {
         create("slider") {
-            // ...
             compatibility {
                 features {
                     // asciidoctorRevealJs runs OUT_OF_PROCESS via JRuby —
                     // not compatible with Configuration Cache.
-                    // Will be revisited when asciidoctor-gradle stabilises
-                    // beyond 5.0.0-alpha.1.
                     configurationCache = false
                 }
             }
@@ -536,14 +716,14 @@ gradlePlugin {
 }
 ----
 
-Declaring `configurationCache = false` is honest and recommended — it informs
-users clearly and has no negative consequences for the plugin's Portal ranking
-beyond the Configuration Cache badge.
+Declaring `configurationCache = false` is honest and recommended — it informs users clearly
+and has no negative consequences for the plugin's Portal ranking beyond the Configuration Cache badge.
 
 == Roadmap
 * Configuration Cache support — blocked on asciidoctor-gradle `5.x` stable release.
 * Extended DSL — configurable theme, transition, source directory.
-* Automated functional tests covering the full build lifecycle.
+* Cucumber tests covering scaffold, `proposeDeckContext` and `generateDeck`.
+* `asciidocCapsule` — video capsule generation from slides.
 
 == License
 This project is licensed under the Apache 2.0 License – see the `LICENCE` file.
