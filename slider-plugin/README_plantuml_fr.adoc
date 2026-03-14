@@ -65,7 +65,44 @@ slider-plugin/
 
 === Architecture interne
 
-image::images/fr/diag-plantuml-md5-3b0343a07def68f0045b6332de5c508c.png[]
+[plantuml]
+....
+@startuml
+skinparam componentStyle rectangle
+
+package "com.cheroliv.slider" {
+  component "SliderPlugin\n(orchestrateur)" as Plugin
+  component "SliderManager\n(logique principale)" as Manager
+  component "models.kt\n(DeckContext, SlidesConfiguration…)" as Models
+}
+
+package "com.cheroliv.slider.ai" {
+  component "AssistantManager\n(LLM + PromptManager)" as AM
+  component "RagManager\n(pgvector + indexation)" as RM
+  component "PgVectorService\n(BuildService Docker)" as PGS
+  component "RagTask\n(@ServiceReference)" as RT
+  component "RagTasks\n(Propose / Generate / Reindex)" as RTS
+}
+
+package "Infrastructure" {
+  component "pgvector\n(Docker)" as PG
+  component "AllMiniLmL6V2\n(ONNX in-process)" as Embed
+  component "Fournisseurs LLM\n(Ollama/Gemini/Mistral/HF)" as LLM
+}
+
+Plugin --> Manager
+Plugin --> AM : afterEvaluate\ncreateChatTasks()
+Manager --> Models
+AM --> RM
+AM --> PGS
+AM --> LLM
+RTS --|> RT
+RT --> PGS : @ServiceReference
+RM --> PG
+RM --> Embed
+PGS --> PG : docker-java
+@enduml
+....
 
 == Décisions techniques clés
 
@@ -381,7 +418,39 @@ l'ensemble des tâches IA. Le pipeline RAG repose sur trois composants :
 * `AssistantManager` — résolution du modèle, construction des prompts, appel LLM
 
 === Cycle de vie du pipeline RAG
-image::images/fr/diag-plantuml-md5-a8dbd87942fd1adefb8fd31826696dbf.png[]
+
+[plantuml]
+....
+@startuml
+participant "Gradle" as G
+participant "RagTask\n(@ServiceReference)" as RT
+participant "PgVectorService\n(BuildService)" as PGS
+participant "RagManager" as RM
+participant "AssistantManager" as AM
+participant "LLM Provider" as LLM
+collections "slides/misc/" as Files
+
+G -> RT : exécution de la tâche
+RT -> PGS : start() — idempotent
+activate PGS
+PGS --> RT : port Docker assigné
+
+RT -> RM : retrieve(query) ou reindex()
+RM -> PGS : port / credentials
+RM --> RT : chunks RAG
+
+RT -> AM : resolveModel(provider)
+AM --> RT : ChatModel
+
+RT -> LLM : systemPrompt + userMessage + chunks RAG
+LLM --> RT : réponse
+
+RT -> Files : écriture *-deck-context.yml\nou *_<lang>-deck.adoc
+
+G -> PGS : close() — fin du build
+deactivate PGS
+@enduml
+....
 
 === Fournisseurs supportés
 

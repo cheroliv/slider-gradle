@@ -65,7 +65,46 @@ slider-plugin/
 
 === Internal Architecture
 
-image::images/en/diag-plantuml-md5-310245db5847cf11bb4e9b47b2009c27.png[]
+
+
+[plantuml]
+....
+@startuml
+skinparam componentStyle rectangle
+
+package "com.cheroliv.slider" {
+  component "SliderPlugin\n(orchestrator)" as Plugin
+  component "SliderManager\n(core logic)" as Manager
+  component "models.kt\n(DeckContext, SlidesConfiguration…)" as Models
+}
+
+package "com.cheroliv.slider.ai" {
+  component "AssistantManager\n(LLM + PromptManager)" as AM
+  component "RagManager\n(pgvector + indexing)" as RM
+  component "PgVectorService\n(BuildService Docker)" as PGS
+  component "RagTask\n(@ServiceReference)" as RT
+  component "RagTasks\n(Propose / Generate / Reindex)" as RTS
+}
+
+package "Infrastructure" {
+  component "pgvector\n(Docker)" as PG
+  component "AllMiniLmL6V2\n(ONNX in-process)" as Embed
+  component "LLM Providers\n(Ollama/Gemini/Mistral/HF)" as LLM
+}
+
+Plugin --> Manager
+Plugin --> AM : afterEvaluate\ncreateChatTasks()
+Manager --> Models
+AM --> RM
+AM --> PGS
+AM --> LLM
+RTS --|> RT
+RT --> PGS : @ServiceReference
+RM --> PG
+RM --> Embed
+PGS --> PG : docker-java
+@enduml
+....
 
 == Key Technical Decisions
 
@@ -381,7 +420,38 @@ The RAG pipeline relies on three components:
 
 === RAG Pipeline Lifecycle
 
-image::images/en/diag-plantuml-md5-6c9c93f90b48a0dbd57c918daf22fbaf.png[]
+[plantuml]
+....
+@startuml
+participant "Gradle" as G
+participant "RagTask\n(@ServiceReference)" as RT
+participant "PgVectorService\n(BuildService)" as PGS
+participant "RagManager" as RM
+participant "AssistantManager" as AM
+participant "LLM Provider" as LLM
+collections "slides/misc/" as Files
+
+G -> RT : task execution
+RT -> PGS : start() — idempotent
+activate PGS
+PGS --> RT : Docker port assigned
+
+RT -> RM : retrieve(query) or reindex()
+RM -> PGS : port / credentials
+RM --> RT : RAG chunks
+
+RT -> AM : resolveModel(provider)
+AM --> RT : ChatModel
+
+RT -> LLM : systemPrompt + userMessage + RAG chunks
+LLM --> RT : response
+
+RT -> Files : write *-deck-context.yml\nor *_<lang>-deck.adoc
+
+G -> PGS : close() — end of build
+deactivate PGS
+@enduml
+....
 
 === Supported providers
 
