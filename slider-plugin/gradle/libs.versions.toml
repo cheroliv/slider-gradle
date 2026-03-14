@@ -1,48 +1,49 @@
 [versions]
-slider = "0.0.4"
+slider = "0.0.5"
 asciidoctor-gradle = "5.0.0-alpha.1"
 node-gradle = "7.1.0"
 commons-io = "2.13.0"
-jgit = "6.10.0.202406032230-r"
+jgit = "7.5.0.202512021534-r"
 slf4j = "2.0.17"
-xz = "1.10"
-asciidoctorj-diagram = "3.0.1"
+xz = "1.12"
+asciidoctorj-diagram = "3.2.0"
 asciidoctorj-diagram-plantuml = "1.2025.3"
 kotlin = "2.3.10"
 junit-platform-launcher = "1.10.2"
-mockito-kotlin = "5.3.1"
-mockito-jupiter = "5.12.0"
+mockito-kotlin = "6.2.3"
+mockito-jupiter = "5.23.0"
 gradle = "9.4.0"
-assertj = "3.27.6"
+assertj = "3.27.7"
 plugin-publish = "2.1.0"
-cucumber = "7.33.0"
-junit_platform = "1.14.2"
-jackson = "2.21.0"
+#cucumber = "7.33.0"
+cucumber = "7.34.3"
+junit_platform = "1.14.3"
+jackson = "2.21.1"
 coroutines = "1.10.2"
-arrow = "1.2.4"
-arrow-jackson = "0.14.1"
+arrow = "2.2.2"
+arrow-jackson = "0.15.1"
 langchain4j = "1.12.1"
 langchain4j-beta = "1.12.2-beta22"
 docker-java = "3.7.0"
 
 [libraries]
-asciidoctor-gradle-jvm-slides = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm-slides", version.ref = "asciidoctor-gradle" }
-asciidoctor-gradle-jvm-gems = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm-gems", version.ref = "asciidoctor-gradle" }
-asciidoctor-gradle-jvm = { group = "org.asciidoctor", name = "asciidoctor-gradle-jvm", version.ref = "asciidoctor-gradle" }
-node-gradle = { group = "com.github.node-gradle", name = "gradle-node-plugin", version.ref = "node-gradle" }
-kotlin-stdlib-jdk8 = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8" }
-kotlin-test-junit5 = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit5", version.ref = "kotlin" }
-assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
-mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockito-kotlin" }
-mockito-junit-jupiter = { group = "org.mockito", name = "mockito-junit-jupiter", version.ref = "mockito-jupiter" }
-asciidoctorj-diagram = { group = "org.asciidoctor", name = "asciidoctorj-diagram", version.ref = "asciidoctorj-diagram" }
-asciidoctorj-diagram-plantuml = { group = "org.asciidoctor", name = "asciidoctorj-diagram-plantuml", version.ref = "asciidoctorj-diagram-plantuml" }
-commons-io = { group = "commons-io", name = "commons-io", version.ref = "commons-io" }
-jgit-core = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
-jgit-ssh = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.ssh.jsch", version.ref = "jgit" }
-jgit-archive = { group = "org.eclipse.jgit", name = "org.eclipse.jgit.archive", version.ref = "jgit" }
-xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
-gradle-tooling-api = { group = "org.gradle", name = "gradle-tooling-api", version.ref = "gradle" }
+asciidoctor-gradle-jvm-slides = { module = "org.asciidoctor:asciidoctor-gradle-jvm-slides", version.ref = "asciidoctor-gradle" }
+asciidoctor-gradle-jvm-gems = { module = "org.asciidoctor:asciidoctor-gradle-jvm-gems", version.ref = "asciidoctor-gradle" }
+asciidoctor-gradle-jvm = { module = "org.asciidoctor:asciidoctor-gradle-jvm", version.ref = "asciidoctor-gradle" }
+node-gradle = { module = "com.github.node-gradle:gradle-node-plugin", version.ref = "node-gradle" }
+kotlin-stdlib-jdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8" }
+kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito-jupiter" }
+asciidoctorj-diagram = { module = "org.asciidoctor:asciidoctorj-diagram", version.ref = "asciidoctorj-diagram" }
+asciidoctorj-diagram-plantuml = { module = "org.asciidoctor:asciidoctorj-diagram-plantuml", version.ref = "asciidoctorj-diagram-plantuml" }
+commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
+jgit-core = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
+jgit-ssh = { module = "org.eclipse.jgit:org.eclipse.jgit.ssh.jsch", version.ref = "jgit" }
+jgit-archive = { module = "org.eclipse.jgit:org.eclipse.jgit.archive", version.ref = "jgit" }
+xz = { module = "org.tukaani:xz", version.ref = "xz" }
+gradle-tooling-api = { module = "org.gradle:gradle-tooling-api", version.ref = "gradle" }
 cucumber-java = { module = "io.cucumber:cucumber-java", version.ref = "cucumber" }
 cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
 cucumber-picocontainer = { module = "io.cucumber:cucumber-picocontainer", version.ref = "cucumber" }
@@ -115,66 +116,3 @@ asciidoctor = [
     "asciidoctor-gradle-jvm-gems",
     "asciidoctor-gradle-jvm"
 ]
-#
-#[versions]
-#kotlin = "2.3.10"
-#jackson = "2.21.1"
-#mockito-jupiter = "5.17.0"
-#okhttp = "5.3.2"
-#jaudiotagger = "3.0.1"
-##newpipe-extractor = "v0.25.2"
-#newpipe-extractor = "4701a17"
-#newpipe = "0.0.4"
-#commons-io = "2.13.0"
-#slf4j = "2.0.17"
-#junit-platform-launcher = "1.10.2"
-#mockito-kotlin = "5.3.1"
-#gradle = "9.3.1"
-#assertj = "3.27.6"
-#plugin-publish = "1.3.1"
-#cucumber = "7.33.0"
-#junit-platform = "1.14.2"
-#logback = "1.5.26"
-#
-#[libraries]
-#logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
-#slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
-#newpipe-extractor = { module = "com.github.TeamNewPipe:NewPipeExtractor", version.ref = "newpipe-extractor" }
-#jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger" }
-#okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
-#kotlin-stdlib-jdk8 = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8" }
-#kotlin-test-junit5 = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit5", version.ref = "kotlin" }
-#assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
-#mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockito-kotlin" }
-#mockito-junit-jupiter = { group = "org.mockito", name = "mockito-junit-jupiter", version.ref = "mockito-jupiter" }
-#gradle-tooling-api = { group = "org.gradle", name = "gradle-tooling-api", version.ref = "gradle" }
-#cucumber-java = { module = "io.cucumber:cucumber-java", version.ref = "cucumber" }
-#cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
-#cucumber-picocontainer = { module = "io.cucumber:cucumber-picocontainer", version.ref = "cucumber" }
-#junit-platform-suite = { module = "org.junit.platform:junit-platform-suite", version.ref = "junit-platform" }
-#junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-#jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
-#jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
-##TODO: migrate to tools.jackson
-##    implementation("tools.jackson.module:jackson-module-kotlin:3.0.4")
-##    implementation("tools.jackson.dataformat:jackson-dataformat-yaml:3.0.4")
-#
-#[plugins]
-#kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-#newpipe = { id = "com.cheroliv.newpipe", version.ref = "newpipe" }
-#publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }
-#
-#[bundles]
-#newpipe = [
-#    "jackson-module-kotlin",
-#    "jackson-dataformat-yaml",
-#    "newpipe-extractor",
-#    "jaudiotagger",
-#    "okhttp",
-#]
-#cucumber = [
-#    "cucumber-java",
-#    "cucumber-junit-platform-engine",
-#    "cucumber-picocontainer",
-#    "junit-platform-suite",
-#]
