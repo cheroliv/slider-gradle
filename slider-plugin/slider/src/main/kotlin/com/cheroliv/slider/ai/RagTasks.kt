@@ -48,7 +48,8 @@ abstract class ReindexRagTask : RagTask() {
  *   `-Psubject=<text>`
  *
  * Optional properties:
- *   `-Poutput=<path>`              default: slides/misc/<slug>-deck-context.yml
+ *   `-Planguage=<lang>`            ISO 639-1 code, default: fr — used in filename: <slug>_<lang>-deck-context.yml
+ *   `-Poutput=<path>`              overrides the auto-generated path
  *   `-Pai.provider=<provider>`     ollama (default) | gemini | mistral | huggingface
  *
  * Usage:
@@ -67,11 +68,29 @@ abstract class ProposeDeckContextTask : RagTask() {
                         "Usage: ./gradlew proposeDeckContext -Psubject=\"Introduction to Kotlin\""
             )
 
+        // Language: -Planguage=fr|en|… (default: fr)
+        val language = (project.findProperty("language") as? String ?: "fr").lowercase().trim()
+
+        // Author: -Pauthor.name / -Pauthor.email
+        // Falls back to git config user.name / user.email if not provided
+        val authorName = project.findProperty("author.name") as? String
+            ?: runCatching {
+                ProcessBuilder("git", "config", "user.name")
+                    .directory(project.projectDir)
+                    .start().inputStream.bufferedReader().readLine()
+            }.getOrNull() ?: "Unknown"
+        val authorEmail = project.findProperty("author.email") as? String
+            ?: runCatching {
+                ProcessBuilder("git", "config", "user.email")
+                    .directory(project.projectDir)
+                    .start().inputStream.bufferedReader().readLine()
+            }.getOrNull() ?: "unknown@example.com"
+
         val outputPath = project.findProperty("output") as? String
             ?: "slides/misc/${subject.toSlug()}-deck-context.yml"
 
         val provider = project.aiProvider
-        println("🔍 [1/2] proposeDeckContext — provider: $provider — subject: \"$subject\"")
+        println("🔍 [1/2] proposeDeckContext — provider: $provider — subject: \"$subject\" — lang: $language")
 
         println("📚 [RAG] Retrieving relevant context chunks…")
         val ragContext = RagManager.run { project.retrieve(subject, pgService) }
@@ -82,7 +101,7 @@ abstract class ProposeDeckContextTask : RagTask() {
 
         val model = project.resolveModel(provider)
         val systemMsg = SystemMessage.from(AssistantManager.PromptManager.contextSystemPrompt)
-        val userMsg = UserMessage.from(AssistantManager.PromptManager.contextUserMessage(subject, ragContext))
+        val userMsg = UserMessage.from(AssistantManager.PromptManager.contextUserMessage(subject, language, authorName, authorEmail, ragContext))
 
         println("🤖 [LLM] Proposing DeckContext…")
         val rawJson = model.chat(listOf(systemMsg, userMsg)).aiMessage().text()
