@@ -25,20 +25,93 @@ This project demonstrates the use of the **com.cheroliv.slider** plugin with **G
 
 All slide generation logic is fully encapsulated in the `slider-plugin/`, keeping the consumer build script minimal.
 
+AI-assisted generation relies on a two-step RAG pipeline:
+`proposeDeckContext` prepares a pedagogical context file reviewed by the author,
+`generateDeck` produces the final AsciiDoc deck enriched by project examples.
+
 === Use Cases
 
-image::readme_images/diag-plantuml-md5-55a778e2db52e7503068618bacfb65ee.png[]
+[plantuml]
+....
+@startuml
+left to right direction
 
+actor "Developer" as Dev
+actor "AI Provider\n(Ollama, Gemini, Mistral, HF)" as AI
+actor "pgvector\n(Docker)" as PG
+actor "Git Repository" as Git
+
+rectangle "Gradle Slider Plugin" {
+  Dev --> (Initialize slides project)
+  Dev --> (Propose a deck context)
+  Dev --> (Generate a deck)
+  Dev --> (Reindex RAG store)
+  Dev --> (Compile slides)
+  Dev --> (Serve slides locally)
+  Dev --> (Publish slides)
+
+  (Propose a deck context) --> PG
+  (Propose a deck context) --> AI
+  (Generate a deck) --> PG
+  (Generate a deck) --> AI
+  (Reindex RAG store) --> PG
+  (Publish slides) --> Git
+}
+@enduml
+....
 
 === Global Flow Overview
 
-image::readme_images/diag-plantuml-md5-ff05c55645179f6361691831baa50471.png[]
+[plantuml]
+....
+@startuml
+start
+:Gradle starts;
+:Plugin applied;
+:Slides project initialization;
+
+if (proposeDeckContext ?) then (yes)
+  :PgVectorService starts Docker;
+  :RAG — retrieve relevant chunks;
+  :LLM — propose DeckContext JSON;
+  :Write <slug>-deck-context.yml;
+  :PgVectorService stopped;
+endif
+
+note right
+  Human review
+  of deck-context.yml
+end note
+
+if (generateDeck ?) then (yes)
+  :PgVectorService starts Docker;
+  :RAG — AsciiDoc syntax examples;
+  :LLM — generate full AsciiDoc;
+  :Write <slug>_<lang>-deck.adoc;
+  :PgVectorService stopped;
+endif
+
+if (build slides ?) then (yes)
+  :Asciidoctor RevealJS;
+endif
+
+if (serve ?) then (yes)
+  :npx serve;
+endif
+
+if (publish ?) then (yes)
+  :Git push;
+endif
+stop
+@enduml
+....
 
 == Current version: {plugin-version}
 
 == Prerequisites
 * JDK 25 (tested with Eclipse Temurin 25.0.2), 23+ supported
 * Gradle Wrapper (version 9.4.0 included)
+* Docker (for the pgvector container used by the RAG pipeline)
 * Node.js / npx (for the `serveSlides` task)
 * Internet connection (to download Reveal.js dependencies)
 
@@ -82,11 +155,11 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 │   └── wrapper/              # Gradle Wrapper 9.4.0
 ├── slides/
 │   └── misc/                 # AsciiDoc presentation sources
-│       ├── *.adoc            # Slide source files
-│       ├── *-deck-context.yml# AI generation context per deck
-│       ├── index.html        # Presentation dashboard
-│       ├── deck.properties   # Deck file paths
-│       └── images/           # Image resources
+│       ├── *_<lang>-deck.adoc          # Generated decks (e.g. kotlin-intro_fr-deck.adoc)
+│       ├── *-deck-context.yml          # AI generation contexts (no language code)
+│       ├── index.html                  # Presentation dashboard
+│       ├── deck.properties             # Deck file paths
+│       └── images/                     # Image resources
 ├── slides-context.yml        # Git push config + AI API keys
 ├── slider-plugin/            # Gradle plugin (plugin source)
 ├── README.adoc               # This file
@@ -95,21 +168,124 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 
 === Global Architecture
 
-image::readme_images/diag-plantuml-md5-5ef32ae9205e4dc13bbed7a94f0f55a6.png[]
+[plantuml]
+....
+@startuml
 
+package "Consumer Gradle Project" {
+  [build.gradle.kts]
+  [slides-context.yml]
+  [slides/]
+}
+
+package "Slider Gradle Plugin" {
+  [SliderPlugin]
+  [SliderExtension]
+  [SlidesInitializer]
+  [AssistantManager]
+  [RagManager]
+  [PgVectorService]
+  [SlidesBuilder]
+  [SlidesPublisher]
+  [SlidesServer]
+}
+
+package "External Systems" {
+  [AsciidoctorJ Reveal.js]
+  [Node npx serve]
+  [Git]
+  [pgvector\n(Docker)]
+  [AI Providers\n(Ollama / Gemini / Mistral / HF)]
+}
+
+[build.gradle.kts] --> [SliderPlugin]
+[SliderPlugin] --> [SliderExtension]
+[SliderPlugin] --> [SlidesInitializer]
+[SliderPlugin] --> [AssistantManager]
+[SliderPlugin] --> [SlidesBuilder]
+[SliderPlugin] --> [SlidesPublisher]
+[SliderPlugin] --> [SlidesServer]
+[AssistantManager] --> [RagManager]
+[AssistantManager] --> [PgVectorService]
+[RagManager] --> [pgvector\n(Docker)]
+[PgVectorService] --> [pgvector\n(Docker)]
+[AssistantManager] --> [AI Providers\n(Ollama / Gemini / Mistral / HF)]
+[SlidesBuilder] --> [AsciidoctorJ Reveal.js]
+[SlidesServer] --> [Node npx serve]
+[SlidesPublisher] --> [Git]
+@enduml
+....
 
 === Gradle Execution Cycle
 
-image::readme_images/diag-plantuml-md5-f4f63585bf94674b0b6fc5da4d190b73.png[]
+[plantuml]
+....
+@startuml
+actor Developer
 
+participant "Gradle" as Gradle
+participant "SliderPlugin"
+participant "SlidesInitializer"
+participant "PgVectorService\n(BuildService)"
+participant "RagManager"
+participant "AssistantManager"
+participant "Tasks"
+
+Developer -> Gradle : ./gradlew <task>
+Gradle -> SliderPlugin : apply()
+SliderPlugin -> SlidesInitializer : checkStructure()
+SlidesInitializer --> SliderPlugin : structure OK / resources generated
+SliderPlugin -> Tasks : register tasks
+Gradle -> Tasks : execute task
+
+opt RAG task (proposeDeckContext / generateDeck / reindexRag)
+  Tasks -> PgVectorService : start()
+  PgVectorService --> Tasks : assigned port
+  Tasks -> RagManager : retrieve() / reindex()
+  RagManager -> Tasks : RAG chunks
+  Tasks -> AssistantManager : resolveModel(provider)
+  AssistantManager --> Tasks : ChatModel
+  Tasks --> Gradle : result
+  Gradle -> PgVectorService : close()
+end
+@enduml
+....
 
 == Automatic Initialization (first use)
 
 On the first execution of any Gradle task, the plugin checks whether the `slides/` folder,
 the `slides-context.yml` file and `slides/misc/example-deck-context.yml` are present and complete.
 
-image::readme_images/diag-plantuml-md5-2ec4ae03039a28d109809edb7baf4b25.png[]
+[plantuml]
+....
+@startuml
+start
+:Gradle task execution;
 
+if (slides/ exists ?) then (yes)
+  if (deck.properties OK ?) then (yes)
+    :continue;
+  else (no)
+    :extract slides template;
+  endif
+else (no)
+  :extract slides.zip from classpath;
+endif
+
+if (slides-context.yml exists ?) then (yes)
+  :load configuration;
+else (no)
+  :generate default SlidesConfiguration;
+endif
+
+if (example-deck-context.yml exists ?) then (yes)
+  :continue;
+else (no)
+  :generate deck-context template;
+endif
+stop
+@enduml
+....
 
 === Initializing slides/
 
@@ -170,16 +346,15 @@ NOTE: `slides-context.yml` contains sensitive credentials — add it to `.gitign
 
 === Initializing example-deck-context.yml
 
-If `slides/misc/example-deck-context.yml` is missing, the plugin generates a ready-to-use
-template for the `generateDeck` task:
+If `slides/misc/example-deck-context.yml` is missing, the plugin generates a ready-to-use template:
 
 [source,yaml]
 ----
 subject: "Your presentation subject"
 audience: "Your target audience"
 duration: 45
-language: "English"
-outputFile: "example-deck.adoc"
+language: "en"
+outputFile: "example_en-deck.adoc"
 author:
   name: "Your Name"
   email: "your.email@example.com"
@@ -198,7 +373,7 @@ slides:
     pageNotesHint: "List prerequisites and suggested readings."
 ----
 
-NOTE: If all three resources already exist, the plugin never touches the existing content.
+NOTE: If all three resources already exist, the plugin never modifies existing content.
 
 == Plugin DSL Configuration
 
@@ -224,10 +399,10 @@ Slides are generated in `build/docs/asciidocRevealJs/`.
 ----
 
 `asciidoctor`::
-Runs the standard Asciidoctor conversion (depends on `asciidoctorRevealJs`).
+Runs standard Asciidoctor conversion (depends on `asciidoctorRevealJs`).
 
 `cleanSlidesBuild`::
-Deletes the generated presentation artefacts from the `build` directory.
+Deletes generated presentation artifacts from the `build` directory.
 
 [source,bash]
 ----
@@ -235,13 +410,13 @@ Deletes the generated presentation artefacts from the `build` directory.
 ----
 
 `dashSlidesBuild`::
-Generates the `index.html` and `slides.json` files listing all available presentations.
+Generates `index.html` and `slides.json` listing all available presentations.
 
 === Serve
 
 `serveSlides`::
-Serves the slides via the *serve* package run by **npx**.
-Ideal for a quick local preview.
+Serves slides via the *serve* package run by **npx**.
+Ideal for quick local preview.
 
 [source,bash]
 ----
@@ -259,7 +434,7 @@ Opens the presentation dashboard in **Firefox**.
 === Deploy
 
 `publishSlides`::
-Deploys the generated slides to the remote repository configured in `slides-context.yml`.
+Deploys generated slides to the remote repository configured in `slides-context.yml`.
 
 [source,bash]
 ----
@@ -268,55 +443,232 @@ Deploys the generated slides to the remote repository configured in `slides-cont
 
 ==== Deployment Pipeline
 
-image::readme_images/diag-plantuml-md5-e6cd66fe2240b2e9c7bab6647ecaf61f.png[]
+[plantuml]
+....
+@startuml
+actor Developer
+
+participant Gradle
+participant publishSlides
+participant "Local build"
+participant Git
+
+Developer -> Gradle : ./gradlew publishSlides
+Gradle -> publishSlides
+publishSlides -> "Local build" : collect compiled slides
+publishSlides -> Git : clone remote repository
+publishSlides -> Git : copy slides
+publishSlides -> Git : commit
+publishSlides -> Git : push (force)
+@enduml
+....
 
 == AI-Assisted Deck Generation (slider-ai)
 
-The plugin integrates an AI assistant (E-3PO) that generates complete AsciiDoc/Reveal.js
-decks from a YAML context file. Four providers are supported: `ollama` (default),
-`gemini`, `mistral` and `huggingface`. The provider is selected at the command line with `-Pai.provider`.
+The plugin integrates a RAG (Retrieval-Augmented Generation) pipeline to generate
+complete AsciiDoc/Reveal.js decks. A pgvector store launched via Docker indexes the
+project's AsciiDoc sources and enriches each LLM call with relevant examples.
 
-=== AI Engine Architecture (E-3PO)
+Four providers are available: `ollama` (default), `gemini`, `mistral` and `huggingface`.
+Select the provider with `-Pai.provider`.
 
-The E-3PO engine transforms a pedagogical configuration file into an AsciiDoc deck ready
-to be compiled with Reveal.js. It is designed to be modular, provider-agnostic and extensible.
+=== RAG Pipeline Architecture
 
-image::readme_images/diag-plantuml-md5-e4b452c7b932a3cb10ea28c472cf6e42.png[]
+[plantuml]
+....
+@startuml
+skinparam componentStyle uml2
 
-=== Pedagogical Pipeline (Instructional Design → Slides)
+package "Gradle Slider Plugin" {
+  component "ProposeDeckContextTask" as ProposeTask
+  component "GenerateDeckTask" as GenerateTask
+  component "ReindexRagTask" as ReindexTask
+  component "AssistantManager" as AM
+  component "RagManager" as RM
+  component "PgVectorService\n(BuildService)" as PGS
+  component "PromptManager" as PM
+}
 
-The engine follows a transformation pipeline inspired by instructional design practices.
+package "Infrastructure" {
+  component "pgvector\n(Docker)" as PG
+  component "AllMiniLmL6V2\n(ONNX in-process)" as Embed
+}
 
-image::readme_images/diag-plantuml-md5-6ac35e0a104668d5263a0f661552b006.png[]
+package "LLM Providers" {
+  component "Ollama"
+  component "Gemini"
+  component "Mistral"
+  component "HuggingFace"
+}
 
-=== Internal Responsibilities (E-3PO)
+component "*-deck-context.yml" as CtxFile
+component "<slug>_<lang>-deck.adoc" as DeckFile
 
-image::readme_images/diag-plantuml-md5-5fd60805546ab8ddf7b32e0daf4d5a1d.png[]
+ProposeTask --> PGS : start()
+ProposeTask --> RM : retrieve(subject)
+ProposeTask --> AM : resolveModel(provider)
+ProposeTask --> PM : contextSystemPrompt / contextUserMessage
+ProposeTask --> CtxFile : write
 
-=== generateDeck
+GenerateTask --> PGS : start()
+GenerateTask --> RM : retrieve(AsciiDoc syntax)
+GenerateTask --> AM : resolveModel(provider)
+GenerateTask --> PM : deckSystemPrompt / deckUserMessage
+GenerateTask --> DeckFile : write
 
-Reads a `*-deck-context.yml` file and generates a complete `.adoc` deck via the configured LLM.
+ReindexTask --> PGS : start()
+ReindexTask --> RM : reindex()
+
+RM --> Embed : embedAll()
+RM --> PG : search() / addAll() / removeAll()
+PGS --> PG : docker start/stop
+
+AM --> Ollama
+AM --> Gemini
+AM --> Mistral
+AM --> HuggingFace
+@enduml
+....
+
+=== Two-Step Generation Pipeline
+
+[plantuml]
+....
+@startuml
+actor Developer
+
+participant "Gradle\n(proposeDeckContext)" as Propose
+participant "PgVectorService" as PGS
+participant "RagManager" as RAG
+participant "LLM Provider" as LLM
+collections "*-deck-context.yml" as CtxFile
+
+participant "Gradle\n(generateDeck)" as Generate
+collections "<slug>_<lang>-deck.adoc" as DeckFile
+
+== Step 1: proposeDeckContext ==
+
+Developer -> Propose : ./gradlew proposeDeckContext\n  -Psubject="..." -Planguage=en\n  -Pai.provider=gemini --no-daemon
+Propose -> PGS : start()
+activate PGS
+Propose -> RAG : retrieve(subject)
+RAG --> Propose : RAG chunks
+Propose -> LLM : contextSystemPrompt + userMessage
+LLM --> Propose : DeckContext JSON
+Propose -> CtxFile : write <slug>-deck-context.yml
+Propose -> PGS : close() [end of build]
+deactivate PGS
+
+note over Developer : Review deck-context.yml
+
+== Step 2: generateDeck ==
+
+Developer -> Generate : ./gradlew generateDeck\n  -Pdeck.context=slides/misc/<slug>-deck-context.yml\n  -Pai.provider=gemini --no-daemon
+Generate -> PGS : start()
+activate PGS
+Generate -> RAG : retrieve("AsciiDoc Reveal.js syntax <subject>")
+RAG --> Generate : AsciiDoc syntax examples
+Generate -> LLM : deckSystemPrompt + userMessage
+LLM --> Generate : AsciiDoc content
+Generate -> DeckFile : write <slug>_en-deck.adoc
+Generate -> PGS : close() [end of build]
+deactivate PGS
+@enduml
+....
+
+=== Available AI Tasks
+
+==== reindexRag
+
+Drops and fully rebuilds the pgvector index from project sources.
+Run after adding or deleting source files.
+
+[source,bash]
+----
+./gradlew reindexRag --no-daemon
+----
+
+==== proposeDeckContext
+
+Proposes a `*-deck-context.yml` for a given subject, enriched by RAG context.
+Author is resolved automatically from `git config user.name` / `git config user.email`.
 
 [source,bash]
 ----
 # Default provider: ollama (local)
-./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml
+./gradlew proposeDeckContext \
+  -Psubject="Kotlin Coroutines" \
+  -Planguage=en \
+  --no-daemon
 
 # Gemini
-./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=gemini
+./gradlew proposeDeckContext \
+  -Psubject="Kotlin inline functions and reification" \
+  -Planguage=fr \
+  -Pai.provider=gemini \
+  --no-daemon
 
-# Mistral AI
-./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=mistral
-
-# HuggingFace (via OpenAI-compatible router)
-./gradlew generateDeck -Pdeck.context=slides/misc/my-deck-context.yml -Pai.provider=huggingface
+# Override author
+./gradlew proposeDeckContext \
+  -Psubject="Spring Boot 3" \
+  -Planguage=en \
+  -Pai.provider=mistral \
+  -Pauthor.name="cheroliv" \
+  -Pauthor.email="cheroliv@example.com" \
+  --no-daemon
 ----
 
-The output file is written to `slides/misc/` at the path defined by `outputFile` in the context.
+Output file: `slides/misc/<slug>-deck-context.yml`.
+Review and adjust before running `generateDeck`.
 
-==== Full Generation Sequence
+==== generateDeck
 
-image::readme_images/diag-plantuml-md5-5da1666cb76eeaf0d2d0d29f19483450.png[]
+Reads a validated `*-deck-context.yml` and generates the complete AsciiDoc deck,
+enriched with AsciiDoc syntax examples retrieved from the RAG store.
+
+[source,bash]
+----
+# Gemini
+./gradlew generateDeck \
+  -Pdeck.context=slides/misc/kotlin-inline-functions-and-reification-deck-context.yml \
+  -Pai.provider=gemini \
+  --no-daemon
+
+# Mistral AI
+./gradlew generateDeck \
+  -Pdeck.context=slides/misc/kotlin-coroutines-deck-context.yml \
+  -Pai.provider=mistral \
+  --no-daemon
+----
+
+Output file: `slides/misc/<slug>_<lang>-deck.adoc`
+where `<lang>` is the ISO 639-1 code from the `language` field in deck-context.yml.
+
+NOTE: Always use `--no-daemon` for RAG tasks. The Gradle daemon reuses the JVM process
+between builds, preventing native ONNX library reload (libtokenizers.so) and causing
+an `UnsatisfiedLinkError` on the second build.
+
+=== File Naming Convention
+
+[cols="1,2,2"]
+|===
+| File | Pattern | Example
+
+| Generation context
+| `<slug>-deck-context.yml`
+| `kotlin-inline-functions-and-reification-deck-context.yml`
+
+| Generated AsciiDoc deck
+| `<slug>_<lang>-deck.adoc`
+| `kotlin-inline-functions-and-reification_fr-deck.adoc`
+
+| Compiled HTML deck
+| `<slug>_<lang>-deck.html`
+| `kotlin-inline-functions-and-reification_fr-deck.html`
+|===
+
+The `<slug>` is derived from the subject in kebab-case (accents normalized, special characters replaced by `-`).
+The `<lang>` is the ISO 639-1 code passed via `-Planguage` (e.g. `fr`, `en`, `de`).
 
 === Provider Selection
 
@@ -347,14 +699,14 @@ If `-Pai.provider` is absent or set to an unknown value, the task falls back to 
 
 [source,yaml]
 ----
-subject: "Introduction to Kotlin"
-audience: "senior Java developers"
+subject: "Kotlin inline functions and reification"
+audience: "intermediate Kotlin developers"
 duration: 60
-language: "English"
-outputFile: "kotlin-intro-deck.adoc"
+language: "en"
+outputFile: "kotlin-inline-functions-and-reification_en-deck.adoc"
 author:
   name: "cheroliv"
-  email: "cheroliv.developer@gmail.com"
+  email: "cheroliv@example.com"
 revealjs:
   theme: "sky"
   slideNumber: "c/t"
@@ -365,12 +717,12 @@ notes:
   pageNotes: true       # generates [.notes] on every slide
   pageNotesStyle: "DETAILED"  # MINIMAL | DETAILED | EXERCISES_ONLY
 slides:
-  - title: "Why Kotlin?"
-    speakerHint: "Start from daily Java pain points: boilerplate, NPE, verbosity."
-    pageNotesHint: "Include JetBrains Kotlin adoption statistics 2023."
-  - title: "Null Safety"
-    speakerHint: "Show a Java NPE then the same logic in Kotlin."
-    pageNotesHint: "Exercise: migrate a nullable Java POJO to a Kotlin data class."
+  - title: "Why inline?"
+    speakerHint: "Start from the JVM cost of lambdas — object allocation on each call."
+    pageNotesHint: "JMH benchmarks: inline vs non-inline on a 100k-element collection."
+  - title: "reified: access the type at runtime"
+    speakerHint: "Show the type-erasure error, then the reified solution."
+    pageNotesHint: "Exercise: re-implement a typed version of Gson.fromJson() using reified."
 ----
 
 `slides` is optional — if empty, the LLM decides the slide structure freely.
@@ -393,6 +745,28 @@ slides:
 
 === Typical Workflows
 
+.Full pipeline: propose → review → generate → compile → serve
+[source,bash]
+----
+# Step 1 — propose the context
+./gradlew proposeDeckContext \
+  -Psubject="Kotlin inline functions and reification" \
+  -Planguage=en \
+  -Pai.provider=gemini \
+  --no-daemon
+
+# → review slides/misc/kotlin-inline-functions-and-reification-deck-context.yml
+
+# Step 2 — generate the deck
+./gradlew generateDeck \
+  -Pdeck.context=slides/misc/kotlin-inline-functions-and-reification-deck-context.yml \
+  -Pai.provider=gemini \
+  --no-daemon
+
+# Step 3 — compile and serve
+./gradlew asciidoctorRevealJs serveSlides
+----
+
 .Build and preview locally
 [source,bash]
 ----
@@ -405,14 +779,6 @@ slides:
 ./gradlew cleanSlidesBuild asciidoctorRevealJs
 ----
 
-.Generate deck + compile + serve in one command
-[source,bash]
-----
-./gradlew generateDeck asciidoctorRevealJs serveSlides \
-  -Pdeck.context=slides/misc/kotlin-intro-deck-context.yml \
-  -Pai.provider=gemini
-----
-
 .Publish to remote repository
 [source,bash]
 ----
@@ -423,9 +789,59 @@ slides:
 
 === C4 View — Plugin Context
 
-The C4 model represents software architecture at multiple levels; here the complete system context.
+[plantuml]
+....
+@startuml
+actor Developer
 
-image::readme_images/diag-plantuml-md5-11fa2eea08edb6cf7a5d9a650f019590.png[]
+rectangle "Developer Environment" {
+  rectangle "Gradle Build System" {
+    component "Slider Gradle Plugin"
+  }
+}
+
+rectangle "Slider Internal Components" {
+  component "Slides Initializer"
+  component "AssistantManager"
+  component "RagManager"
+  component "PgVectorService"
+  component "Slides Builder"
+  component "Slides Publisher"
+}
+
+rectangle "RAG Pipeline" {
+  component "AllMiniLmL6V2\n(ONNX in-process)"
+  component "pgvector\n(Docker)"
+  component "PromptManager"
+}
+
+rectangle "External Systems" {
+  component "LLM Providers\n(Ollama / Gemini / HF / Mistral)"
+  component "Reveal.js / Asciidoctor"
+  component "Git Repository"
+}
+
+Developer --> "Gradle Build System"
+"Gradle Build System" --> "Slider Gradle Plugin"
+
+"Slider Gradle Plugin" --> "Slides Initializer"
+"Slider Gradle Plugin" --> "AssistantManager"
+"Slider Gradle Plugin" --> "Slides Builder"
+"Slider Gradle Plugin" --> "Slides Publisher"
+
+"AssistantManager" --> "RagManager"
+"AssistantManager" --> "PgVectorService"
+"AssistantManager" --> "PromptManager"
+"AssistantManager" --> "LLM Providers\n(Ollama / Gemini / HF / Mistral)"
+
+"RagManager" --> "AllMiniLmL6V2\n(ONNX in-process)"
+"RagManager" --> "pgvector\n(Docker)"
+"PgVectorService" --> "pgvector\n(Docker)"
+
+"Slides Builder" --> "Reveal.js / Asciidoctor"
+"Slides Publisher" --> "Git Repository"
+@enduml
+....
 
 === Hexagonal Architecture (Ports & Adapters)
 
@@ -433,20 +849,80 @@ The plugin follows a hexagonal architecture that separates business logic,
 external interfaces and infrastructure technologies.
 This design guarantees LLM provider independence and high testability.
 
-image::readme_images/diag-plantuml-md5-a257c0e86f73ee8870f3d232be82dd7a.png[]
+[plantuml]
+....
+@startuml
+skinparam componentStyle rectangle
+
+package "Domain Core" {
+  component "Deck Generation Logic"
+  component "RAG Retrieval"
+  component "Presentation Context\n(DeckContext)"
+}
+
+package "Application Layer" {
+  component "AssistantManager"
+  component "RagManager"
+  component "SlidesInitializer"
+  component "SlidesPublisher"
+}
+
+package "Ports" {
+  interface "LLM Port"
+  interface "Embedding Store Port"
+  interface "Docker Service Port"
+  interface "Slides Renderer Port"
+  interface "Git Repository Port"
+}
+
+package "Adapters" {
+  component "Ollama Adapter"
+  component "Gemini Adapter"
+  component "Mistral Adapter"
+  component "HuggingFace Adapter"
+  component "PgVectorEmbeddingStore"
+  component "PgVectorService\n(docker-java)"
+  component "RevealJS Adapter"
+  component "Git Adapter"
+  component "Gradle Task Adapter\n(RagTask)"
+}
+
+"AssistantManager" --> "LLM Port"
+"RagManager" --> "Embedding Store Port"
+"RagManager" --> "Docker Service Port"
+"SlidesPublisher" --> "Git Repository Port"
+"SlidesInitializer" --> "Slides Renderer Port"
+
+"LLM Port" --> "Ollama Adapter"
+"LLM Port" --> "Gemini Adapter"
+"LLM Port" --> "Mistral Adapter"
+"LLM Port" --> "HuggingFace Adapter"
+
+"Embedding Store Port" --> "PgVectorEmbeddingStore"
+"Docker Service Port" --> "PgVectorService\n(docker-java)"
+"Slides Renderer Port" --> "RevealJS Adapter"
+"Git Repository Port" --> "Git Adapter"
+
+"Gradle Task Adapter\n(RagTask)" --> "AssistantManager"
+"Gradle Task Adapter\n(RagTask)" --> "RagManager"
+"Gradle Task Adapter\n(RagTask)" --> "SlidesInitializer"
+@enduml
+....
 
 This architecture delivers:
 
 * independence from LLM providers
+* swappable RAG store (pgvector today, any backend tomorrow)
 * ability to replace Reveal.js with another rendering engine
 * high testability through dependency injection
 * complete decoupling between Gradle and business logic
 
 == Roadmap
 * Configuration Cache support — blocked on `asciidoctor-gradle` `5.x` stable release.
-* Automated functional tests for slide generation.
+* Cucumber tests for deck generation and the RAG pipeline.
 * Support for additional Reveal.js themes.
 * Extended DSL configuration (theme, transition, source dir).
+* Real-time incremental indexing when editing sources.
 
 NOTE: The plugin explicitly declares `configurationCache = false` on the Gradle Plugin Portal.
 Do not enable the Gradle Configuration Cache with this plugin — the `asciidoctorRevealJs` task
