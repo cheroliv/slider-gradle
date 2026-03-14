@@ -2,7 +2,6 @@ package com.cheroliv.slider
 
 import arrow.integrations.jackson.module.registerArrowModule
 import com.cheroliv.slider.SliderManager.Configuration.CONFIG_PATH_KEY
-import com.cheroliv.slider.SliderManager.Configuration.deckFile
 import com.cheroliv.slider.SliderManager.Configuration.localConf
 import com.cheroliv.slider.SliderManager.Configuration.yamlMapper
 import com.cheroliv.slider.SliderManager.Git.initAddCommitToSlides
@@ -55,7 +54,6 @@ import org.gradle.kotlin.dsl.register
 import java.io.File
 import java.io.File.separator
 import java.io.IOException
-import java.util.*
 import java.util.zip.ZipInputStream
 
 /**
@@ -83,26 +81,6 @@ object SliderManager {
         /** Reads and returns the slides YAML configuration bound to this project. */
         val Project.localConf: SlidesConfiguration
             get() = readSlidesConfigurationFile { "$rootDir$separator${properties[CONFIG_PATH_KEY]}" }
-
-        /**
-         * Resolves a deck file path from deck.properties for a given key.
-         * Prepends the standard asciidocRevealJs output directory.
-         *
-         * TODO: replace hardcoded path with a reference to sliderConfig model.
-         */
-        fun Project.deckFile(key: String): String = buildString {
-            append("build/docs/asciidocRevealJs/")
-            append(
-                Properties().apply {
-                    layout.projectDirectory.asFile
-                        .resolve("slides")
-                        .resolve("misc")
-                        .resolve("deck.properties")
-                        .inputStream()
-                        .use(::load)
-                }[key].toString()
-            )
-        }
 
         /** Jackson ObjectMapper configured for YAML, Kotlin, and Arrow support. */
         val yamlMapper: ObjectMapper
@@ -187,35 +165,19 @@ object SliderManager {
         private const val SLIDES_ZIP = "slides.zip"
 
         /**
-         * A complete slides configuration requires all three of the following
-         * to be present inside slides/misc/:
-         * - deck.properties         — maps *.deck.file keys to HTML filenames
-         * - index.html              — dashboard entry point
-         * - at least one *-deck.adoc matching a *.deck.file key in deck.properties
+         * A complete slides configuration requires:
+         * - index.html         — dashboard entry point in slides/misc/
+         * - at least one *-deck.adoc source file in slides/misc/
          *
-         * The deck file convention:
-         * - Key pattern  : `*.deck.file`  (e.g. `example.deck.file`)
-         * - Value pattern: `*-deck.html`  (e.g. `example-deck.html`)
-         * - Source file  : `*-deck.adoc`  (e.g. `example-deck.adoc`)
+         * deck.properties has been removed — decks are discovered by scanning
+         * *.adoc files directly, following the <slug>_<lang>-deck.adoc convention.
          */
         private fun isSlidesConfigComplete(miscDir: File): Boolean {
-            val deckProperties = miscDir.resolve("deck.properties")
             val indexHtml = miscDir.resolve("index.html")
-
-            if (!deckProperties.exists() || !indexHtml.exists()) return false
-
-            // At least one *.deck.file key must have a matching *-deck.adoc source file
-            val hasAtLeastOneDeck = Properties()
-                .apply { deckProperties.inputStream().use(::load) }
-                .entries
-                .filter { (key, _) -> key.toString().endsWith(".deck.file") }
-                .any { (_, value) ->
-                    value.toString()            // e.g. "example-deck.html"
-                        .removeSuffix(".html")  // → "example-deck"
-                        .let { miscDir.resolve("$it.adoc").exists() }
-                }
-
-            return hasAtLeastOneDeck
+            if (!indexHtml.exists()) return false
+            return miscDir.listFiles { f ->
+                f.isFile && f.name.endsWith("-deck.adoc")
+            }?.isNotEmpty() ?: false
         }
 
         /**
@@ -544,8 +506,6 @@ object SliderManager {
             registerServeSlidesTask()
             registerDashboardTask()
             registerPublishSlidesTask()
-            registerOpenFirefoxTask()
-            registerOpenChromiumTask()
             registerAsciidocCapsuleTask()
             registerReportTestsTask()
             registerReportFunctionalTestsTask()
@@ -782,45 +742,18 @@ object SliderManager {
             }
         }
 
-        /**
-         * Opens the default presentation deck in Firefox.
-         * Deck file path is resolved from deck.properties via [SliderManager.Configuration.deckFile].
-         */
-        private fun Project.registerOpenFirefoxTask() {
-            tasks.register<Exec>("openFirefox") {
-                group = GROUP_TASK_SLIDER
-                description = "Open the presentation dashboard in Firefox."
-                dependsOn("asciidoctor")
-                commandLine("firefox", deckFile("default.deck.file"))
-                workingDir = layout.projectDirectory.asFile
-            }
-        }
 
         /**
-         * Opens the default presentation deck in Chromium.
-         * Deck file path is resolved from deck.properties via [SliderManager.Configuration.deckFile].
-         */
-        private fun Project.registerOpenChromiumTask() {
-            tasks.register<Exec>("openChromium") {
-                group = GROUP_TASK_SLIDER
-                description = "Open the default presentation in Chromium."
-                dependsOn("asciidoctor")
-                commandLine("chromium", deckFile("default.deck.file"))
-                workingDir = layout.projectDirectory.asFile
-            }
-        }
-
-        /**
-         * Opens a capsule-style AsciiDoc deck in Chromium.
-         * Uses a distinct deck.properties key from the default deck.
+         * TODO: Generate video capsule from sliders.
          */
         private fun Project.registerAsciidocCapsuleTask() {
             tasks.register<Exec>("asciidocCapsule") {
                 group = "capsule"
-                description = "Open the asciidoc capsule deck in Chromium."
+                description = "TODO: Generate video capsule from sliders."
                 dependsOn("asciidoctor")
-                commandLine("chromium", deckFile("asciidoc.capsule.deck.file"))
-                workingDir = layout.projectDirectory.asFile
+                "Voici l'ebauche de capsule"
+                    .apply(logger::info)
+                    .run(::println)
             }
         }
 
