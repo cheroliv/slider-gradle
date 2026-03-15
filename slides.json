@@ -1,0 +1,10 @@
+[
+  {"name": "example-deck", "filename": "example-deck.html"},
+  {"name": "understand-gradle_ne-deck", "filename": "understand-gradle_ne-deck.html"},
+  {"name": "kotlin-inline-reification_fr-deck", "filename": "kotlin-inline-reification_fr-deck.html"},
+  {"name": "kotlin-coroutines-zero_fr-deck", "filename": "kotlin-coroutines-zero_fr-deck.html"},
+  {"name": "understand-gradle_fr-deck", "filename": "understand-gradle_fr-deck.html"},
+  {"name": "kotlin-coroutines-zero-deck", "filename": "kotlin-coroutines-zero-deck.html"},
+  {"name": "kotlin-intro-zero-deck", "filename": "kotlin-intro-zero-deck.html"},
+  {"name": "understand-gradle_en-deck", "filename": "understand-gradle_en-deck.html"}
+]
