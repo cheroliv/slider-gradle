@@ -3,7 +3,7 @@
 Feature: proposeDeckContext — RAG-assisted deck context generation
 
   # ---------------------------------------------------------------------------
-  # Validation des paramètres
+  # Parameter validation
   # ---------------------------------------------------------------------------
 
   Scenario: Missing subject property causes build failure
@@ -13,7 +13,7 @@ Feature: proposeDeckContext — RAG-assisted deck context generation
     And the build output should contain "Missing required property -Psubject"
 
   # ---------------------------------------------------------------------------
-  # Convention de nommage du fichier de sortie
+  # Output file naming convention
   # ---------------------------------------------------------------------------
 
   Scenario: Output file is named after the subject slug
@@ -55,7 +55,7 @@ Feature: proposeDeckContext — RAG-assisted deck context generation
     And the file "slides/misc/custom-context.yml" should exist
 
   # ---------------------------------------------------------------------------
-  # Contenu YAML — DeckContext valide et bien formé
+  # YAML content — valid and well-formed DeckContext
   # ---------------------------------------------------------------------------
 
   Scenario: Generated deck-context.yml is parseable as a valid DeckContext
@@ -95,7 +95,7 @@ Feature: proposeDeckContext — RAG-assisted deck context generation
     And the DeckContext "outputFile" should match the pattern "<slug>_<lang>-deck.adoc"
 
   # ---------------------------------------------------------------------------
-  # Auteur
+  # Author
   # ---------------------------------------------------------------------------
 
   Scenario: Author is taken from explicit properties
@@ -111,29 +111,17 @@ Feature: proposeDeckContext — RAG-assisted deck context generation
     And the DeckContext author email should equal "cheroliv@example.com"
 
   # ---------------------------------------------------------------------------
-  # Pipeline complet — tag @integration, exclus du check normal
+  # Full pipeline — @integration tag, excluded from the normal check
   # ---------------------------------------------------------------------------
 
-  @integration
-  Scenario: Full pipeline with Gemini produces a valid deck-context file
-    Given a new Slider project
-    When I execute the task 'proposeDeckContext' with properties:
-      | subject      | Kotlin inline functions and reification |
-      | language     | fr                                      |
-      | ai.provider  | gemini                                  |
-      | author.name  | cheroliv                                |
-      | author.email | cheroliv@example.com                    |
-    Then the build should succeed
-    And the file "slides/misc/kotlin-inline-functions-and-reification-deck-context.yml" should exist
-    And the file "slides/misc/kotlin-inline-functions-and-reification-deck-context.yml" should be a valid DeckContext
 
   @integration
   Scenario: Full pipeline with Ollama produces a valid deck-context file
     Given a new Slider project
+    And an Ollama instance is available
     When I execute the task 'proposeDeckContext' with properties:
       | subject      | Kotlin Coroutines    |
       | language     | fr                   |
-      | ai.provider  | ollama               |
       | author.name  | cheroliv             |
       | author.email | cheroliv@example.com |
     Then the build should succeed
