@@ -1,6 +1,8 @@
 package com.cheroliv.slider
 
 import arrow.integrations.jackson.module.registerArrowModule
+import com.cheroliv.slider.FileOperationResult.Failure
+import com.cheroliv.slider.FileOperationResult.Success
 import com.cheroliv.slider.SliderManager.Configuration.CONFIG_PATH_KEY
 import com.cheroliv.slider.SliderManager.Configuration.localConf
 import com.cheroliv.slider.SliderManager.Configuration.yamlMapper
@@ -486,9 +488,9 @@ object SliderManager {
      * ```
      * cleanSlidesBuild
      *   └── asciidoctorRevealJs ──┐
-     *         └── asciidoctor    │ finalizedBy
-     *         └── serveSlides    │
-     *                            ▼
+     *         └── asciidoctor     │ finalizedBy
+     *         └── serveSlides     │
+     *                             ▼
      *                    dashSlidesBuild
      * ```
      */
@@ -830,7 +832,7 @@ object SliderManager {
             .run(FileOps::createRepoDir)
             .let { repoDir: File ->
                 FileOps.copySlideFilesToRepo(slidesDirPath(), repoDir)
-                    .takeIf { it is FileOperationResult.Success }
+                    .takeIf { it is Success }
                     ?.run {
                         initAddCommitToSlides(repoDir, localConf)
                         pushSlide(
@@ -889,7 +891,7 @@ object SliderManager {
             conf: SlidesConfiguration,
         ): MutableIterable<PushResult>? =
             FileRepositoryBuilder()
-                .setInitialBranch("main")
+                .setInitialBranch(conf.pushSlides?.branch ?: "main")
                 .setGitDir("${repoDir.absolutePath}${separator}.git".let(::File))
                 .readEnvironment()
                 .findGitDir()
@@ -900,20 +902,17 @@ object SliderManager {
                         getString(CVS_REMOTE, CVS_ORIGIN, conf.pushSlides?.repo?.repository)
                     }.save()
                     if (isBare) throw IOException("Repo dir should not be bare")
-                }
-                .let(::Git)
+                }.let(::Git)
                 .push()
                 .setCredentialsProvider(
                     UsernamePasswordCredentialsProvider(
                         conf.pushSlides?.repo?.credentials?.username,
                         conf.pushSlides?.repo?.credentials?.password
                     )
-                )
-                .apply {
+                ).apply {
                     remote = CVS_ORIGIN
                     isForce = true
-                }
-                .call()
+                }.call()
     }
 
 // =========================================================================
@@ -947,9 +946,9 @@ object SliderManager {
                             throw Exception("Unable to copy slides directory to build directory")
                     }
                 }.deleteRecursively()
-            FileOperationResult.Success
+            Success
         } catch (e: Exception) {
-            FileOperationResult.Failure(e.message ?: "An error occurred during file copy.")
+            Failure(e.message ?: "An error occurred during file copy.")
         }
 
         /**
