@@ -24,6 +24,8 @@ arrow-jackson = "0.15.1"
 langchain4j = "1.12.1"
 langchain4j-beta = "1.12.2-beta22"
 docker-java = "3.7.0"
+testcontainers-pg = "1.21.4"
+logback = "1.5.32"
 
 [libraries]
 asciidoctor-gradle-jvm-slides = { module = "org.asciidoctor:asciidoctor-gradle-jvm-slides", version.ref = "asciidoctor-gradle" }
@@ -67,7 +69,9 @@ langchain4j-pgvector = { module = "dev.langchain4j:langchain4j-pgvector", versio
 langchain4j-minilm = { module = "dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2", version.ref = "langchain4j-beta" }
 docker-java = { module = "com.github.docker-java:docker-java-core", version.ref = "docker-java" }
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker-java" }
-
+testcontainers-pg = { module = "org.testcontainers:postgresql", version.ref = "testcontainers-pg" }
+slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -103,7 +107,8 @@ cucumber = [
     "cucumber-java",
     "cucumber-junit-platform-engine",
     "cucumber-picocontainer",
-    "junit-platform-suite"
+    "junit-platform-suite",
+    "testcontainers-pg"
 ]
 coroutines = [
     "kotlinx-coroutines-core",
