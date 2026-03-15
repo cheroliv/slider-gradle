@@ -1,0 +1,141 @@
+#noinspection CucumberUndefinedStep
+@cucumber @slider
+Feature: proposeDeckContext — RAG-assisted deck context generation
+
+  # ---------------------------------------------------------------------------
+  # Validation des paramètres
+  # ---------------------------------------------------------------------------
+
+  Scenario: Missing subject property causes build failure
+    Given a new Slider project
+    When I execute the task 'proposeDeckContext' without any properties
+    Then the build should fail
+    And the build output should contain "Missing required property -Psubject"
+
+  # ---------------------------------------------------------------------------
+  # Convention de nommage du fichier de sortie
+  # ---------------------------------------------------------------------------
+
+  Scenario: Output file is named after the subject slug
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Kotlin Coroutines"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject  | Kotlin Coroutines |
+      | language | fr                |
+    Then the build should succeed
+    And the file "slides/misc/kotlin-coroutines-deck-context.yml" should exist
+
+  Scenario: Subject with accents is slugified correctly
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Programmation réactive"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject  | Programmation réactive |
+      | language | fr                     |
+    Then the build should succeed
+    And the file "slides/misc/programmation-reactive-deck-context.yml" should exist
+
+  Scenario: Language code does not appear in the context filename
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Spring Boot"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject  | Spring Boot |
+      | language | en          |
+    Then the build should succeed
+    And the file "slides/misc/spring-boot-deck-context.yml" should exist
+    And no file matching "slides/misc/*_en-deck-context.yml" should exist
+
+  Scenario: Custom output path overrides the default naming
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Kotlin Coroutines"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject  | Kotlin Coroutines              |
+      | language | fr                             |
+      | output   | slides/misc/custom-context.yml |
+    Then the build should succeed
+    And the file "slides/misc/custom-context.yml" should exist
+
+  # ---------------------------------------------------------------------------
+  # Contenu YAML — DeckContext valide et bien formé
+  # ---------------------------------------------------------------------------
+
+  Scenario: Generated deck-context.yml is parseable as a valid DeckContext
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Kotlin Coroutines"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject  | Kotlin Coroutines |
+      | language | fr                |
+    Then the build should succeed
+    And the file "slides/misc/kotlin-coroutines-deck-context.yml" should be a valid DeckContext
+
+  Scenario: Generated DeckContext contains the expected subject
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Kotlin Coroutines"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject  | Kotlin Coroutines |
+      | language | fr                |
+    Then the build should succeed
+    And the DeckContext field "subject" should equal "Kotlin Coroutines"
+
+  Scenario: Generated DeckContext contains the expected language
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Kotlin Coroutines"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject  | Kotlin Coroutines |
+      | language | fr                |
+    Then the build should succeed
+    And the DeckContext field "language" should equal "fr"
+
+  Scenario: Generated DeckContext outputFile follows the naming convention
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Kotlin Coroutines"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject  | Kotlin Coroutines |
+      | language | fr                |
+    Then the build should succeed
+    And the DeckContext "outputFile" should match the pattern "<slug>_<lang>-deck.adoc"
+
+  # ---------------------------------------------------------------------------
+  # Auteur
+  # ---------------------------------------------------------------------------
+
+  Scenario: Author is taken from explicit properties
+    Given a new Slider project
+    And a mock LLM that returns a valid DeckContext JSON for subject "Kotlin Coroutines"
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject      | Kotlin Coroutines    |
+      | language     | fr                   |
+      | author.name  | cheroliv             |
+      | author.email | cheroliv@example.com |
+    Then the build should succeed
+    And the DeckContext author name should equal "cheroliv"
+    And the DeckContext author email should equal "cheroliv@example.com"
+
+  # ---------------------------------------------------------------------------
+  # Pipeline complet — tag @integration, exclus du check normal
+  # ---------------------------------------------------------------------------
+
+  @integration
+  Scenario: Full pipeline with Gemini produces a valid deck-context file
+    Given a new Slider project
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject      | Kotlin inline functions and reification |
+      | language     | fr                                      |
+      | ai.provider  | gemini                                  |
+      | author.name  | cheroliv                                |
+      | author.email | cheroliv@example.com                    |
+    Then the build should succeed
+    And the file "slides/misc/kotlin-inline-functions-and-reification-deck-context.yml" should exist
+    And the file "slides/misc/kotlin-inline-functions-and-reification-deck-context.yml" should be a valid DeckContext
+
+  @integration
+  Scenario: Full pipeline with Ollama produces a valid deck-context file
+    Given a new Slider project
+    When I execute the task 'proposeDeckContext' with properties:
+      | subject      | Kotlin Coroutines    |
+      | language     | fr                   |
+      | ai.provider  | ollama               |
+      | author.name  | cheroliv             |
+      | author.email | cheroliv@example.com |
+    Then the build should succeed
+    And the file "slides/misc/kotlin-coroutines-deck-context.yml" should exist
+    And the file "slides/misc/kotlin-coroutines-deck-context.yml" should be a valid DeckContext
