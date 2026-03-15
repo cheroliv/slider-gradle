@@ -67,6 +67,12 @@ abstract class PgVectorService : BuildService<PgVectorService.Params>, AutoClose
         val password:       Property<String>
         val table:          Property<String>
         val startupTimeout: Property<Long>   // seconds
+        /**
+         * If set, PgVectorService skips Docker entirely and connects to this
+         * external port on localhost. Used in tests via Testcontainers.
+         * Set via Gradle property -Ppgvector.port=<port>.
+         */
+        val externalPort:   Property<Int>
     }
 
     // -------------------------------------------------------------------------
@@ -102,7 +108,13 @@ abstract class PgVectorService : BuildService<PgVectorService.Params>, AutoClose
     @Synchronized
     fun start() {
         if (started) return
-        doStart()
+        if (parameters.externalPort.isPresent) {
+            // External pgvector (e.g. Testcontainers in tests) — skip Docker
+            port = parameters.externalPort.get()
+            println("🐘 [PgVectorService] Using external pgvector at localhost:$port")
+        } else {
+            doStart()
+        }
         started = true
     }
 
@@ -165,6 +177,7 @@ abstract class PgVectorService : BuildService<PgVectorService.Params>, AutoClose
 
     override fun close() {
         if (!started) return  // start() was never called — nothing to stop
+        if (parameters.externalPort.isPresent) return  // external mode — nothing to stop
         runCatching {
             docker.stopContainerCmd(containerId).withTimeout(10).exec()
             println("🐘 [PgVectorService] Container stopped.")
