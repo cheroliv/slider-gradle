@@ -109,6 +109,10 @@ object AssistantManager {
             spec.parameters.password.convention(PgVectorService.DEFAULT_PASSWORD)
             spec.parameters.table.convention(PgVectorService.DEFAULT_TABLE)
             spec.parameters.startupTimeout.convention(PgVectorService.DEFAULT_TIMEOUT)
+            // If -Ppgvector.port is provided, use external pgvector (e.g. Testcontainers)
+            (project.findProperty("pgvector.port") as? String)?.toIntOrNull()?.let {
+                spec.parameters.externalPort.set(it)
+            }
             spec.maxParallelUsages.set(1)
         }
 
@@ -462,8 +466,8 @@ no explanation, no preamble:
   "audience": "string",
   "duration": <integer minutes>,
   "language": "string",
-  "outputFile": "string following the pattern <subject-slug>_<lang>-deck.adoc where <lang> is the ISO 639-1 code (e.g. kotlin-coroutines_fr-deck.adoc)",
-  "author": { "name": "<use the provided author name>", "email": "<use the provided author email>" },
+  "outputFile": "string (kebab-case, ends with -deck_<lang>.adoc where <lang> is the ISO 639-1 language code, e.g. kotlin-coroutines-deck_fr.adoc)",
+  "author": { "name": "string", "email": "string" },
   "revealjs": {
     "theme": "string",
     "slideNumber": "c/t",
@@ -491,10 +495,16 @@ no explanation, no preamble:
 - Adapt depth and number of slides to the audience level
 - speakerHint: what the presenter should say/demonstrate on that slide
 - pageNotesHint: references, exercises or deeper content for learners
-- outputFile: MUST follow the pattern <subject-slug>_<lang>-deck.adoc (e.g. kotlin-coroutines_fr-deck.adoc, spring-boot-intro_en-deck.adoc)
+- outputFile: must follow the pattern <subject-slug>-deck_<lang>.adoc (e.g. kotlin-coroutines-deck_fr.adoc, spring-boot-intro-deck_en.adoc)
 """.trimIndent()
 
-        fun contextUserMessage(subject: String, language: String, authorName: String, authorEmail: String, ragContext: String): String = buildString {
+        fun contextUserMessage(
+            subject: String,
+            language: String,
+            authorName: String,
+            authorEmail: String,
+            ragContext: String,
+        ): String = buildString {
             appendLine("Propose a complete DeckContext JSON for the following subject:")
             appendLine()
             appendLine("Subject : $subject")
