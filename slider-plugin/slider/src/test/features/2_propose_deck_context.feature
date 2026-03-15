@@ -25,6 +25,7 @@ Feature: proposeDeckContext — RAG-assisted deck context generation
     Then the build should succeed
     And the file "slides/misc/kotlin-coroutines-deck-context.yml" should exist
 
+  #noinspection NonAsciiCharacters
   Scenario: Subject with accents is slugified correctly
     Given a new Slider project
     And a mock LLM that returns a valid DeckContext JSON for subject "Programmation réactive"
