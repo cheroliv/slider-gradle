@@ -20,7 +20,7 @@ repositories {
     listOf(
         "https://repo.gradle.org/gradle/libs-releases/",
         "https://plugins.gradle.org/m2/",
-        "https://maven.xillio.com/artifactory/libs-release/",
+//        "https://maven.xillio.com/artifactory/libs-release/",
         "https://mvnrepository.com/repos/springio-plugins-release",
         "https://archiva-repository.apache.org/archiva/repository/public/"
     ).forEach(::maven)
@@ -43,8 +43,8 @@ dependencies {
 
     testImplementation(kotlin("test-junit5"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("org.slf4j:slf4j-api:2.0.17")
-    testRuntimeOnly("ch.qos.logback:logback-classic:1.5.26")
+    testImplementation(libs.slf4j)
+    testRuntimeOnly(libs.logback)
 
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockito.kotlin)
