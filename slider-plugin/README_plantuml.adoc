@@ -205,6 +205,35 @@ private fun isSlidesConfigComplete(miscDir: File): Boolean {
 }
 ----
 
+=== `publishSlides` — configurable branch
+
+The hardcoded `setInitialBranch("main")` bug in `pushSlide` has been fixed.
+The publish branch is now read from `conf.pushSlides?.branch`:
+
+[source,kotlin]
+----
+FileRepositoryBuilder()
+    .setInitialBranch(conf.pushSlides?.branch ?: "main")
+----
+
+To publish to a `slides` branch of the same source repository and expose it via GitHub Pages:
+
+[source,yaml]
+----
+pushSlides:
+  from: "docs/asciidocRevealJs"
+  to: "cvs"
+  branch: "slides"
+  message: "slides show"
+  repo:
+    repository: "https://github.com/your-org/your-project.git"
+    credentials:
+      username: "your-username"
+      password: "your-github-token"
+----
+
+NOTE: Enable GitHub Pages on the `slides` branch in *Settings → Pages* of the repository.
+
 === Deck file naming convention
 
 [cols="1,2,2"]
@@ -366,7 +395,7 @@ slider {
 
 | `publishSlides`
 | slider
-| Deploys slides to remote Git repository
+| Deploys compiled slides to the configured branch (e.g. `slides`) via force push — compatible with GitHub Pages
 
 | `asciidocCapsule`
 | capsule
@@ -487,13 +516,13 @@ deactivate PGS
 ./gradlew proposeDeckContext \
   -Psubject="Kotlin inline functions and reification" \
   -Planguage=fr \
-  -Pai.provider=gemini \
+  -Pai.provider=ollama \
   --no-daemon
 
 # Generate the deck (step 2/2)
 ./gradlew generateDeck \
   -Pdeck.context=slides/misc/kotlin-inline-functions-and-reification-deck-context.yml \
-  -Pai.provider=gemini \
+  -Pai.provider=ollama \
   --no-daemon
 ----
 
@@ -724,7 +753,7 @@ and has no negative consequences for the plugin's Portal ranking beyond the Conf
 == Roadmap
 * Configuration Cache support — blocked on asciidoctor-gradle `5.x` stable release.
 * Extended DSL — configurable theme, transition, source directory.
-* Cucumber tests covering scaffold, `proposeDeckContext` and `generateDeck`.
+* Cucumber tests for the `generateDeck` task.
 * `asciidocCapsule` — video capsule generation from slides.
 
 == License

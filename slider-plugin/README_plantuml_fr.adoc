@@ -204,6 +204,35 @@ private fun isSlidesConfigComplete(miscDir: File): Boolean {
 }
 ----
 
+=== `publishSlides` — branche configurable
+
+Le bug `setInitialBranch("main")` hardcodé dans `pushSlide` a été corrigé.
+La branche de publication est désormais lue depuis `conf.pushSlides?.branch` :
+
+[source,kotlin]
+----
+FileRepositoryBuilder()
+    .setInitialBranch(conf.pushSlides?.branch ?: "main")
+----
+
+Pour publier vers une branche `slides` du même dépôt source et l'exposer via GitHub Pages :
+
+[source,yaml]
+----
+pushSlides:
+  from: "docs/asciidocRevealJs"
+  to: "cvs"
+  branch: "slides"
+  message: "slides show"
+  repo:
+    repository: "https://github.com/your-org/your-project.git"
+    credentials:
+      username: "your-username"
+      password: "your-github-token"
+----
+
+NOTE: Activez GitHub Pages sur la branche `slides` dans *Settings → Pages* du dépôt.
+
 === Convention de nommage des decks
 
 [cols="1,2,2"]
@@ -365,7 +394,7 @@ slider {
 
 | `publishSlides`
 | slider
-| Déploie les slides vers le dépôt Git distant
+| Déploie les slides compilés vers la branche configurée (ex: `slides`) via force push — compatible GitHub Pages
 
 | `asciidocCapsule`
 | capsule
@@ -486,13 +515,13 @@ deactivate PGS
 ./gradlew proposeDeckContext \
   -Psubject="Kotlin inline functions and reification" \
   -Planguage=fr \
-  -Pai.provider=gemini \
+  -Pai.provider=ollama \
   --no-daemon
 
 # Générer le deck (étape 2/2)
 ./gradlew generateDeck \
   -Pdeck.context=slides/misc/kotlin-inline-functions-and-reification-deck-context.yml \
-  -Pai.provider=gemini \
+  -Pai.provider=ollama \
   --no-daemon
 ----
 
@@ -720,7 +749,7 @@ gradlePlugin {
 == Roadmap
 * Support du Configuration Cache — bloqué sur la version stable d'asciidoctor-gradle `5.x`.
 * DSL étendu — thème, transition, répertoire source configurables.
-* Tests Cucumber couvrant le scaffold, `proposeDeckContext` et `generateDeck`.
+* Tests Cucumber pour la tâche `generateDeck`.
 * `asciidocCapsule` — génération de capsules vidéo depuis les slides.
 
 == Licence

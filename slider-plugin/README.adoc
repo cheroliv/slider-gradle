@@ -65,7 +65,7 @@ slider-plugin/
 
 === Internal Architecture
 
-image::images/en/diag-plantuml-md5-310245db5847cf11bb4e9b47b2009c27.png[]
+image::images/fr/diag-plantuml-md5-3b0343a07def68f0045b6332de5c508c.png[]
 
 == Key Technical Decisions
 
@@ -165,6 +165,35 @@ private fun isSlidesConfigComplete(miscDir: File): Boolean {
     }?.isNotEmpty() ?: false
 }
 ----
+
+=== `publishSlides` — configurable branch
+
+The hardcoded `setInitialBranch("main")` bug in `pushSlide` has been fixed.
+The publish branch is now read from `conf.pushSlides?.branch`:
+
+[source,kotlin]
+----
+FileRepositoryBuilder()
+    .setInitialBranch(conf.pushSlides?.branch ?: "main")
+----
+
+To publish to a `slides` branch of the same source repository and expose it via GitHub Pages:
+
+[source,yaml]
+----
+pushSlides:
+  from: "docs/asciidocRevealJs"
+  to: "cvs"
+  branch: "slides"
+  message: "slides show"
+  repo:
+    repository: "https://github.com/your-org/your-project.git"
+    credentials:
+      username: "your-username"
+      password: "your-github-token"
+----
+
+NOTE: Enable GitHub Pages on the `slides` branch in *Settings → Pages* of the repository.
 
 === Deck file naming convention
 
@@ -315,7 +344,7 @@ slider {
 
 | `cleanSlidesBuild`
 | slider
-| Deletes generated presentation artifacts
+| Deletes generated presentation artefacts
 
 | `dashSlidesBuild`
 | documentation
@@ -327,7 +356,7 @@ slider {
 
 | `publishSlides`
 | slider
-| Deploys slides to remote Git repository
+| Deploys compiled slides to the configured branch (e.g. `slides`) via force push — compatible with GitHub Pages
 
 | `asciidocCapsule`
 | capsule
@@ -381,7 +410,7 @@ The RAG pipeline relies on three components:
 
 === RAG Pipeline Lifecycle
 
-image::images/en/diag-plantuml-md5-6c9c93f90b48a0dbd57c918daf22fbaf.png[]
+image::images/fr/diag-plantuml-md5-a8dbd87942fd1adefb8fd31826696dbf.png[]
 
 === Supported providers
 
@@ -417,13 +446,13 @@ image::images/en/diag-plantuml-md5-6c9c93f90b48a0dbd57c918daf22fbaf.png[]
 ./gradlew proposeDeckContext \
   -Psubject="Kotlin inline functions and reification" \
   -Planguage=fr \
-  -Pai.provider=gemini \
+  -Pai.provider=ollama \
   --no-daemon
 
 # Generate the deck (step 2/2)
 ./gradlew generateDeck \
   -Pdeck.context=slides/misc/kotlin-inline-functions-and-reification-deck-context.yml \
-  -Pai.provider=gemini \
+  -Pai.provider=ollama \
   --no-daemon
 ----
 
@@ -594,7 +623,7 @@ The consumer configuration is minimal — the plugin handles all repository and 
 [source,kotlin]
 ----
 pluginManagement.repositories {
-    mavenLocal() // dev mode only
+    mavenLocal()
     gradlePluginPortal()
 }
 rootProject.name = "your-project-name"
@@ -654,7 +683,7 @@ and has no negative consequences for the plugin's Portal ranking beyond the Conf
 == Roadmap
 * Configuration Cache support — blocked on asciidoctor-gradle `5.x` stable release.
 * Extended DSL — configurable theme, transition, source directory.
-* Cucumber tests covering scaffold, `proposeDeckContext` and `generateDeck`.
+* Cucumber tests for the `generateDeck` task.
 * `asciidocCapsule` — video capsule generation from slides.
 
 == License
