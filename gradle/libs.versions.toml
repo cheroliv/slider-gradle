@@ -1,9 +1,11 @@
 [versions]
 slider = "0.0.5"
+readme = "0.0.0"
 
 [libraries]
 
 [plugins]
 slider = { id = "com.cheroliv.slider", version.ref = "slider" }
+readme = { id = "com.cheroliv.readme", version.ref = "readme" }
 
 [bundles]
