@@ -194,6 +194,8 @@ tasks.check {
 
 gradlePlugin {
     plugins {
+        vcsUrl = "https://github.com/cheroliv/slider-gradle.git"
+        website = "https://cheroliv.com"
         create("slider") {
             id = libs.plugins.slider.get().pluginId
             implementationClass = "${libs.plugins.slider.get().pluginId}.SliderPlugin"
@@ -224,8 +226,6 @@ gradlePlugin {
             }
         }
     }
-    website = "https://cheroliv.com"
-    vcsUrl = "https://github.com/cheroliv/slider-gradle.git"
     testSourceSets(functionalTest)
 }
 

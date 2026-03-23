@@ -1,4 +1,7 @@
-plugins { alias(libs.plugins.slider) }
+plugins {
+    alias(libs.plugins.slider)
+    alias(libs.plugins.readme)
+}
 
 slider {
     configPath = "slides-context.yml"
