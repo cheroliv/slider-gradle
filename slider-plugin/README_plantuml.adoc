@@ -10,7 +10,7 @@
 ++++
 <p align="right">
   <a href="README_fr.adoc">
-    <img src="images/lang-fr-red.svg" alt="Français" width="64"/>
+    <img src="../.github/workflows/readmes/images/lang-fr-red.svg" alt="Français" width="64"/>
   </a>
 </p>
 ++++
@@ -68,7 +68,7 @@ slider-plugin/
 
 
 [plantuml]
-....
+----
 @startuml
 skinparam componentStyle rectangle
 
@@ -104,7 +104,7 @@ RM --> PG
 RM --> Embed
 PGS --> PG : docker-java
 @enduml
-....
+----
 
 == Key Technical Decisions
 
@@ -450,7 +450,7 @@ The RAG pipeline relies on three components:
 === RAG Pipeline Lifecycle
 
 [plantuml]
-....
+----
 @startuml
 participant "Gradle" as G
 participant "RagTask\n(@ServiceReference)" as RT
@@ -480,7 +480,7 @@ RT -> Files : write *-deck-context.yml\nor *_<lang>-deck.adoc
 G -> PGS : close() — end of build
 deactivate PGS
 @enduml
-....
+----
 
 === Supported providers
 

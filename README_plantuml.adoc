@@ -10,7 +10,7 @@
 ++++
 <p align="right">
   <a href="README_fr.adoc">
-    <img src="slider-plugin/images/lang-fr-red.svg" alt="Français" width="64"/>
+    <img src=".github/workflows/readmes/images/lang-fr-red.svg" alt="Français" width="64"/>
   </a>
 </p>
 ++++
@@ -32,7 +32,7 @@ AI-assisted generation relies on a two-step RAG pipeline:
 === Use Cases
 
 [plantuml]
-....
+----
 @startuml
 left to right direction
 
@@ -58,12 +58,12 @@ rectangle "Gradle Slider Plugin" {
   (Publish slides) --> Git
 }
 @enduml
-....
+----
 
 === Global Flow Overview
 
 [plantuml]
-....
+----
 @startuml
 start
 :Gradle starts;
@@ -104,7 +104,7 @@ if (publish ?) then (yes)
 endif
 stop
 @enduml
-....
+----
 
 == Current version: {plugin-version}
 
@@ -168,7 +168,7 @@ slider = { id = "com.cheroliv.slider", version.ref = "slider" }
 === Global Architecture
 
 [plantuml]
-....
+----
 @startuml
 
 package "Consumer Gradle Project" {
@@ -213,12 +213,12 @@ package "External Systems" {
 [SlidesServer] --> [Node npx serve]
 [SlidesPublisher] --> [Git]
 @enduml
-....
+----
 
 === Gradle Execution Cycle
 
 [plantuml]
-....
+----
 @startuml
 actor Developer
 
@@ -248,7 +248,7 @@ opt RAG task (proposeDeckContext / generateDeck / reindexRag)
   Gradle -> PgVectorService : close()
 end
 @enduml
-....
+----
 
 == Automatic Initialization (first use)
 
@@ -256,7 +256,7 @@ On the first execution of any Gradle task, the plugin checks whether the `slides
 the `slides-context.yml` file and `slides/misc/example-deck-context.yml` are present and complete.
 
 [plantuml]
-....
+----
 @startuml
 start
 :Gradle task execution;
@@ -284,7 +284,7 @@ else (no)
 endif
 stop
 @enduml
-....
+----
 
 === Initializing slides/
 
@@ -432,7 +432,7 @@ Deploys generated slides to the remote repository configured in `slides-context.
 ==== Deployment Pipeline
 
 [plantuml]
-....
+----
 @startuml
 actor Developer
 
@@ -449,7 +449,7 @@ publishSlides -> Git : copy slides
 publishSlides -> Git : commit
 publishSlides -> Git : push (force)
 @enduml
-....
+----
 
 == AI-Assisted Deck Generation (slider-ai)
 
@@ -463,7 +463,7 @@ Select the provider with `-Pai.provider`.
 === RAG Pipeline Architecture
 
 [plantuml]
-....
+----
 @startuml
 skinparam componentStyle uml2
 
@@ -516,12 +516,12 @@ AM --> Gemini
 AM --> Mistral
 AM --> HuggingFace
 @enduml
-....
+----
 
 === Two-Step Generation Pipeline
 
 [plantuml]
-....
+----
 @startuml
 actor Developer
 
@@ -562,7 +562,7 @@ Generate -> DeckFile : write <slug>_en-deck.adoc
 Generate -> PGS : close() [end of build]
 deactivate PGS
 @enduml
-....
+----
 
 === Available AI Tasks
 
@@ -778,7 +778,7 @@ slides:
 === C4 View — Plugin Context
 
 [plantuml]
-....
+----
 @startuml
 actor Developer
 
@@ -829,7 +829,7 @@ Developer --> "Gradle Build System"
 "Slides Builder" --> "Reveal.js / Asciidoctor"
 "Slides Publisher" --> "Git Repository"
 @enduml
-....
+----
 
 === Hexagonal Architecture (Ports & Adapters)
 
@@ -838,7 +838,7 @@ external interfaces and infrastructure technologies.
 This design guarantees LLM provider independence and high testability.
 
 [plantuml]
-....
+----
 @startuml
 skinparam componentStyle rectangle
 
@@ -895,7 +895,7 @@ package "Adapters" {
 "Gradle Task Adapter\n(RagTask)" --> "RagManager"
 "Gradle Task Adapter\n(RagTask)" --> "SlidesInitializer"
 @enduml
-....
+----
 
 This architecture delivers:
 

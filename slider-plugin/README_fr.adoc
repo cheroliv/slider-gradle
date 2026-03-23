@@ -10,7 +10,7 @@
 ++++
 <p align="right">
   <a href="README.adoc">
-    <img src="images/lang-en-blue.svg" alt="English" width="64"/>
+    <img src="../.github/workflows/readmes/images/lang-en-blue.svg" alt="English" width="64"/>
   </a>
 </p>
 ++++
