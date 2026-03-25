@@ -11,15 +11,14 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
-import java.net.HttpURLConnection
-import java.net.URL
 import java.io.File
 import java.io.File.createTempFile
+import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.URI
 
-class TestWorld {
-    val log: Logger = getLogger(TestWorld::class.java)
+class SliderWorld {
+    val log: Logger = getLogger(SliderWorld::class.java)
 
     val scope = CoroutineScope(Default + SupervisorJob())
 
@@ -66,10 +65,10 @@ class TestWorld {
      */
     fun pgProperties(): Map<String, String> = pgPort?.let {
         mapOf(
-            "pgvector.host"     to "localhost",
-            "pgvector.port"     to it.toString(),
+            "pgvector.host" to "localhost",
+            "pgvector.port" to it.toString(),
             "pgvector.database" to pgDatabase,
-            "pgvector.user"     to pgUser,
+            "pgvector.user" to pgUser,
             "pgvector.password" to pgPassword,
         )
     } ?: emptyMap()
@@ -112,7 +111,7 @@ class TestWorld {
     private fun isOllamaLocal(): Boolean = runCatching {
         val conn = URI("http://localhost:11434/api/tags").toURL().openConnection() as HttpURLConnection
         conn.connectTimeout = 1_000
-        conn.readTimeout   = 1_000
+        conn.readTimeout = 1_000
         conn.requestMethod = "GET"
         conn.responseCode == 200
     }.getOrDefault(false)

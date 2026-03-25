@@ -4,7 +4,6 @@ package com.cheroliv.slider.scenarios
 
 import com.cheroliv.slider.SliderManager.Configuration.yamlMapper
 import io.cucumber.datatable.DataTable
-import io.cucumber.java.en.And
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
@@ -18,11 +17,11 @@ import java.io.File
  * ## Mock LLM strategy
  * proposeDeckContext runs inside a GradleTestKit subprocess — in-memory mocks
  * are not injectable. Instead, a minimal Ollama-compatible HTTP server is started
- * in the test JVM ([TestWorld.startMockLlm]) and its URL is passed to GradleRunner
+ * in the test JVM ([SliderWorld.startMockLlm]) and its URL is passed to GradleRunner
  * via `-Pollama.baseUrl=http://localhost:<port>`. LangChain4j's OllamaChatModel
  * then hits the mock instead of a real Ollama instance.
  */
-class ProposeDeckContextSteps(private val world: TestWorld) {
+class ProposeDeckContextSteps(private val world: SliderWorld) {
 
     // -------------------------------------------------------------------------
     // Mock LLM — valid DeckContext JSON response fixture
