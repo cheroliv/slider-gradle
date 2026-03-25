@@ -1,0 +1,49 @@
+name: Generate README from truth sources
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "README_truth*.adoc"
+  workflow_dispatch:
+
+jobs:
+  generate-readme:
+    name: Process README_truth → README
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 24
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Inject plugin config
+        run: echo "${{ secrets.README_GRADLE_PLUGIN }}" > readme-truth.yml
+
+      - name: Generate README and commit via JGit
+        run: ./gradlew -q -s commitGeneratedReadme --no-daemon
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### README — Result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          git diff HEAD~1 --name-only 2>/dev/null | while read f; do
+            echo "- \`$f\`" >> $GITHUB_STEP_SUMMARY
+          done || echo "- *(first run)*" >> $GITHUB_STEP_SUMMARY
