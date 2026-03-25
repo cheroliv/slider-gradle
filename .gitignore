@@ -17,6 +17,6 @@ postgresql.yml
 #*.adoc
 !README.adoc
 !README_fr.adoc
-!README_plantuml.adoc
-!README_plantuml_fr.adoc
-readme-plantuml.yml
+!README_truth.adoc
+!README_truth_fr.adoc
+readme-truth.yml
