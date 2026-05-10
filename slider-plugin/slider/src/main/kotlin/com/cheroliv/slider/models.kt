@@ -73,6 +73,9 @@ data class SlideHint(
     val speakerHint: String? = null,
     val pageNotesHint: String? = null,
     val transition: String? = null,
+    val autoAnimate: Boolean = false,
+    val autoAnimateEasing: String? = null,
+    val autoAnimateDuration: Double? = null,
 )
 
 data class AuthorContext(

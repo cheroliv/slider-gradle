@@ -485,7 +485,7 @@ no explanation, no preamble:
     "pageNotesStyle": "DETAILED"
   },
   "slides": [
-    { "title": "string", "speakerHint": "string", "pageNotesHint": "string" }
+    { "title": "string", "speakerHint": "string", "pageNotesHint": "string", "transition": "string", "autoAnimate": false, "autoAnimateEasing": "ease-in-out", "autoAnimateDuration": 1.0 }
   ]
 }
 
@@ -573,6 +573,29 @@ pageNotesStyle controls [.notes] depth:
 3. Last slide: Summary/Conclusion
 4. Follow slide hints order and titles exactly when provided
 5. Content language must match the `language` field
+
+## AUTO-ANIMATE (reveal.js 4.0+)
+Two adjacent slides with [%auto-animate] will automatically animate
+matched DOM elements between them.
+
+Syntax:
+[%auto-animate]
+== Slide Title A
+Content…
+
+[%auto-animate]
+== Slide Title B
+Modified content — elements animate automatically
+
+Options (on the same line as %auto-animate):
+  [%auto-animate,auto-animate-easing="ease-in-out",auto-animate-duration=2.0]
+  == Slide Title
+
+Use auto-animate for:
+- Code evolution (add/remove lines across slides)
+- List growth (items appearing one by one)
+- Element repositioning (title moves up, body appears)
+- Style transitions (color, size, margin changes)
 """.trimIndent()
 
         fun deckUserMessage(ctx: DeckContext, ragContext: String): String = buildString {
@@ -607,6 +630,9 @@ pageNotesStyle controls [.notes] depth:
                 ctx.slides.forEach { hint ->
                     appendLine("  - title: ${hint.title}")
                     hint.transition?.let   { appendLine("    transition: $it") }
+                    if (hint.autoAnimate) appendLine("    autoAnimate: true")
+                    hint.autoAnimateEasing?.let { appendLine("    autoAnimateEasing: $it") }
+                    hint.autoAnimateDuration?.let { appendLine("    autoAnimateDuration: $it") }
                     hint.speakerHint?.let  { appendLine("    speakerHint: $it") }
                     hint.pageNotesHint?.let { appendLine("    pageNotesHint: $it") }
                 }

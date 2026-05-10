@@ -1,0 +1,43 @@
+= Session 002 — EPIC SLD-1 — US-1.3 + US-1.4
+:author: cheroliv + opencode (deepseek-v4-pro)
+:date: 2026-05-10
+:status: TERMINE
+
+== Resume
+
+US-1.3 (Auto-Animate data model + prompts) et US-1.4 (Tests Cucumber)
+terminees en 1 session. 17/17 Cucumber PASS, 1 skipped (@integration).
+
+== Fichiers modifies
+
+[cols="2,2,5"]
+|===
+| Fichier | Ligne(s) | Changement
+| `models.kt` | 75-77 | SlideHint: autoAnimate, autoAnimateEasing, autoAnimateDuration
+| `AssistantManager.kt` | 488 | contextSystemPrompt JSON schema slides: autoAnimate fields
+| `AssistantManager.kt` | 576-597 | deckSystemPrompt: section AUTO-ANIMATE (syntax + use cases)
+| `AssistantManager.kt` | 633-635 | deckUserMessage: per-slide autoAnimate hints
+| `ProposeDeckContextSteps.kt` | 194-207 | Support dotted path "revealjs.transition" in field checks
+|===
+
+== Fichiers crees
+
+[cols="2,5"]
+|===
+| Fichier | Role
+| `3_revealjs_transition.feature` | Scenarios transition: default "slide", not "linear", per-slide field
+| `4_auto_animate.feature` | Scenarios auto-animate: SlideHint field exposure, model validity
+| `RevealJsTransitionSteps.kt` | Step defs: buildOutputShouldNotContain, deckContextShouldContainField, modelShouldBeValid
+|===
+
+== US livrees
+
+- [x] *US-1.3* — Auto-Animate dans SlideHint + system prompt
+- [x] *US-1.4* — Tests Cucumber transition + auto-animate
+
+== Verifications
+
+- CompileKotlin: PASS
+- CucumberTest: 17/17 PASS, 1 skipped (@integration)
+- Secret scan: OK (dev pgvector password only)
+- Git: clean

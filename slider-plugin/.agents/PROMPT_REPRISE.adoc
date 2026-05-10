@@ -1,33 +1,37 @@
-= PROMPT_REPRISE — slider-gradle Session 002
+= PROMPT_REPRISE — slider-gradle Session 003
 
-_Mission_ : EPIC SLD-1 — US-1.3 (Auto-Animate) + US-1.4 (Tests Cucumber).
+_Mission_ : EPIC SLD-1 — US-1.5 (Validation dogfooding).
 _Statut_ : A DEMARRER
 _Date_ : 2026-05-10
 
 == Contexte
 
-US-1.1 + US-1.2 terminées Session 001 :
-- reveal.js 5.2.1, gem 5.0.0 ✅
-- transition "slide" par défaut, configurable per-slide ✅
+US-1.1 a US-1.4 terminees Sessions 001-002 :
+- reveal.js 5.2.1, gem 5.0.0
+- transition "slide" par defaut, configurable per-slide
+- Auto-Animate expose dans SlideHint + system prompt
+- 17/17 Cucumber PASS, 1 skipped (@integration)
 
-== US planifiées
+== US planifiee
 
-.US-1.3 : Auto-Animate dans SlideHint + system prompt
-.US-1.4 : Tests Cucumber transition + auto-animate
+.US-1.5 : Validation dogfooding — deck avec transitions custom + auto-animate
 
-== Fichiers concernés
+== Fichiers concernes
 
-- `models.kt:72` — `SlideHint` : autoAnimate, autoAnimateEasing, autoAnimateDuration
-- `AssistantManager.kt:449-510` — contextSystemPrompt JSON schema
-- `AssistantManager.kt:529-571` — deckSystemPrompt (section Auto-Animate)
-- `AssistantManager.kt:573-613` — deckUserMessage (per-slide hints)
-- `src/cucumberTest/` — `revealjs_transition.feature` + `auto_animate.feature`
-- Step definitions associées
+- `slides/misc/revealjs-upgrade-demo-deck-context.yml` (a creer)
+- Demos manuelles : `./gradlew -i asciidoctorRevealJs` puis `./gradlew -i serveSlides`
 
-== Procédure démarrage Session 002
+== Criteres d'acceptation
+
+- Les transitions ne sont plus un glissement 1D
+- Le changement entre slides est fluide (CSS transforms au lieu de left property)
+- Auto-Animate produit un effet de continuite visuelle
+- Aucune regression sur les slides sans configuration custom
+
+== Procedure demarrage Session 003
 
 ----
 Je travaille sur le plugin slider-gradle.
 Applique la procedure d'ouverture standard AGENT.adoc.
-On attaque US-1.3 (Auto-Animate) + US-1.4 (Tests Cucumber).
+On attaque US-1.5 (Validation dogfooding).
 ----

@@ -191,9 +191,19 @@ class ProposeDeckContextSteps(private val world: SliderWorld) {
     }
 
     @Then("the DeckContext field {string} should equal {string}")
-    fun deckContextFieldShouldEqual(field: String, expected: String) {
+    fun deckContextFieldShouldEqual(dottedPath: String, expected: String) {
         val ctx = loadDeckContext(lastDeckContextFile().relativeTo(world.projectDir!!).path)
-        assertThat(ctx[field].toString()).isEqualTo(expected)
+        val parts = dottedPath.split(".")
+        if (parts.size > 1) {
+            @Suppress("UNCHECKED_CAST")
+            var current: Map<String, Any?> = ctx
+            for (i in 0 until parts.size - 1) {
+                current = (current[parts[i]] as? Map<String, Any?>) ?: error("Path segment '${parts[i]}' is null or not a map")
+            }
+            assertThat(current[parts.last()].toString()).isEqualTo(expected)
+        } else {
+            assertThat(ctx[dottedPath].toString()).isEqualTo(expected)
+        }
     }
 
     @Then("the DeckContext {string} should match the pattern {string}")

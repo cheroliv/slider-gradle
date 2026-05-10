@@ -5,7 +5,7 @@ _Regles absolues_ : voir `AGENT.adoc`
 _DAG_ : N2 — Plugin Gradle de generation de presentations (Regle 4bis)
 
 _Derniere mise a jour_ : 2026-05-10
-_Session en cours_ : 001 TERMINE — Prochaine 002
+_Session en cours_ : 002 TERMINE — Prochaine 003
 
 '''
 == REGLES ABSOLUES (resume)
@@ -23,7 +23,8 @@ _Session en cours_ : 001 TERMINE — Prochaine 002
 |===
 | # | Date | Type | Sujet | Score
 | 001 | 2026-05-10 | feat | EPIC SLD-1 — US-1.1 + US-1.2 (Upgrade reveal.js + Transition) | ✅ TERMINE
-| 002 | 2026-05-10 | feat | EPIC SLD-1 — US-1.3 + US-1.4 (Auto-Animate + Tests) | 🔴 A DEMARRER
+| 002 | 2026-05-10 | feat | EPIC SLD-1 — US-1.3 + US-1.4 (Auto-Animate + Tests) | ✅ TERMINE
+| 003 | 2026-05-10 | feat | EPIC SLD-1 — US-1.5 (Validation dogfooding) | 🔴 A DEMARRER
 |===
 
 '''
@@ -32,7 +33,7 @@ _Session en cours_ : 001 TERMINE — Prochaine 002
 |===
 | EPIC | Description | Statut | Priorite
 | SLD-0 | Bootstrap gouvernance agent slider (.agents/, AGENT.adoc, doc/) | ✅ TERMINE | P0
-| SLD-1 | Upgrade Reveal.js 3.9.1→5.2.1 + Auto-Animate + Transitions configurables | 🟡 EN COURS (2/5 US) | P0
+| SLD-1 | Upgrade Reveal.js 3.9.1→5.2.1 + Auto-Animate + Transitions configurables | 🟡 EN COURS (4/5 US) | P0
 |===
 
 '''
@@ -43,12 +44,12 @@ a Auto-Animate (reveal.js 4.0+), le tout configurable depuis
 le DeckContext YAML.
 
 |===
-| US | Description | Statut | Fichiers impactes
-| US-1.1 | Upgrade reveal.js (5.2.1) + gem asciidoctor-revealjs (5.0.0) | ✅ TERMINE | `SliderManager.kt:445,470-475`
-| US-1.2 | Exposer `transition` dans `RevealJsContext` + `data-transition` per-slide | ✅ TERMINE | `models.kt:75,84`, `SliderManager.kt:593`, `AssistantManager.kt`
-| US-1.3 | Exposer Auto-Animate dans `SlideHint` + system prompt | 🔴 TODO | `models.kt:72`, `AssistantManager.kt`
-| US-1.4 | Tests Cucumber — scenarios transition + auto-animate | 🔴 TODO | `SliderPluginCucumberTest.kt`, `*.feature`
-| US-1.5 | Validation dogfooding — deck avec transitions custom + auto-animate | 🔴 TODO | `slides/misc/` (nouveau deck de test)
+| US | Description | Statut
+| US-1.1 | Upgrade reveal.js (5.2.1) + gem asciidoctor-revealjs (5.0.0) | ✅ TERMINE
+| US-1.2 | Exposer `transition` dans `RevealJsContext` + `data-transition` per-slide | ✅ TERMINE
+| US-1.3 | Exposer Auto-Animate dans `SlideHint` + system prompt | ✅ TERMINE
+| US-1.4 | Tests Cucumber — scenarios transition + auto-animate (17/17 PASS) | ✅ TERMINE
+| US-1.5 | Validation dogfooding — deck avec transitions custom + auto-animate | 🔴 TODO
 |===
 
 '''
@@ -65,14 +66,4 @@ le DeckContext YAML.
 | `.agents/sessions/` | Archives par session | LAZY
 | `.agents/archives/` | Archives taches terminees | LAZY
 | `slider-plugin/doc/SLD-1_UPGRADE_REVEALJS_AUTO_ANIMATE.adoc` | Spec technique EPIC SLD-1 | LAZY
-| `slider-plugin/slider/src/main/kotlin/com/cheroliv/slider/models.kt` | Data classes (DeckContext, RevealJsContext, SlideHint) | CODE
-| `slider-plugin/slider/src/main/kotlin/com/cheroliv/slider/SliderManager.kt` | Taches Gradle + configuration reveal.js | CODE
-| `slider-plugin/slider/src/main/kotlin/com/cheroliv/slider/ai/AssistantManager.kt` | Prompts LLM + generation JSON | CODE
-| `slider-plugin/slider/src/main/kotlin/com/cheroliv/slider/ai/AdocWriter.kt` | Ecriture AsciiDoc depuis DeckContext | CODE
 |===
-
-'''
-== Conventions de Nommage EPIC/US
-
-Les EPICs suivent le prefixe `SLD-N` (SLiDe).
-Les US suivent le format `US-N.M` ou N = numero d'EPIC, M = numero d'US.
