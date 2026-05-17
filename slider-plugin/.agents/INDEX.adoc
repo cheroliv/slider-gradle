@@ -4,8 +4,8 @@
 _Regles absolues_ : voir `AGENT.adoc`
 _DAG_ : N2 — Plugin Gradle de generation de presentations (Regle 4bis)
 
-_Derniere mise a jour_ : 2026-05-10
-_Session en cours_ : 003 TERMINE — Prochaine 004
+_Derniere mise a jour_ : 2026-05-17
+_Session en cours_ : 004 EN COURS — SLD-2 Playwright + Rendu Visuel
 
 '''
 == REGLES ABSOLUES (resume)
@@ -34,6 +34,7 @@ _Session en cours_ : 003 TERMINE — Prochaine 004
 | EPIC | Description | Statut | Priorite
 | SLD-0 | Bootstrap gouvernance agent slider (.agents/, AGENT.adoc, doc/) | ✅ TERMINE | P0
 | SLD-1 | Upgrade Reveal.js 3.9.1→5.2.1 + Auto-Animate + Transitions configurables | ✅ TERMINE (5/5 US) | P0
+| SLD-2 | Playwright E2E + Theme pro + Capsule feed (5 US) | 🔴 EN COURS (Session 004) | P0
 |===
 
 '''
@@ -50,6 +51,21 @@ le DeckContext YAML.
 | US-1.3 | Exposer Auto-Animate dans `SlideHint` + system prompt | ✅ TERMINE
 | US-1.4 | Tests Cucumber — scenarios transition + auto-animate (17/17 PASS) | ✅ TERMINE
 | US-1.5 | Validation dogfooding — deck avec transitions custom + auto-animate | ✅ TERMINE
+|===
+
+'''
+== EPIC SLD-2 — Detail US
+
+_Vision_ : Rendu visuel professionnel validé par Playwright, thème reveal.js pro,
+transitions fluides, feed capsule pour capsule-gradle.
+
+|===
+| US | Description | Statut
+| US-2.1 | Ajouter Playwright via node-gradle (npm install @playwright/test + browsers) | ✅ TERMINE
+| US-2.2 | Tâche `slider:visualTest` — Playwright screenshot chaque slide + snapshot CI | ✅ TERMINE
+| US-2.3 | Theme CSS reveal.js pro (typo, palette Talaria, header/footer, barre progression) | ✅ TERMINE
+| US-2.4 | Tests validation visuelle Playwright — 10 contraintes P0/P1/P2 par slide | ✅ TERMINE
+| US-2.5 | Feed capsule — Playwright screenshots → JSON attendu par capsule-gradle | 🔴 A FAIRE
 |===
 
 '''

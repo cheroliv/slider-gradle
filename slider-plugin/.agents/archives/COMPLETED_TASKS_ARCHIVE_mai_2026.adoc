@@ -9,4 +9,8 @@
 | 002 | 2026-05-10 | SLD-1 | US-1.3 | Auto-Animate dans SlideHint + system prompt (models.kt + AssistantManager.kt)
 | 002 | 2026-05-10 | SLD-1 | US-1.4 | Tests Cucumber transition + auto-animate (2 features, 17/17 PASS)
 | 003 | 2026-05-10 | SLD-1 | US-1.5 | Validation dogfooding — deck 15 slides (transitions custom + auto-animate) + gem upgrade 5.0.0→5.2.0
+| 004 | 2026-05-17 | SLD-2 | US-2.1 | Playwright npm config + package.json + playwright.config.ts
+| 004 | 2026-05-17 | SLD-2 | US-2.2 | Taches Gradle `visualTest` + `installPlaywright` via NpxTask
+| 004 | 2026-05-17 | SLD-2 | US-2.3 | Theme CSS talaria.css + `revealjs_customcss` attribute
+| 004 | 2026-05-17 | SLD-2 | US-2.4 | 10 contraintes validation P0/P1/P2 dans slider-visual.spec.ts
 |===

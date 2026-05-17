@@ -1,0 +1,12 @@
+{
+  "name": "slider-playwright-tests",
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:update": "playwright test --update-snapshots",
+    "install:browsers": "playwright install chromium"
+  }
+}

@@ -1,0 +1,29 @@
+= Session 004 — SLD-2 Playwright + Visuel + Theme Pro
+
+_Date_ : 2026-05-17
+_Type_ : feat
+_EPIC_ : SLD-2 (Playwright E2E + Theme pro + Capsule feed)
+
+== Realisations
+
+- US-2.1 ✅ : package.json playwright config, npm dépendances
+- US-2.2 ✅ : Tache Gradle `slider:visualTest` + `slider:installPlaywright` via NpxTask
+- US-2.3 ✅ : Theme CSS talaria.css (palette foncee, typo Inter, header/footer, transitions)
+
+== Tests
+
+- Compilation : ✅ `:slider:compileKotlin` PASS
+- Tests unitaires : ✅ 1/1 PASS
+- Tests Cucumber : ✅ 17/17 PASS (1 SKIP — Ollama)
+- Tests fonctionnels : ✅ PASS
+
+== Decision
+
+- Playwright via NpxTask (node-gradle deja present, pas de nouveau plugin Gradle necessaire)
+- Theme CSS deploye via `doFirst` copie depuis les ressources du plugin → build output
+- `revealjs_customcss` attribute pointe vers talaria.css dans le repertoire de sortie
+
+== Prochaine session
+
+- US-2.4 : Tests Cucumber rendu visuel + validation via Playwright
+- US-2.5 : Feed capsule (screenshots → capsule-gradle)

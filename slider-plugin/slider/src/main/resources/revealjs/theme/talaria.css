@@ -1,0 +1,187 @@
+/* Talaria Theme for Reveal.js — CCPC/Talaria Brand */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+  --talaria-bg: #0f172a;
+  --talaria-bg-alt: #1e293b;
+  --talaria-text: #e2e8f0;
+  --talaria-text-muted: #94a3b8;
+  --talaria-accent: #38bdf8;
+  --talaria-accent-alt: #818cf8;
+  --talaria-success: #22c55e;
+  --talaria-warning: #f59e0b;
+  --talaria-border: #334155;
+  --talaria-font: 'Inter', system-ui, -apple-system, sans-serif;
+  --talaria-transition: 0.3s ease;
+}
+
+.reveal {
+  font-family: var(--talaria-font);
+  color: var(--talaria-text);
+  background: var(--talaria-bg);
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slides section {
+  padding: 1.5rem 2rem;
+}
+
+.reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.reveal h1 { font-size: 3.2em; color: var(--talaria-accent); }
+.reveal h2 { font-size: 2.2em; color: var(--talaria-accent-alt); }
+.reveal h3 { font-size: 1.5em; color: var(--talaria-text); }
+
+.reveal p {
+  font-size: 1.1em;
+  line-height: 1.6;
+  color: var(--talaria-text);
+}
+
+/* Code blocks */
+.reveal pre {
+  font-size: 0.85em;
+  border-radius: 8px;
+  border: 1px solid var(--talaria-border);
+  background: var(--talaria-bg-alt);
+}
+
+.reveal code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--talaria-accent);
+}
+
+/* Lists */
+.reveal ul, .reveal ol {
+  display: block;
+  line-height: 1.8;
+}
+
+.reveal li {
+  color: var(--talaria-text);
+}
+
+/* Links */
+.reveal a {
+  color: var(--talaria-accent);
+  transition: color var(--talaria-transition);
+}
+
+.reveal a:hover {
+  color: var(--talaria-accent-alt);
+}
+
+/* Blockquotes */
+.reveal blockquote {
+  background: var(--talaria-bg-alt);
+  border-left: 4px solid var(--talaria-accent);
+  padding: 1em 1.5em;
+  font-style: italic;
+  color: var(--talaria-text-muted);
+}
+
+/* Progress bar */
+.reveal .progress {
+  height: 3px;
+  background: var(--talaria-border);
+}
+
+.reveal .progress span {
+  background: var(--talaria-accent);
+}
+
+/* Slide numbers */
+.reveal .slide-number {
+  color: var(--talaria-text-muted);
+  font-size: 0.7em;
+}
+
+/* Controls */
+.reveal .controls {
+  color: var(--talaria-accent);
+}
+
+/* Title slide specific */
+.reveal .slides section.title-slide h1 {
+  font-size: 4em;
+  margin-bottom: 0.3em;
+}
+
+.reveal .slides section.title-slide p {
+  font-size: 1.3em;
+  color: var(--talaria-text-muted);
+}
+
+/* Section transitions */
+.reveal .slides section[data-transition="fade"] {
+  transition: opacity 0.5s ease;
+}
+
+.reveal .slides section[data-transition="zoom"] {
+  transition: transform 0.5s ease;
+}
+
+/* Responsive images */
+.reveal .slides img {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Tables */
+.reveal table {
+  font-size: 0.9em;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.reveal table th {
+  background: var(--talaria-bg-alt);
+  color: var(--talaria-accent);
+  font-weight: 600;
+  padding: 0.6em 1em;
+}
+
+.reveal table td {
+  padding: 0.5em 1em;
+  border-bottom: 1px solid var(--talaria-border);
+}
+
+/* Talaria header/footer */
+.slide-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0.5em 1em;
+  font-size: 0.6em;
+  color: var(--talaria-text-muted);
+  border-bottom: 1px solid var(--talaria-border);
+  z-index: 10;
+}
+
+.slide-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.3em 1em;
+  font-size: 0.55em;
+  color: var(--talaria-text-muted);
+  border-top: 1px solid var(--talaria-border);
+  display: flex;
+  justify-content: space-between;
+  z-index: 10;
+}
+
+/* Print styles */
+@media print {
+  .reveal { background: white; color: black; }
+  .reveal h1 { color: #1a56db; }
+}

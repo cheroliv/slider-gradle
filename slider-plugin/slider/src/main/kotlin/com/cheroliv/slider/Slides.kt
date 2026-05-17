@@ -19,10 +19,13 @@ object Slides {
         const val IDSEPARATOR_KEY = "idseparator"
         const val DOCINFO_KEY = "docinfo"
         const val REVEALJS_THEME_KEY = "revealjs_theme"
+        const val REVEALJS_CUSTOMCSS_KEY = "revealjs_customcss"
         const val REVEALJS_TRANSITION_KEY = "revealjs_transition"
         const val REVEALJS_HISTORY_KEY = "revealjs_history"
         const val REVEALJS_SLIDENUMBER_KEY = "revealjs_slideNumber"
         const val TASK_SERVE_SLIDES = "serveSlides"
+        const val TASK_VISUAL_TEST = "visualTest"
+        const val TASK_INSTALL_PLAYWRIGHT = "installPlaywright"
     }
 
     object Serve {

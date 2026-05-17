@@ -24,6 +24,8 @@ import com.cheroliv.slider.Slides.RevealJsSlides.TASK_CLEAN_SLIDES_BUILD
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_DASHBOARD_SLIDES_BUILD
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_PUBLISH_SLIDES
 import com.cheroliv.slider.Slides.RevealJsSlides.TASK_SERVE_SLIDES
+import com.cheroliv.slider.Slides.RevealJsSlides.TASK_VISUAL_TEST
+import com.cheroliv.slider.Slides.RevealJsSlides.TASK_INSTALL_PLAYWRIGHT
 import com.cheroliv.slider.Slides.Serve.SERVE_DEP
 import com.cheroliv.slider.Slides.Slide.DEFAULT_SLIDES_FOLDER
 import com.cheroliv.slider.Slides.Slide.IMAGES
@@ -511,6 +513,8 @@ object SliderManager {
             registerAsciidocCapsuleTask()
             registerReportTestsTask()
             registerReportFunctionalTestsTask()
+            registerVisualTestTask()
+            registerInstallPlaywrightTask()
         }
 
         /**
@@ -559,6 +563,17 @@ object SliderManager {
                 setExecutionMode(OUT_OF_PROCESS)
                 dependsOn(TASK_CLEAN_SLIDES_BUILD)
                 finalizedBy(TASK_DASHBOARD_SLIDES_BUILD)
+                doFirst {
+                    val cssOutput = layout.buildDirectory.get().asFile
+                        .resolve("docs")
+                        .resolve("asciidocRevealJs")
+                    cssOutput.mkdirs()
+                    javaClass.getResourceAsStream("/revealjs/theme/talaria.css")?.use { input ->
+                        cssOutput.resolve("talaria.css").outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
                 revealjsOptions {
                     // Resolve and log the AsciiDoc source directory
                     layout.projectDirectory.asFile
@@ -568,7 +583,7 @@ object SliderManager {
                         .let(::setSourceDir)
                     // Output path mirrors the source file location
                     baseDirFollowsSourceFile()
-                    // Copy images alongside the generated HTML
+                    // Copy images and theme CSS alongside the generated HTML
                     resources { spec ->
                         spec.from(sourceDir.resolve(IMAGES)) { copy ->
                             copy.include("**")
@@ -590,6 +605,7 @@ object SliderManager {
                             RevealJsSlides.IDSEPARATOR_KEY to "-",
                             RevealJsSlides.DOCINFO_KEY to "shared",
                             RevealJsSlides.REVEALJS_THEME_KEY to "black",
+                            RevealJsSlides.REVEALJS_CUSTOMCSS_KEY to "talaria.css",
                             RevealJsSlides.REVEALJS_TRANSITION_KEY to "slide",
                             RevealJsSlides.REVEALJS_HISTORY_KEY to "true",
                             RevealJsSlides.REVEALJS_SLIDENUMBER_KEY to "true"
@@ -850,6 +866,33 @@ object SliderManager {
                         .resolve("index.html")
                         .absolutePath
                 )
+            }
+        }
+
+        private fun Project.playwrightDir(): String =
+            projectDir.resolve("src/test/playwright").absolutePath
+
+        private fun Project.registerInstallPlaywrightTask() {
+            tasks.register<NpxTask>(TASK_INSTALL_PLAYWRIGHT) {
+                group = GROUP_TASK_SLIDER
+                description = "Install Playwright browsers (chromium) for visual testing."
+                command.set("playwright")
+                args.set(listOf("install", "chromium"))
+                workingDir.set(file(playwrightDir()))
+            }
+        }
+
+        private fun Project.registerVisualTestTask() {
+            tasks.register<NpxTask>(TASK_VISUAL_TEST) {
+                group = GROUP_TASK_SLIDER
+                description = "Run Playwright visual snapshot tests on generated slides."
+                dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
+                command.set("playwright")
+                args.set(listOf(
+                    "test",
+                    "--config", "${playwrightDir()}/playwright.config.ts"
+                ))
+                workingDir.set(file(playwrightDir()))
             }
         }
     }

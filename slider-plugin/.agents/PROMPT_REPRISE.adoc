@@ -1,41 +1,36 @@
-= PROMPT_REPRISE — slider-gradle Session 004
+= PROMPT_REPRISE — slider-gradle Session 005
 
-_Mission_ : A DEFINIR — Next EPIC after SLD-1 closure.
+_Mission_ : EPIC SLD-2 — US-2.5 Feed capsule (Playwright screenshots → capsule-gradle)
 _Statut_ : EN ATTENTE
-_Date_ : 2026-05-10
+_Date_ : 2026-05-17
 
 == Contexte
 
-EPIC SLD-1 COMPLET (5/5 US, Sessions 001-003) :
-- reveal.js 5.2.1, gem 5.2.0 (upgrade depuis 5.0.0 — indisponible sur rubygems.org)
-- transition "slide" par defaut, data-transition per-slide (5 overrides)
-- Auto-Animate dans SlideHint + system prompt + 4 paires demo
-- 17/17 Cucumber PASS
-- Deck dogfooding : slides/misc/revealjs-upgrade-demo_en-deck.adoc (15 slides)
+Session 004 (SLD-2) terminee : 4/5 US ✅
+- US-2.1 ✅ Playwright config + package.json
+- US-2.2 ✅ Tache Gradle visualTest + installPlaywright
+- US-2.3 ✅ Theme CSS talaria.css pro
+- US-2.4 ✅ 10 contraintes validation P0/P1/P2 dans spec Playwright
+- US-2.5 🔴 Feed capsule JSON → capsule-gradle (reste a faire)
 
-== Sujets potentiels Session 004
+Tests: compile OK, 17/17 Cucumber PASS, 1 unit PASS, functionalTest PASS.
 
-- Resoudre le probleme de POM gem corrompu (jcenter-backup → HTML)
-  → gem 5.2.0 installee en local mais asciidoctorRevealJs fail toujours
-- Nouvel EPIC (SLD-2 ?) selon roadmap
-- Publish slides (interdit sans permission)
+== Fichiers crees Session 004
 
-== Fichiers crees Session 003
+- `src/test/playwright/package.json`
+- `src/test/playwright/playwright.config.ts`
+- `src/test/playwright/spec/slider-visual.spec.ts`
+- `src/main/resources/revealjs/theme/talaria.css`
 
-- `slides/misc/revealjs-upgrade-demo-deck-context.yml`
-- `slides/misc/revealjs-upgrade-demo_en-deck.adoc`
-- `.agents/sessions/003-SLD-1-dogfooding.adoc`
+== Fichiers modifies Session 004
 
-== Fichiers modifies Session 003
+- `SliderManager.kt` — registerVisualTestTask + registerInstallPlaywrightTask + talaria.css doFirst
+- `Slides.kt` — TASK_VISUAL_TEST + TASK_INSTALL_PLAYWRIGHT + REVEALJS_CUSTOMCSS_KEY
+- `.agents/INDEX.adoc` — SLD-2 roadmap + US status
+- `.agents/SESSIONS_HISTORY.adoc` — session 004
 
-- `SliderManager.kt:445` → gem 5.2.0
-- `SliderManager.kt:470` → version pin 5.2.0
-- `build.gradle.kts` (racine) → +mavenLocal() +mavenCentral()
+== Procedure demarrage Session 005
 
-== Procedure demarrage Session 004
-
-----
-Je travaille sur le plugin slider-gradle.
-Applique la procedure d'ouverture standard AGENT.adoc.
-A definir ensemble ce qu'on attaque.
-----
+. Lire AGENT.adoc + INDEX.adoc + SESSION_CHECKLIST.adoc
+. Build : ./gradlew :slider:compileKotlin
+. Objectif : US-2.5 — Playwright outputs screenshots → JSON → capsule-gradle
