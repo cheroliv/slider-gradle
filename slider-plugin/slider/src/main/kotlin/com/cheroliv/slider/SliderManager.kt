@@ -488,12 +488,12 @@ object SliderManager {
      *
      * Task dependency graph:
      * ```
-     * cleanSlidesBuild
-     *   └── asciidoctorRevealJs ──┐
-     *         └── asciidoctor     │ finalizedBy
-     *         └── serveSlides     │
-     *                             ▼
-     *                    dashSlidesBuild
+     * cleanBuild
+     *   └── generateSlides ──┐
+     *         └── asciidoctor│ finalizedBy
+     *         └── serveSlides │
+     *                         ▼
+     *                generateDashboard
      * ```
      */
     object Tasks {
@@ -527,7 +527,7 @@ object SliderManager {
          */
         private fun Project.registerCleanSlidesBuildTask() {
             tasks.register<DefaultTask>(TASK_CLEAN_SLIDES_BUILD) {
-                group = GROUP_TASK_SLIDER
+                group = "build"
                 description = "Delete generated presentation artifacts from the build directory."
                 doFirst {
                     layout.buildDirectory.get().asFile
@@ -558,7 +558,7 @@ object SliderManager {
         @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
         private fun Project.registerAsciidoctorRevealJsTask() {
             tasks.getByName<AsciidoctorJRevealJSTask>(TASK_ASCIIDOCTOR_REVEALJS) {
-                group = GROUP_TASK_SLIDER
+                group = "generate"
                 description = "Compile AsciiDoc sources into a Reveal.js HTML presentation."
                 setExecutionMode(OUT_OF_PROCESS)
                 dependsOn(TASK_CLEAN_SLIDES_BUILD)
@@ -622,7 +622,7 @@ object SliderManager {
         @Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
         private fun Project.registerAsciidoctorTask() {
             tasks.register<AsciidoctorTask>("asciidoctor") {
-                group = GROUP_TASK_SLIDER
+                group = "generate"
                 dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
             }
         }
@@ -634,7 +634,7 @@ object SliderManager {
          */
         private fun Project.registerServeSlidesTask() {
             tasks.register<NpxTask>(TASK_SERVE_SLIDES) {
-                group = GROUP_TASK_SLIDER
+                group = "info"
                 description = "Serve slides using the serve package executed via npx."
                 dependsOn(TASK_ASCIIDOCTOR_REVEALJS)
                 command.set(SERVE_DEP)
@@ -659,7 +659,7 @@ object SliderManager {
          */
         private fun Project.registerDashboardTask() {
             tasks.register<DefaultTask>(TASK_DASHBOARD_SLIDES_BUILD) {
-                group = "documentation"
+                group = "generate"
                 description = "Generate index.html and slides.json listing all Reveal.js presentations."
                 doLast {
                     val slidesDir = layout.projectDirectory.asFile
@@ -729,7 +729,7 @@ object SliderManager {
          */
         private fun Project.registerPublishSlidesTask() {
             tasks.register<DefaultTask>(TASK_PUBLISH_SLIDES) {
-                group = GROUP_TASK_SLIDER
+                group = "deploy"
                 description = "Deploy generated slides to the configured remote repository."
                 dependsOn("asciidoctor")
                 doFirst { task ->
@@ -766,8 +766,8 @@ object SliderManager {
             val adocDir = projectDir.resolve("slides/misc")
             val buildDir = layout.buildDirectory
 
-            tasks.register<DefaultTask>("asciidocCapsule") {
-                group = "capsule"
+            tasks.register<DefaultTask>("generateCapsule") {
+                group = "generate"
                 description = "Extract speaker notes from AsciiDoc decks and generate a video script."
                 dependsOn("asciidoctor")
                 outputs.upToDateWhen { false }
@@ -833,7 +833,7 @@ object SliderManager {
          */
         private fun Project.registerReportTestsTask() {
             tasks.register<Exec>("reportTests") {
-                group = "verification"
+                group = "verify"
                 description = "Run checks and open the unit test report in Firefox."
                 dependsOn("check")
                 commandLine(
@@ -854,7 +854,7 @@ object SliderManager {
          */
         private fun Project.registerReportFunctionalTestsTask() {
             tasks.register<Exec>("reportFunctionalTests") {
-                group = "verification"
+                group = "verify"
                 description = "Run checks and open the functional test report in Firefox."
                 dependsOn("check")
                 commandLine(
@@ -874,7 +874,7 @@ object SliderManager {
 
         private fun Project.registerInstallPlaywrightTask() {
             tasks.register<NpxTask>(TASK_INSTALL_PLAYWRIGHT) {
-                group = GROUP_TASK_SLIDER
+                group = "setup"
                 description = "Install Playwright browsers (chromium) for visual testing."
                 command.set("playwright")
                 args.set(listOf("install", "chromium"))

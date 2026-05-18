@@ -205,7 +205,7 @@ private fun isSlidesConfigComplete(miscDir: File): Boolean {
 }
 ----
 
-=== `publishSlides` — configurable branch
+=== `deploySlides` — configurable branch
 
 The hardcoded `setInitialBranch("main")` bug in `pushSlide` has been fixed.
 The publish branch is now read from `conf.pushSlides?.branch`:
@@ -273,7 +273,7 @@ override fun apply(project: Project) {
 
 `createChatTasks()` is defined in `AssistantManager` and registers:
 - `PgVectorService` via `gradle.sharedServices.registerIfAbsent()`
-- `reindexRag`, `proposeDeckContext`, `generateDeck` (typed RAG tasks)
+- `collectRagIndex`, `generateDeckContext`, `generateDeck` (typed RAG tasks)
 - smoke-test tasks `helloOllama*`, `helloGemini*`, `helloMistral*`, `helloHuggingFace*`
 
 == Data Model
@@ -374,43 +374,43 @@ slider {
 | Task | Group | Description
 
 | `asciidoctorRevealJs`
-| slider
+| generate
 | Compiles `.adoc` sources into a Reveal.js HTML presentation
 
 | `asciidoctor`
-| slider
+| generate
 | Standard Asciidoctor conversion (depends on `asciidoctorRevealJs`)
 
 | `cleanSlidesBuild`
-| slider
+| build
 | Deletes generated presentation artifacts
 
-| `dashSlidesBuild`
-| documentation
+| `generateDashboard`
+| generate
 | Generates `index.html` and `slides.json` dashboard
 
 | `serveSlides`
-| slider
+| info
 | Serves slides via npx + serve package (prints link to console)
 
-| `publishSlides`
-| slider
+| `deploySlides`
+| deploy
 | Deploys compiled slides to the configured branch (e.g. `slides`) via force push — compatible with GitHub Pages
 
-| `asciidocCapsule`
-| capsule
+| `generateCapsule`
+| generate
 | _(TODO)_ Video capsule generation from slides
 
-| `reindexRag`
-| slider-ai
+| `collectRagIndex`
+| collect
 | Drops and fully rebuilds the pgvector embedding index
 
-| `proposeDeckContext`
-| slider-ai
+| `generateDeckContext`
+| generate
 | Proposes a `*-deck-context.yml` via RAG + LLM (step 1/2)
 
 | `generateDeck`
-| slider-ai
+| generate
 | Generates a complete AsciiDoc/Reveal.js deck from a `*-deck-context.yml` (step 2/2)
 
 | `helloOllama*`
@@ -430,11 +430,11 @@ slider {
 | HuggingFace smoke tests
 
 | `reportTests`
-| verification
+| verify
 | Runs checks and opens test report in Firefox
 
 | `reportFunctionalTests`
-| verification
+| verify
 | Runs checks and opens functional test report in Firefox
 |===
 
@@ -526,7 +526,7 @@ deactivate PGS
   --no-daemon
 ----
 
-Properties available for `proposeDeckContext`:
+Properties available for `generateDeckContext`:
 
 [cols="1,1,2"]
 |===
@@ -754,7 +754,7 @@ and has no negative consequences for the plugin's Portal ranking beyond the Conf
 * Configuration Cache support — blocked on asciidoctor-gradle `5.x` stable release.
 * Extended DSL — configurable theme, transition, source directory.
 * Cucumber tests for the `generateDeck` task.
-* `asciidocCapsule` — video capsule generation from slides.
+* `generateCapsule` — video capsule generation from slides.
 
 == License
 This project is licensed under the Apache 2.0 License – see the `LICENCE` file.

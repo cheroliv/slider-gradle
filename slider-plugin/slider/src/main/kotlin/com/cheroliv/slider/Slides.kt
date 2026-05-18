@@ -3,10 +3,10 @@ package com.cheroliv.slider
 object Slides {
     object RevealJsSlides {
         const val GROUP_TASK_SLIDER = "slider"
-        const val TASK_ASCIIDOCTOR_REVEALJS = "asciidoctorRevealJs"
-        const val TASK_CLEAN_SLIDES_BUILD = "cleanSlidesBuild"
-        const val TASK_DASHBOARD_SLIDES_BUILD = "dashSlidesBuild"
-        const val TASK_PUBLISH_SLIDES = "publishSlides"
+        const val TASK_ASCIIDOCTOR_REVEALJS = "generateSlides"
+        const val TASK_CLEAN_SLIDES_BUILD = "cleanBuild"
+        const val TASK_DASHBOARD_SLIDES_BUILD = "generateDashboard"
+        const val TASK_PUBLISH_SLIDES = "deploySlides"
         const val BUILD_GRADLE_KEY = "build-gradle"
         const val ENDPOINT_URL_KEY = "endpoint-url"
         const val SOURCE_HIGHLIGHTER_KEY = "source-highlighter"

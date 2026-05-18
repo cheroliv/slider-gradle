@@ -5,7 +5,7 @@ readme = "0.0.0"
 [libraries]
 
 [plugins]
-slider = { id = "com.cheroliv.slider", version.ref = "slider" }
-readme = { id = "com.cheroliv.readme", version.ref = "readme" }
+slider = { id = "education.cccp.slider", version.ref = "slider" }
+readme = { id = "education.cccp.readme", version.ref = "readme" }
 
 [bundles]

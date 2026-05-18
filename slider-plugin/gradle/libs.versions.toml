@@ -26,6 +26,7 @@ langchain4j-beta = "1.14.1-beta24"
 docker-java = "3.7.0"
 testcontainers-pg = "1.21.4"
 logback = "1.5.32"
+codebase = "0.0.1"
 
 [libraries]
 asciidoctor-gradle-jvm-slides = { module = "org.asciidoctor:asciidoctor-gradle-jvm-slides", version.ref = "asciidoctor-gradle" }
@@ -75,8 +76,9 @@ logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-slider = { id = "com.cheroliv.slider", version.ref = "slider" }
+slider = { id = "education.cccp.slider", version.ref = "slider" }
 publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }
+codebase = { id = "education.cccp.codebase", version.ref = "codebase" }
 
 [bundles]
 slider = [

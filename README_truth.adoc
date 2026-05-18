@@ -26,7 +26,7 @@ This project demonstrates the use of the **com.cheroliv.slider** plugin with **G
 All slide generation logic is fully encapsulated in the `slider-plugin/`, keeping the consumer build script minimal.
 
 AI-assisted generation relies on a two-step RAG pipeline:
-`proposeDeckContext` prepares a pedagogical context file reviewed by the author,
+`generateDeckContext` prepares a pedagogical context file reviewed by the author,
 `generateDeck` produces the final AsciiDoc deck enriched by project examples.
 
 === Use Cases
@@ -70,7 +70,7 @@ start
 :Plugin applied;
 :Slides project initialization;
 
-if (proposeDeckContext ?) then (yes)
+if (generateDeckContext ?) then (yes)
   :PgVectorService starts Docker;
   :RAG — retrieve relevant chunks;
   :LLM — propose DeckContext JSON;
@@ -237,7 +237,7 @@ SlidesInitializer --> SliderPlugin : structure OK / resources generated
 SliderPlugin -> Tasks : register tasks
 Gradle -> Tasks : execute task
 
-opt RAG task (proposeDeckContext / generateDeck / reindexRag)
+opt RAG task (generateDeckContext / generateDeck / collectRagIndex)
   Tasks -> PgVectorService : start()
   PgVectorService --> Tasks : assigned port
   Tasks -> RagManager : retrieve() / reindex()
@@ -375,17 +375,17 @@ slider {
 
 === Build
 
-`asciidoctorRevealJs`::
+`generateSlides`::
 Compiles `.adoc` sources into an HTML Reveal.js presentation.
 Slides are generated in `build/docs/asciidocRevealJs/`.
 
 [source,bash]
 ----
-./gradlew asciidoctorRevealJs
+./gradlew generateSlides
 ----
 
 `asciidoctor`::
-Runs standard Asciidoctor conversion (depends on `asciidoctorRevealJs`).
+Runs standard Asciidoctor conversion (depends on `generateSlides`).
 
 `cleanSlidesBuild`::
 Deletes generated presentation artifacts from the `build` directory.
@@ -395,7 +395,7 @@ Deletes generated presentation artifacts from the `build` directory.
 ./gradlew cleanSlidesBuild
 ----
 
-`dashSlidesBuild`::
+`generateDashboard`::
 Generates `index.html` and `slides.json` listing all available presentations.
 
 === Serve
@@ -411,22 +411,22 @@ Ideal for quick local preview.
 
 === Capsule
 
-`asciidocCapsule`::
+`generateCapsule`::
 _(TODO)_ — Video capsule generation from slides. Currently logs a placeholder message.
 
 [source,bash]
 ----
-./gradlew asciidocCapsule
+./gradlew generateCapsule
 ----
 
 === Deploy
 
-`publishSlides`::
+`deploySlides`::
 Deploys generated slides to the remote repository configured in `slides-context.yml`.
 
 [source,bash]
 ----
-./gradlew publishSlides
+./gradlew deploySlides
 ----
 
 ==== Deployment Pipeline
@@ -437,17 +437,17 @@ Deploys generated slides to the remote repository configured in `slides-context.
 actor Developer
 
 participant Gradle
-participant publishSlides
+participant deploySlides
 participant "Local build"
 participant Git
 
-Developer -> Gradle : ./gradlew publishSlides
-Gradle -> publishSlides
-publishSlides -> "Local build" : collect compiled slides
-publishSlides -> Git : clone remote repository
-publishSlides -> Git : copy slides
-publishSlides -> Git : commit
-publishSlides -> Git : push (force)
+Developer -> Gradle : ./gradlew deploySlides
+Gradle -> deploySlides
+deploySlides -> "Local build" : collect compiled slides
+deploySlides -> Git : clone remote repository
+deploySlides -> Git : copy slides
+deploySlides -> Git : commit
+deploySlides -> Git : push (force)
 @enduml
 ----
 
@@ -525,7 +525,7 @@ AM --> HuggingFace
 @startuml
 actor Developer
 
-participant "Gradle\n(proposeDeckContext)" as Propose
+participant "Gradle\n(generateDeckContext)" as Propose
 participant "PgVectorService" as PGS
 participant "RagManager" as RAG
 participant "LLM Provider" as LLM
@@ -534,9 +534,9 @@ collections "*-deck-context.yml" as CtxFile
 participant "Gradle\n(generateDeck)" as Generate
 collections "<slug>_<lang>-deck.adoc" as DeckFile
 
-== Step 1: proposeDeckContext ==
+== Step 1: generateDeckContext ==
 
-Developer -> Propose : ./gradlew proposeDeckContext\n  -Psubject="..." -Planguage=en\n  -Pai.provider=gemini --no-daemon
+Developer -> Propose : ./gradlew generateDeckContext\n  -Psubject="..." -Planguage=en\n  -Pai.provider=gemini --no-daemon
 Propose -> PGS : start()
 activate PGS
 Propose -> RAG : retrieve(subject)
@@ -566,17 +566,17 @@ deactivate PGS
 
 === Available AI Tasks
 
-==== reindexRag
+==== collectRagIndex
 
 Drops and fully rebuilds the pgvector index from project sources.
 Run after adding or deleting source files.
 
 [source,bash]
 ----
-./gradlew reindexRag --no-daemon
+./gradlew collectRagIndex --no-daemon
 ----
 
-==== proposeDeckContext
+==== generateDeckContext
 
 Proposes a `*-deck-context.yml` for a given subject, enriched by RAG context.
 Author is resolved automatically from `git config user.name` / `git config user.email`.
@@ -584,20 +584,20 @@ Author is resolved automatically from `git config user.name` / `git config user.
 [source,bash]
 ----
 # Default provider: ollama (local)
-./gradlew proposeDeckContext \
+./gradlew generateDeckContext \
   -Psubject="Kotlin Coroutines" \
   -Planguage=en \
   --no-daemon
 
 # Gemini
-./gradlew proposeDeckContext \
+./gradlew generateDeckContext \
   -Psubject="Kotlin inline functions and reification" \
   -Planguage=fr \
   -Pai.provider=gemini \
   --no-daemon
 
 # Override author
-./gradlew proposeDeckContext \
+./gradlew generateDeckContext \
   -Psubject="Spring Boot 3" \
   -Planguage=en \
   -Pai.provider=mistral \
@@ -737,7 +737,7 @@ slides:
 [source,bash]
 ----
 # Step 1 — propose the context
-./gradlew proposeDeckContext \
+./gradlew generateDeckContext \
   -Psubject="Kotlin inline functions and reification" \
   -Planguage=en \
   -Pai.provider=gemini \
@@ -752,7 +752,7 @@ slides:
   --no-daemon
 
 # Step 3 — compile and serve
-./gradlew asciidoctorRevealJs serveSlides
+./gradlew generateSlides serveSlides
 ----
 
 .Build and preview locally
@@ -764,13 +764,13 @@ slides:
 .Clean and rebuild
 [source,bash]
 ----
-./gradlew cleanSlidesBuild asciidoctorRevealJs
+./gradlew cleanSlidesBuild generateSlides
 ----
 
 .Publish to remote repository
 [source,bash]
 ----
-./gradlew asciidoctorRevealJs publishSlides
+./gradlew generateSlides deploySlides
 ----
 
 == Advanced Architecture
@@ -913,7 +913,7 @@ This architecture delivers:
 * Real-time incremental indexing when editing sources.
 
 NOTE: The plugin explicitly declares `configurationCache = false` on the Gradle Plugin Portal.
-Do not enable the Gradle Configuration Cache with this plugin — the `asciidoctorRevealJs` task
+Do not enable the Gradle Configuration Cache with this plugin — the `generateSlides` task
 runs `OUT_OF_PROCESS` via JRuby and is not compatible in its current state.
 
 == License

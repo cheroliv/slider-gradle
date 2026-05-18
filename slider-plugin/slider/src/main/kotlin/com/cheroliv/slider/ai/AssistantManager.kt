@@ -44,8 +44,8 @@ import kotlin.coroutines.resume
  * Defaults to `ollama` when absent.
  *
  * ## Two-step RAG pipeline
- *   1. `proposeDeckContext` → [ProposeDeckContextTask]
- *   2. `generateDeck`       → [GenerateDeckTask]
+ *   1. `generateDeckContext` → [ProposeDeckContextTask]
+ *   2. `generateDeck`        → [GenerateDeckTask]
  *
  * Both tasks share the same model instance resolved by [resolveModel].
  */
@@ -145,8 +145,8 @@ object AssistantManager {
     private fun Project.registerReindexRagTask(
         pgServiceProvider: Provider<PgVectorService>
     ) {
-        tasks.register("reindexRag", ReindexRagTask::class.java) {
-            it.group = "slider-ai"
+        tasks.register("collectRagIndex", ReindexRagTask::class.java) {
+            it.group = "collect"
             it.description = "Force a full rebuild of the RAG embedding index."
             it.pgVectorService.set(pgServiceProvider)
             it.usesService(pgServiceProvider)
@@ -156,8 +156,8 @@ object AssistantManager {
     private fun Project.registerProposeDeckContextTask(
         pgServiceProvider: Provider<PgVectorService>
     ) {
-        tasks.register("proposeDeckContext", ProposeDeckContextTask::class.java) {
-            it.group = "slider-ai"
+        tasks.register("generateDeckContext", ProposeDeckContextTask::class.java) {
+            it.group = "generate"
             it.description = buildString {
                 append("Propose a deck-context.yml for a given subject using RAG + LLM (step 1/2). ")
                 append("Required: -Psubject=<text>. ")
@@ -172,7 +172,7 @@ object AssistantManager {
         pgServiceProvider: Provider<PgVectorService>
     ) {
         tasks.register("generateDeck", GenerateDeckTask::class.java) {
-            it.group = "slider-ai"
+            it.group = "generate"
             it.description = buildString {
                 append("Generate a complete AsciiDoc/Reveal.js deck from a *-deck-context.yml (step 2/2). ")
                 append("Required: -Pdeck.context=<path>. ")

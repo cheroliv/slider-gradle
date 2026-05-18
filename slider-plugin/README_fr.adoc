@@ -206,7 +206,7 @@ override fun apply(project: Project) {
 
 `createChatTasks()` est défini dans `AssistantManager` et enregistre :
 - `PgVectorService` via `gradle.sharedServices.registerIfAbsent()`
-- `reindexRag`, `proposeDeckContext`, `generateDeck` (tâches RAG typées)
+- `collectRagIndex`, `generateDeckContext`, `generateDeck` (tâches RAG typées)
 - les tâches smoke-test `helloOllama*`, `helloGemini*`, `helloMistral*`, `helloHuggingFace*`
 
 == Modèle de données
@@ -307,43 +307,43 @@ slider {
 | Tâche | Groupe | Description
 
 | `asciidoctorRevealJs`
-| slider
+| generate
 | Compile les sources `.adoc` en présentation HTML Reveal.js
 
 | `asciidoctor`
-| slider
+| generate
 | Conversion Asciidoctor standard (dépend de `asciidoctorRevealJs`)
 
 | `cleanSlidesBuild`
-| slider
+| build
 | Supprime les artefacts de présentation générés
 
-| `dashSlidesBuild`
-| documentation
+| `generateDashboard`
+| generate
 | Génère le dashboard `index.html` et `slides.json`
 
 | `serveSlides`
-| slider
+| info
 | Sert les slides via npx + paquet serve (affiche le lien dans la console)
 
-| `publishSlides`
-| slider
+| `deploySlides`
+| deploy
 | Déploie les slides vers le dépôt Git distant
 
-| `asciidocCapsule`
-| capsule
+| `generateCapsule`
+| generate
 | _(TODO)_ Génération de capsules vidéo depuis les slides
 
-| `reindexRag`
-| slider-ai
+| `collectRagIndex`
+| collect
 | Vide et reconstruit intégralement l'index pgvector
 
-| `proposeDeckContext`
-| slider-ai
+| `generateDeckContext`
+| generate
 | Propose un `*-deck-context.yml` via RAG + LLM (étape 1/2)
 
 | `generateDeck`
-| slider-ai
+| generate
 | Génère un deck AsciiDoc/Reveal.js complet depuis un `*-deck-context.yml` (étape 2/2)
 
 | `helloOllama*`
@@ -363,11 +363,11 @@ slider {
 | Smoke tests HuggingFace
 
 | `reportTests`
-| verification
+| verify
 | Lance les vérifications et ouvre le rapport dans Firefox
 
 | `reportFunctionalTests`
-| verification
+| verify
 | Lance les vérifications fonctionnelles et ouvre le rapport
 |===
 
@@ -411,10 +411,10 @@ image::images/fr/diag-plantuml-md5-a8dbd87942fd1adefb8fd31826696dbf.png[]
 [source,bash]
 ----
 # Reconstruire l'index (après ajout/suppression de sources)
-./gradlew reindexRag --no-daemon
+./gradlew collectRagIndex --no-daemon
 
 # Proposer un contexte de deck (étape 1/2)
-./gradlew proposeDeckContext \
+./gradlew generateDeckContext \
   -Psubject="Kotlin inline functions and reification" \
   -Planguage=fr \
   -Pai.provider=gemini \
@@ -427,7 +427,7 @@ image::images/fr/diag-plantuml-md5-a8dbd87942fd1adefb8fd31826696dbf.png[]
   --no-daemon
 ----
 
-Propriétés disponibles pour `proposeDeckContext` :
+Propriétés disponibles pour `generateDeckContext` :
 
 [cols="1,1,2"]
 |===
@@ -651,8 +651,8 @@ gradlePlugin {
 == Roadmap
 * Support du Configuration Cache — bloqué sur la version stable d'asciidoctor-gradle `5.x`.
 * DSL étendu — thème, transition, répertoire source configurables.
-* Tests Cucumber couvrant le scaffold, `proposeDeckContext` et `generateDeck`.
-* `asciidocCapsule` — génération de capsules vidéo depuis les slides.
+* Tests Cucumber couvrant le scaffold, `generateDeckContext` et `generateDeck`.
+* `generateCapsule` — génération de capsules vidéo depuis les slides.
 
 == Licence
 Ce projet est sous licence Apache 2.0 – voir le fichier `LICENCE`.
